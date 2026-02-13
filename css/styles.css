@@ -186,13 +186,13 @@ button:focus-visible,
 }
 
 .brand {
-  grid-column: 1 / span 3;
+  grid-column: 1 / span 2;
   display: inline-grid;
-  gap: 2px;
-  font-size: 0.95rem;
+  gap: 1px;
+  font-size: 1.1875rem;
   font-weight: 760;
-  letter-spacing: 0.09em;
-  line-height: 1;
+  letter-spacing: 0.07em;
+  line-height: 0.98;
   text-transform: uppercase;
   color: var(--color-foreground);
 }
@@ -207,27 +207,29 @@ button:focus-visible,
 }
 
 nav {
-  grid-column: 4 / -1;
+  grid-column: 3 / -1;
+  min-width: 0;
 }
 
 .nav-list {
   list-style: none;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--space-1);
   justify-content: flex-start;
   padding: var(--space-0);
 }
 
 .nav-list a {
-  font-size: var(--type-caption);
+  font-size: calc(var(--type-caption) * 1.25);
   font-family: var(--font-mono);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-muted);
   text-decoration: none;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-1);
   border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .nav-list a:hover,
@@ -636,11 +638,11 @@ main {
   }
 
   .brand {
-    grid-column: 1 / span 3;
+    grid-column: 1 / span 2;
   }
 
   nav {
-    grid-column: 4 / -1;
+    grid-column: 3 / -1;
   }
 
   .hero {
@@ -681,6 +683,10 @@ main {
   .brand,
   nav {
     grid-column: 1 / -1;
+  }
+
+  .nav-list {
+    flex-wrap: wrap;
   }
 
   .hero {
