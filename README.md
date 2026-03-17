@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bioprocess Development ROI Calculator
 
-## Getting Started
+Governed Next.js application for estimating the economic impact of digital orchestration in pharmaceutical bioprocess development. The model keeps Hard-Dollar, Capacity, and Strategic value separate, exposes auditable formula trace output, preserves provenance metadata, and records lifecycle lineage for local persisted model states.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 App Router
+- TypeScript
+- Tailwind CSS v4
+- shadcn/ui primitives
+- React Hook Form + Zod
+- Zustand with localStorage persistence
+- Recharts
+- jsPDF + jsPDF AutoTable
+- xlsx
+- pg
+
+## Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Verification
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+Both commands pass in the current workspace.
 
-To learn more about Next.js, take a look at the following resources:
+## What Is Implemented
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Structured input model covering Organization Profile, Current State, Cost Basis, Improvement Assumptions, Risk & Realization, Advanced Settings, Review and Sign-Off, and Scenario Justification.
+- Scenario-based pure calculation engine for Labor Efficiency, Rerun Avoidance, Failed-Run Avoidance, Deviation Reduction, Cycle-Time Acceleration, Transfer Improvement, Transfer Delay Avoidance, Onboarding Efficiency, and optional Strategic Proxy.
+- Conservative financial metrics across a three-year horizon, including Total Investment, recurring cost, phased benefits, 3-Year ROI, payback, NPV, and IRR.
+- Assumptions Register with locked columns and provenance-aware source labeling.
+- Model Risk Panel and conservative readiness logic.
+- Formula Trace output for major engines and KPI calculations.
+- Lifecycle metadata, local persistence, change log, review metadata, and override logging.
+- Front-door lead capture gate that hides the calculator until contact details are submitted.
+- Built-in lead-capture API route with local fallback behavior and Postgres persistence when `DATABASE_URL` is configured.
+- Demo/test-data controls that can load illustrative governed datasets and restore the previous working model.
+- JSON, Excel, and PDF export flows with the required top-level ordering rules applied in code.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+- [`app/page.tsx`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/page.tsx): page entry point
+- [`app/api/lead-capture/route.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/api/lead-capture/route.ts): lead capture API route with Postgres insert and safe fallback
+- [`components/calculator-app.tsx`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/components/calculator-app.tsx): primary governed UI
+- [`lib/model.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/model.ts): types, field definitions, defaults, validation, provenance metadata
+- [`lib/calculations.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/calculations.ts): pure value engines, financial metrics, readiness, risk, trace, narrative
+- [`lib/exporters.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/exporters.ts): JSON, Excel, and PDF exports
+- [`lib/test-data.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/test-data.ts): governed demo datasets used by the test-data controls
+- [`store/use-calculator-store.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/store/use-calculator-store.ts): persisted local model state, lineage, overrides, and change log
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Render Setup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+To persist the lead gate into Render-hosted Postgres, create:
+
+1. A Render Postgres instance in the same region as the web service.
+2. A `DATABASE_URL` environment variable on the web service, using the database's internal connection string.
+3. A redeploy of the web service after the env var is present.
+
+Once `DATABASE_URL` is available, the built-in [`/api/lead-capture`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/api/lead-capture/route.ts) route will:
+
+- validate the incoming lead payload
+- create the `roi_lead_captures` table automatically if it does not exist
+- upsert lead records by work email
+
+If `DATABASE_URL` is missing or the insert fails, the gate still unlocks using local-only capture so the app remains usable during setup.
+
+## API Access
+
+- Browser traffic posts only to the app's own `/api/lead-capture` route.
+- The database is never called directly from the browser.
+- No separate API service is required unless you want one; the existing Next.js app can own the lead-capture endpoint.
+- For local development, leave `DATABASE_URL` unset if you want to test the local-only fallback. Use `.env.example` as the env var template.
+
+## Modeling Notes
+
+- Percentages are stored as whole numbers and converted to decimals inside the calculation engine.
+- Annual runs are derived as `Runs per Month × 12`.
+- Saved labor is monetized once and routed to Hard-Dollar, Capacity, or a mixed split based on Labor Treatment Mode.
+- Cycle-Time Acceleration and Transfer Delay Avoidance apply Capture Factor and Confidence Factor.
+- Strategic Proxy remains separate and discounted by design.
+- Decision-lag reduction is tracked but not independently monetized in version 1.
+
+## Known Limitations
+
+- The handoff document references locked acceptance tests and golden vectors `GV-001` through `GV-005`, but the numeric fixtures themselves were not present in the provided DOCX. The implementation therefore includes the governed engine and reporting surfaces, but not authoritative vector verification.
+- Validation ranges and messages were implemented conservatively from the handoff model, not from a separate locked micro-spec pack.
+- Benchmark guidance is implemented as contextual field hints. No external benchmark dataset was provided, so benchmark provenance can be surfaced but not populated from a formal source pack.
+- The PDF export is structurally compliant with the required section order, but intentionally plain.
+- `npm install` currently reports one high-severity dependency vulnerability from the installed dependency tree. It was not remediated in this pass because no package upgrade strategy was specified.
