@@ -529,10 +529,19 @@ function ReportMetricCard({
   value: string;
   detail: string;
 }) {
+  const isLongValue = value.length >= 9;
+
   return (
-    <div className={cn(DARK_SOFT, "min-h-[148px] p-4")}>
+    <div className={cn(DARK_SOFT, "min-w-0 min-h-[148px] p-4")}>
       <p className="text-[12px] uppercase tracking-[0.18em] text-white/52">{label}</p>
-      <p className="mt-3 text-display text-[clamp(2rem,3.8vw,2.85rem)] leading-[0.9] tracking-[-0.06em] text-white [font-variant-numeric:tabular-nums]">
+      <p
+        className={cn(
+          "mt-3 max-w-full font-heading leading-[0.92] text-white [font-variant-numeric:tabular-nums]",
+          isLongValue
+            ? "text-[clamp(1.8rem,2.9vw,2.3rem)] tracking-[-0.075em]"
+            : "text-[clamp(2rem,3.8vw,2.85rem)] tracking-[-0.06em]",
+        )}
+      >
         {value}
       </p>
       <p className="mt-3 text-[0.96rem] leading-6 text-white/70">{detail}</p>
@@ -1551,7 +1560,7 @@ function ReportStep({
   return (
     <div className="grid gap-4">
       <section className={cn(DARK_PANEL, "overflow-hidden p-0")}>
-        <div className="grid gap-0 xl:grid-cols-[minmax(0,1.04fr)_420px]">
+        <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_minmax(460px,520px)]">
           <div className="p-6">
             <CardHeader className="relative z-10 p-0">
               <div className="flex flex-wrap items-center gap-3">
