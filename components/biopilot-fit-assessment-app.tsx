@@ -67,11 +67,11 @@ const DARK_SOFT =
 const INPUT_CLASS =
   "h-[56px] rounded-[18px] border-[color:var(--input)] bg-[color:var(--surface-3)] px-4 text-lg font-medium text-[color:var(--foreground)] shadow-[inset_0_1px_0_rgba(255,255,255,0.62)] placeholder:text-[color:var(--muted-foreground)] focus-visible:border-[color:var(--border-strong)] focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]";
 const PRIMARY_BUTTON =
-  "h-[48px] rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[linear-gradient(135deg,#004f9b,#0b7fff)] px-4 text-base font-semibold text-white shadow-[0_12px_28px_rgba(0,95,189,0.2)] hover:shadow-[0_16px_34px_rgba(0,95,189,0.24)]";
+  "h-11 rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[linear-gradient(135deg,#004f9b,#0b7fff)] px-4 text-[0.95rem] font-semibold text-white shadow-[0_10px_24px_rgba(0,95,189,0.18)] hover:shadow-[0_14px_30px_rgba(0,95,189,0.22)]";
 const SECONDARY_BUTTON =
-  "h-[48px] rounded-[16px] border-[color:var(--border-strong)] bg-[color:var(--surface-3)] px-4 text-base font-semibold text-[color:var(--foreground)] hover:bg-[color:var(--surface-elevated)]";
+  "h-11 rounded-[14px] border-[color:var(--border-strong)] bg-[color:var(--surface-3)] px-4 text-[0.95rem] font-semibold text-[color:var(--foreground)] hover:bg-[color:var(--surface-elevated)]";
 const ACCENT_BUTTON =
-  "h-[48px] rounded-[16px] border border-[rgba(255,238,0,0.28)] bg-[linear-gradient(135deg,#ffee00,#f2da00)] px-4 text-base font-semibold text-[color:var(--brand-indigo)] shadow-[0_10px_22px_rgba(255,238,0,0.14)] hover:shadow-[0_14px_28px_rgba(255,238,0,0.18)]";
+  "h-11 rounded-[14px] border border-[rgba(255,238,0,0.28)] bg-[linear-gradient(135deg,#ffee00,#f2da00)] px-4 text-[0.95rem] font-semibold text-[color:var(--brand-indigo)] shadow-[0_8px_18px_rgba(255,238,0,0.14)] hover:shadow-[0_12px_24px_rgba(255,238,0,0.18)]";
 const SELECT_CONTENT_CLASS =
   "border-[color:var(--border)] bg-[color:var(--popover)] text-[color:var(--foreground)] text-lg shadow-[0_24px_50px_rgba(11,28,59,0.16)] backdrop-blur-xl";
 const SELECT_ITEM_CLASS = "min-h-[48px] px-3 py-2 text-lg leading-7";
@@ -743,11 +743,13 @@ function StepTracker({
 function WorkspaceSidebar({
   currentStep,
   onSelectStep,
+  onGoHome,
   leadCapture,
   inputs,
 }: {
   currentStep: AssessmentStep;
   onSelectStep?: (step: AssessmentStep) => void;
+  onGoHome: () => void;
   leadCapture: LeadCaptureRecord | null;
   inputs: BioPilotAssessmentInputs;
 }) {
@@ -758,7 +760,12 @@ function WorkspaceSidebar({
     <aside className="grid gap-4 content-start xl:sticky xl:top-6">
       <Card className={cn(PANEL_CARD, "p-4")}>
         <CardContent className="p-0">
-          <div className="rounded-[22px] bg-white px-4 py-3 shadow-[0_14px_30px_rgba(11,28,59,0.08)]">
+          <button
+            type="button"
+            onClick={onGoHome}
+            className="inline-flex rounded-[22px] bg-white px-4 py-3 shadow-[0_14px_30px_rgba(11,28,59,0.08)] transition-shadow duration-150 hover:shadow-[0_18px_34px_rgba(11,28,59,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]"
+            aria-label="Return to main page"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/yokogawa-logo.png"
@@ -767,7 +774,7 @@ function WorkspaceSidebar({
               height={32}
               className="h-auto w-[180px]"
             />
-          </div>
+          </button>
           <div className="mt-4">
             <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
               Assessment workspace
@@ -926,10 +933,12 @@ function IntroStep({
   initialLead,
   onSubmitLead,
   onUseSample,
+  onGoHome,
 }: {
   initialLead: LeadCaptureRecord | null;
   onSubmitLead: (record: LeadCaptureRecord) => void;
   onUseSample: () => void;
+  onGoHome: () => void;
 }) {
   const form = useForm<LeadCaptureFormInput>({
     resolver: zodResolver(leadCaptureSchema),
@@ -983,7 +992,12 @@ function IntroStep({
         <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
         <div className="relative z-10">
           <div className="flex items-center">
-            <div className="rounded-[18px] bg-white px-4 py-3 shadow-[0_18px_40px_rgba(5,20,39,0.18)]">
+            <button
+              type="button"
+              onClick={onGoHome}
+              className="inline-flex rounded-[18px] bg-white px-4 py-3 shadow-[0_18px_40px_rgba(5,20,39,0.18)] transition-shadow duration-150 hover:shadow-[0_22px_44px_rgba(5,20,39,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(8,34,67,0.9)]"
+              aria-label="Return to main page"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/yokogawa-logo.png"
@@ -992,7 +1006,7 @@ function IntroStep({
                 height={39}
                 className="h-auto w-[220px] sm:w-[260px]"
               />
-            </div>
+            </button>
           </div>
 
           <div className="mt-6 max-w-[760px]">
@@ -1022,6 +1036,16 @@ function IntroStep({
                 </li>
               ))}
             </ul>
+            <div className="mt-6">
+              <a
+                href="https://www.yokogawa.com/mx/solutions/products-and-services/solutions/production-management/biopilot/"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-11 items-center justify-center rounded-[14px] border border-white/14 bg-white/8 px-4 text-[0.95rem] font-semibold text-white shadow-[0_10px_24px_rgba(5,20,39,0.14)] backdrop-blur-sm transition-colors duration-150 hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(8,34,67,0.9)]"
+              >
+                Explore BioPilot
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -1970,6 +1994,10 @@ export function BioPilotFitAssessmentApp() {
     setCurrentStep(step);
   };
 
+  const handleGoHome = () => {
+    setCurrentStep("intro");
+  };
+
   if (!hasHydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-xl text-muted-foreground">
@@ -1991,6 +2019,7 @@ export function BioPilotFitAssessmentApp() {
               initialLead={leadCapture}
               onSubmitLead={handleSubmitLead}
               onUseSample={handleUseSampleContact}
+              onGoHome={handleGoHome}
             />
           </div>
         ) : (
@@ -1999,6 +2028,7 @@ export function BioPilotFitAssessmentApp() {
               <WorkspaceSidebar
                 currentStep={currentStep}
                 onSelectStep={handleStepSelect}
+                onGoHome={handleGoHome}
                 leadCapture={leadCapture}
                 inputs={inputs}
               />
