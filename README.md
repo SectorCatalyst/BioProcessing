@@ -44,6 +44,7 @@ Both commands pass in the current workspace.
 - Lifecycle metadata, local persistence, change log, review metadata, and override logging.
 - Front-door lead capture gate that hides the calculator until contact details are submitted.
 - Built-in lead-capture API route with local fallback behavior and Postgres persistence when `DATABASE_URL` is configured.
+- Built-in assessment-submission API route with server-side calculation, persisted report storage, and Postgres-backed admin retrieval when `DATABASE_URL` is configured.
 - Demo/test-data controls that can load illustrative governed datasets and restore the previous working model.
 - JSON, Excel, and PDF export flows with the required top-level ordering rules applied in code.
 
@@ -51,6 +52,7 @@ Both commands pass in the current workspace.
 
 - [`app/page.tsx`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/page.tsx): page entry point
 - [`app/api/lead-capture/route.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/api/lead-capture/route.ts): lead capture API route with Postgres insert and safe fallback
+- [`app/api/assessment-submissions/route.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/api/assessment-submissions/route.ts): full assessment persistence route with server-side report generation and admin access
 - [`components/calculator-app.tsx`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/components/calculator-app.tsx): primary governed UI
 - [`lib/model.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/model.ts): types, field definitions, defaults, validation, provenance metadata
 - [`lib/calculations.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/calculations.ts): pure value engines, financial metrics, readiness, risk, trace, narrative
@@ -75,14 +77,23 @@ Once `DATABASE_URL` is available, the built-in [`/api/lead-capture`](/Users/troy
 - preserve the first capture timestamp and update `updated_at` on later submissions from the same email
 - expose guarded read/delete access for lead management when `LEAD_CAPTURE_ADMIN_KEY` is configured
 
-If `DATABASE_URL` is missing or the insert fails, the gate still unlocks using local-only capture so the app remains usable during setup.
+The built-in [`/api/assessment-submissions`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/api/assessment-submissions/route.ts) route will:
+
+- validate the submitted contact and operating-input payload
+- normalize the inputs and calculate the BioPilot report on the server
+- upsert the linked lead record by work email
+- create the `roi_assessment_submissions` table automatically if it does not exist
+- insert each generated assessment as a durable report snapshot tied back to the lead capture
+- expose guarded read/delete access for assessment management when `LEAD_CAPTURE_ADMIN_KEY` is configured
+
+If `DATABASE_URL` is missing or the insert fails, the gate still unlocks using local-only capture and the report still renders, so the app remains usable during setup.
 
 ## API Access
 
-- Browser traffic posts only to the app's own `/api/lead-capture` route.
+- Browser traffic posts only to the app's own `/api/lead-capture` and `/api/assessment-submissions` routes.
 - The database is never called directly from the browser.
 - No separate API service is required unless you want one; the existing Next.js app can own the lead-capture endpoint.
-- Lead management is available at [`/admin/leads`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/admin/leads/page.tsx) and requires the same `LEAD_CAPTURE_ADMIN_KEY` value entered into the admin page.
+- Lead and assessment management is available at [`/admin/leads`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/admin/leads/page.tsx) and requires the same `LEAD_CAPTURE_ADMIN_KEY` value entered into the admin page.
 - For local development, leave `DATABASE_URL` unset if you want to test the local-only fallback. Use `.env.example` as the env var template.
 
 ## Modeling Notes

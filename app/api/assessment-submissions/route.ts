@@ -1,14 +1,24 @@
 import { NextResponse } from "next/server";
 
+import {
+  assessBioPilotFit,
+  bioPilotAssessmentInputsSchema,
+  normalizeAssessmentInputs,
+} from "@/lib/biopilot-fit-assessment";
 import { leadCaptureSchema } from "@/lib/model";
 import {
-  ensureLeadCaptureTable,
+  ensurePersistenceTables,
   getPool,
+  insertAssessmentSubmission,
   isAuthorizedAdmin,
-  upsertLeadCapture,
+  mapAssessmentAdminRow,
 } from "@/lib/server/biopilot-persistence";
 
 export const runtime = "nodejs";
+
+const assessmentSubmissionSchema = leadCaptureSchema.extend({
+  inputs: bioPilotAssessmentInputsSchema,
+});
 
 export async function GET(request: Request) {
   const pool = getPool();
@@ -16,7 +26,7 @@ export async function GET(request: Request) {
   if (!pool) {
     return NextResponse.json(
       {
-        message: "Lead storage is not connected. Set DATABASE_URL on the web service.",
+        message: "Assessment storage is not connected. Set DATABASE_URL on the web service.",
       },
       { status: 503 },
     );
@@ -32,59 +42,65 @@ export async function GET(request: Request) {
   }
 
   try {
-    await ensureLeadCaptureTable(pool);
+    await ensurePersistenceTables(pool);
 
     const result = await pool.query<{
       id: string;
+      lead_capture_id: string | null;
       first_name: string;
       last_name: string;
       work_email: string;
       company: string;
       job_title: string;
       country_region: string;
-      consent_to_contact: boolean;
-      source: string;
+      process_profile_id: string;
+      lifecycle_stage_id: string;
+      fit_band: string;
+      fit_score: number;
+      annual_value_potential: number;
+      three_year_roi: number;
+      payback_months: number;
+      digital_coverage: number;
+      manual_burden_index: number;
+      generated_report: ReturnType<typeof assessBioPilotFit>;
       created_at: string;
       updated_at: string;
     }>(`
       SELECT
         id,
+        lead_capture_id,
         first_name,
         last_name,
         work_email,
         company,
         job_title,
         country_region,
-        consent_to_contact,
-        source,
+        process_profile_id,
+        lifecycle_stage_id,
+        fit_band,
+        fit_score,
+        annual_value_potential,
+        three_year_roi,
+        payback_months,
+        digital_coverage,
+        manual_burden_index,
+        generated_report,
         created_at,
         updated_at
-      FROM roi_lead_captures
+      FROM roi_assessment_submissions
       ORDER BY updated_at DESC, id DESC
       LIMIT 500
     `);
 
     return NextResponse.json({
-      entries: result.rows.map((row) => ({
-        id: row.id,
-        firstName: row.first_name,
-        lastName: row.last_name,
-        workEmail: row.work_email,
-        company: row.company,
-        jobTitle: row.job_title,
-        countryRegion: row.country_region,
-        consentToContact: row.consent_to_contact,
-        source: row.source,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      })),
+      entries: result.rows.map(mapAssessmentAdminRow),
     });
   } catch (error) {
-    console.error("Lead capture read failed", error);
+    console.error("Assessment submission read failed", error);
 
     return NextResponse.json(
       {
-        message: "Lead records could not be loaded right now.",
+        message: "Assessment records could not be loaded right now.",
       },
       { status: 500 },
     );
@@ -93,18 +109,20 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null);
-  const parsed = leadCaptureSchema.safeParse(payload);
+  const parsed = assessmentSubmissionSchema.safeParse(payload);
 
   if (!parsed.success) {
     return NextResponse.json(
       {
-        message: "We could not save your details. Please review the form and try again.",
+        message: "The assessment payload could not be saved. Review the submitted values and try again.",
         issues: parsed.error.flatten(),
       },
       { status: 400 },
     );
   }
 
+  const normalizedInputs = normalizeAssessmentInputs(parsed.data.inputs);
+  const computedResults = assessBioPilotFit(normalizedInputs);
   const pool = getPool();
 
   if (!pool) {
@@ -112,32 +130,40 @@ export async function POST(request: Request) {
       {
         storageMode: "local_only" as const,
         message:
-          "Your details were saved for this browser session. Server-side follow-up is not connected yet.",
+          "The report was generated, but server-side assessment storage is not connected yet.",
+        results: computedResults,
       },
       { status: 202 },
     );
   }
 
   try {
-    await ensureLeadCaptureTable(pool);
+    await ensurePersistenceTables(pool);
 
-    await upsertLeadCapture(pool, parsed.data);
+    const inserted = await insertAssessmentSubmission({
+      pool,
+      lead: parsed.data,
+      inputs: normalizedInputs,
+    });
 
     return NextResponse.json(
       {
         storageMode: "database" as const,
-        message: "Your details were saved successfully for follow-up.",
+        message: "The assessment report was saved successfully for follow-up.",
+        assessmentId: inserted.assessmentId,
+        results: inserted.results,
       },
       { status: 201 },
     );
   } catch (error) {
-    console.error("Lead capture insert failed", error);
+    console.error("Assessment submission insert failed", error);
 
     return NextResponse.json(
       {
         storageMode: "local_only" as const,
         message:
-          "Your details were saved for this browser session. Server-side follow-up is not available right now.",
+          "The report was generated, but server-side assessment storage is not available right now.",
+        results: computedResults,
       },
       { status: 202 },
     );
@@ -150,7 +176,7 @@ export async function DELETE(request: Request) {
   if (!pool) {
     return NextResponse.json(
       {
-        message: "Lead storage is not connected. Set DATABASE_URL on the web service.",
+        message: "Assessment storage is not connected. Set DATABASE_URL on the web service.",
       },
       { status: 503 },
     );
@@ -172,18 +198,18 @@ export async function DELETE(request: Request) {
   if (!Number.isInteger(id) || id < 1) {
     return NextResponse.json(
       {
-        message: "A valid lead id is required.",
+        message: "A valid assessment id is required.",
       },
       { status: 400 },
     );
   }
 
   try {
-    await ensureLeadCaptureTable(pool);
+    await ensurePersistenceTables(pool);
 
     const result = await pool.query(
       `
-        DELETE FROM roi_lead_captures
+        DELETE FROM roi_assessment_submissions
         WHERE id = $1
       `,
       [id],
@@ -192,21 +218,21 @@ export async function DELETE(request: Request) {
     if (result.rowCount === 0) {
       return NextResponse.json(
         {
-          message: "Lead record not found.",
+          message: "Assessment record not found.",
         },
         { status: 404 },
       );
     }
 
     return NextResponse.json({
-      message: "Lead record deleted.",
+      message: "Assessment record deleted.",
     });
   } catch (error) {
-    console.error("Lead capture delete failed", error);
+    console.error("Assessment submission delete failed", error);
 
     return NextResponse.json(
       {
-        message: "Lead record could not be deleted right now.",
+        message: "Assessment record could not be deleted right now.",
       },
       { status: 500 },
     );

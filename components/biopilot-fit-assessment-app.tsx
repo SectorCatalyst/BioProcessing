@@ -1496,6 +1496,8 @@ function ReportStep({
   inputs,
   results,
   leadCapture,
+  storageMode,
+  storageMessage,
   onEditInputs,
   onNewAssessment,
   onChangeContact,
@@ -1503,6 +1505,8 @@ function ReportStep({
   inputs: BioPilotAssessmentInputs;
   results: BioPilotAssessmentResults;
   leadCapture: LeadCaptureRecord | null;
+  storageMode: "database" | "local_only" | null;
+  storageMessage: string | null;
   onEditInputs: () => void;
   onNewAssessment: () => void;
   onChangeContact: () => void;
@@ -1867,6 +1871,31 @@ function ReportStep({
             </Alert>
           </CardContent>
         ) : null}
+        {storageMessage ? (
+          <CardContent className="mt-4 p-0">
+            <Alert
+              className={cn(
+                "bg-[color:var(--surface-2)]",
+                storageMode === "database"
+                  ? "border-[color:var(--border)]"
+                  : "border-[color:var(--brand-yellow)]/30",
+              )}
+            >
+              <ShieldCheck
+                className={cn(
+                  "size-4",
+                  storageMode === "database"
+                    ? "text-[color:var(--brand-blue)]"
+                    : "text-[color:var(--brand-yellow)]",
+                )}
+              />
+              <AlertTitle>
+                {storageMode === "database" ? "Assessment saved" : "Assessment generated locally"}
+              </AlertTitle>
+              <AlertDescription>{storageMessage}</AlertDescription>
+            </Alert>
+          </CardContent>
+        ) : null}
       </Card>
     </div>
   );
@@ -1887,6 +1916,8 @@ export function BioPilotFitAssessmentApp() {
   const [reportResults, setReportResults] = useState<BioPilotAssessmentResults | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [assessmentStorageMode, setAssessmentStorageMode] = useState<"database" | "local_only" | null>(null);
+  const [assessmentStorageMessage, setAssessmentStorageMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1915,11 +1946,15 @@ export function BioPilotFitAssessmentApp() {
   const handleLoadSample = (sampleId: string) => {
     setInputs(buildRandomizedSampleInputs(sampleId));
     setReportError(null);
+    setAssessmentStorageMode(null);
+    setAssessmentStorageMessage(null);
   };
 
   const handleResetInputs = () => {
     setInputs(DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
     setReportError(null);
+    setAssessmentStorageMode(null);
+    setAssessmentStorageMessage(null);
   };
 
   const handleSubmitLead = (record: LeadCaptureRecord) => {
@@ -1927,13 +1962,43 @@ export function BioPilotFitAssessmentApp() {
     setCurrentStep("profile");
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
+    if (!leadCapture) {
+      setReportError("Enter contact details before generating the report.");
+      return;
+    }
+
     setIsGeneratingReport(true);
     setReportError(null);
+    setAssessmentStorageMode(null);
+    setAssessmentStorageMessage(null);
 
     try {
       const normalizedInputs = normalizeAssessmentInputs(inputs);
-      const nextResults = assessBioPilotFit(normalizedInputs);
+      const response = await fetch("/api/assessment-submissions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: leadCapture.firstName,
+          lastName: leadCapture.lastName,
+          workEmail: leadCapture.workEmail,
+          company: leadCapture.company,
+          jobTitle: leadCapture.jobTitle,
+          countryRegion: leadCapture.countryRegion,
+          consentToContact: leadCapture.consentToContact,
+          inputs: normalizedInputs,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            message?: string;
+            storageMode?: "database" | "local_only";
+            results?: BioPilotAssessmentResults;
+          }
+        | null;
+      const nextResults = payload?.results ?? assessBioPilotFit(normalizedInputs);
       const coreMetrics = [
         nextResults.fitScore,
         nextResults.annualValuePotential,
@@ -1945,13 +2010,24 @@ export function BioPilotFitAssessmentApp() {
         throw new Error("Assessment metrics were not finite.");
       }
 
+      if (!response.ok) {
+        throw new Error(payload?.message ?? "Assessment storage failed.");
+      }
+
       setInputs(normalizedInputs);
       setReportResults(nextResults);
+      setAssessmentStorageMode(payload?.storageMode ?? "local_only");
+      setAssessmentStorageMessage(
+        payload?.message ??
+          "The assessment report was generated. Server-side storage status was not returned.",
+      );
       setCurrentStep("report");
     } catch (error) {
       console.error("Final report generation failed", error);
       setReportError(
-        "The report could not be generated from the current inputs. Review the numeric fields and try again.",
+        error instanceof Error
+          ? error.message
+          : "The report could not be generated from the current inputs. Review the numeric fields and try again.",
       );
     } finally {
       setIsGeneratingReport(false);
@@ -1962,6 +2038,8 @@ export function BioPilotFitAssessmentApp() {
     setReportResults(null);
     setInputs(DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
     setReportError(null);
+    setAssessmentStorageMode(null);
+    setAssessmentStorageMessage(null);
     setCurrentStep("profile");
   };
 
@@ -1969,6 +2047,8 @@ export function BioPilotFitAssessmentApp() {
     clearLeadCapture();
     setReportResults(null);
     setReportError(null);
+    setAssessmentStorageMode(null);
+    setAssessmentStorageMessage(null);
     setCurrentStep("intro");
   };
 
@@ -2061,6 +2141,8 @@ export function BioPilotFitAssessmentApp() {
                     inputs={inputs}
                     results={reportResults}
                     leadCapture={leadCapture}
+                    storageMode={assessmentStorageMode}
+                    storageMessage={assessmentStorageMessage}
                     onEditInputs={() => setCurrentStep("inputs")}
                     onNewAssessment={handleStartAnotherAssessment}
                     onChangeContact={handleChangeContact}

@@ -1,21 +1,29 @@
-export type ProcessProfileId =
-  | "mab-cho"
-  | "biosimilar-antibody"
-  | "recombinant-protein"
-  | "microbial-fermentation"
-  | "vaccines"
-  | "viral-vector"
-  | "plasmid-dna"
-  | "mrna-rna"
-  | "sirna"
-  | "cell-therapy"
-  | "regenerative-medicine";
+import { z } from "zod";
 
-export type LifecycleStageId =
-  | "process-development"
-  | "late-development"
-  | "clinical-manufacturing"
-  | "commercial-scale";
+export const PROCESS_PROFILE_IDS = [
+  "mab-cho",
+  "biosimilar-antibody",
+  "recombinant-protein",
+  "microbial-fermentation",
+  "vaccines",
+  "viral-vector",
+  "plasmid-dna",
+  "mrna-rna",
+  "sirna",
+  "cell-therapy",
+  "regenerative-medicine",
+] as const;
+
+export type ProcessProfileId = (typeof PROCESS_PROFILE_IDS)[number];
+
+export const LIFECYCLE_STAGE_IDS = [
+  "process-development",
+  "late-development",
+  "clinical-manufacturing",
+  "commercial-scale",
+] as const;
+
+export type LifecycleStageId = (typeof LIFECYCLE_STAGE_IDS)[number];
 
 export interface ProcessProfile {
   id: ProcessProfileId;
@@ -142,6 +150,38 @@ export interface BioPilotAssessmentResults {
   executiveSummary: string;
   nextStep: string;
 }
+
+const boundedNumber = (min: number, max: number) =>
+  z.number().finite().min(min).max(max);
+
+export const bioPilotAssessmentInputsSchema = z.object({
+  processProfileId: z.enum(PROCESS_PROFILE_IDS),
+  lifecycleStageId: z.enum(LIFECYCLE_STAGE_IDS),
+  activePrograms: boundedNumber(1, 18),
+  runsPerYear: boundedNumber(12, 220),
+  sites: boundedNumber(1, 8),
+  transferEventsPerYear: boundedNumber(0, 12),
+  vendorPlatforms: boundedNumber(1, 8),
+  blendedHourlyRate: boundedNumber(80, 260),
+  costPerFailedRun: boundedNumber(15000, 250000),
+  valuePerDayAcceleration: boundedNumber(10000, 150000),
+  plannedProgramInvestment: boundedNumber(100000, 900000),
+  bioreactorConnectivity: boundedNumber(0, 100),
+  sensorCoverage: boundedNumber(0, 100),
+  patCoverage: boundedNumber(0, 100),
+  analyzerConnectivity: boundedNumber(0, 100),
+  downstreamVisibility: boundedNumber(0, 100),
+  dataContextualization: boundedNumber(0, 100),
+  sopAutomation: boundedNumber(0, 100),
+  reviewByException: boundedNumber(0, 100),
+  crossSiteCollaboration: boundedNumber(0, 100),
+  manualTranscriptionShare: boundedNumber(0, 100),
+  offlineDataDelayHours: boundedNumber(1, 36),
+  batchReviewHours: boundedNumber(2, 48),
+  deviationInvestigationHours: boundedNumber(2, 48),
+  techTransferPackageHours: boundedNumber(8, 160),
+  onboardingDays: boundedNumber(3, 40),
+});
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));

@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, RefreshCw, Search, Shield, Trash2 } from "lucide-react";
 
+import {
+  LIFECYCLE_STAGE_MAP,
+  PROCESS_PROFILE_MAP,
+  type ProcessProfileId,
+  type LifecycleStageId,
+} from "@/lib/biopilot-fit-assessment";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +28,29 @@ interface LeadAdminEntry {
   updatedAt: string;
 }
 
+interface AssessmentAdminEntry {
+  id: string;
+  leadCaptureId: string | null;
+  firstName: string;
+  lastName: string;
+  workEmail: string;
+  company: string;
+  jobTitle: string;
+  countryRegion: string;
+  processProfileId: ProcessProfileId;
+  lifecycleStageId: LifecycleStageId;
+  fitBand: string;
+  fitScore: number;
+  annualValuePotential: number;
+  threeYearRoi: number;
+  paybackMonths: number;
+  digitalCoverage: number;
+  manualBurdenIndex: number;
+  executiveSummary: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const PANEL_CARD =
   "glass-edge relative rounded-[28px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(246,249,252,0.98))] backdrop-blur-xl";
 const SOFT_CARD =
@@ -29,9 +58,19 @@ const SOFT_CARD =
 const INPUT_CLASS =
   "h-[52px] rounded-[16px] border-[color:var(--input)] bg-[color:var(--surface-3)] px-4 text-base font-medium text-[color:var(--foreground)] shadow-[inset_0_1px_0_rgba(255,255,255,0.62)] placeholder:text-[color:var(--muted-foreground)] focus-visible:border-[color:var(--border-strong)] focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]";
 const PRIMARY_BUTTON =
-  "h-[52px] rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[linear-gradient(135deg,#004f9b,#0b7fff)] px-5 text-base font-semibold text-white shadow-[0_16px_34px_rgba(0,95,189,0.22)] hover:shadow-[0_22px_42px_rgba(0,95,189,0.28)]";
+  "h-[44px] rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[linear-gradient(135deg,#004f9b,#0b7fff)] px-4 text-[0.95rem] font-semibold text-white shadow-[0_10px_24px_rgba(0,95,189,0.18)] hover:shadow-[0_14px_30px_rgba(0,95,189,0.22)]";
 const SECONDARY_BUTTON =
-  "h-[52px] rounded-[16px] border-[color:var(--border-strong)] bg-[color:var(--surface-3)] px-5 text-base font-semibold text-[color:var(--foreground)] hover:bg-[color:var(--surface-elevated)]";
+  "h-[44px] rounded-[14px] border-[color:var(--border-strong)] bg-[color:var(--surface-3)] px-4 text-[0.95rem] font-semibold text-[color:var(--foreground)] hover:bg-[color:var(--surface-elevated)]";
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
+const percentFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
+});
 
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -39,8 +78,26 @@ const formatDateTime = (value: string) =>
     timeStyle: "short",
   }).format(new Date(value));
 
-const exportCsv = (entries: LeadAdminEntry[]) => {
-  const rows = [
+const exportCsv = (filename: string, rows: string[][]) => {
+  const csv = rows
+    .map((row) =>
+      row
+        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+        .join(","),
+    )
+    .join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${filename}-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
+const exportLeadCsv = (entries: LeadAdminEntry[]) => {
+  exportCsv("lead-captures", [
     [
       "id",
       "first_name",
@@ -67,37 +124,72 @@ const exportCsv = (entries: LeadAdminEntry[]) => {
       entry.createdAt,
       entry.updatedAt,
     ]),
-  ];
+  ]);
+};
 
-  const csv = rows
-    .map((row) =>
-      row
-        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
-        .join(","),
-    )
-    .join("\n");
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `lead-captures-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+const exportAssessmentCsv = (entries: AssessmentAdminEntry[]) => {
+  exportCsv("assessment-submissions", [
+    [
+      "id",
+      "lead_capture_id",
+      "first_name",
+      "last_name",
+      "work_email",
+      "company",
+      "job_title",
+      "country_region",
+      "process_profile",
+      "lifecycle_stage",
+      "fit_band",
+      "fit_score",
+      "annual_value",
+      "three_year_roi",
+      "payback_months",
+      "digital_coverage",
+      "manual_burden_index",
+      "executive_summary",
+      "created_at",
+      "updated_at",
+    ],
+    ...entries.map((entry) => [
+      entry.id,
+      entry.leadCaptureId ?? "",
+      entry.firstName,
+      entry.lastName,
+      entry.workEmail,
+      entry.company,
+      entry.jobTitle,
+      entry.countryRegion,
+      PROCESS_PROFILE_MAP[entry.processProfileId]?.label ?? entry.processProfileId,
+      LIFECYCLE_STAGE_MAP[entry.lifecycleStageId]?.label ?? entry.lifecycleStageId,
+      entry.fitBand,
+      String(entry.fitScore),
+      String(entry.annualValuePotential),
+      String(entry.threeYearRoi),
+      String(entry.paybackMonths),
+      String(entry.digitalCoverage),
+      String(entry.manualBurdenIndex),
+      entry.executiveSummary,
+      entry.createdAt,
+      entry.updatedAt,
+    ]),
+  ]);
 };
 
 export default function LeadAdminPage() {
   const [adminKey, setAdminKey] = useState("");
-  const [entries, setEntries] = useState<LeadAdminEntry[]>([]);
+  const [leads, setLeads] = useState<LeadAdminEntry[]>([]);
+  const [assessments, setAssessments] = useState<AssessmentAdminEntry[]>([]);
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [isDeletingLeadId, setIsDeletingLeadId] = useState<string | null>(null);
+  const [isDeletingAssessmentId, setIsDeletingAssessmentId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
   const loadEntries = useCallback(async (key = adminKey) => {
     if (!key.trim()) {
-      setErrorMessage("Enter the admin key to load leads.");
+      setErrorMessage("Enter the admin key to load records.");
       return;
     }
 
@@ -106,46 +198,62 @@ export default function LeadAdminPage() {
     setStatusMessage("");
 
     try {
-      const response = await fetch("/api/lead-capture", {
-        headers: {
-          "x-admin-key": key.trim(),
-        },
-      });
-      const payload = (await response.json().catch(() => null)) as
+      const [leadResponse, assessmentResponse] = await Promise.all([
+        fetch("/api/lead-capture", {
+          headers: { "x-admin-key": key.trim() },
+        }),
+        fetch("/api/assessment-submissions", {
+          headers: { "x-admin-key": key.trim() },
+        }),
+      ]);
+
+      const leadPayload = (await leadResponse.json().catch(() => null)) as
         | { message?: string; entries?: LeadAdminEntry[] }
         | null;
+      const assessmentPayload = (await assessmentResponse.json().catch(() => null)) as
+        | { message?: string; entries?: AssessmentAdminEntry[] }
+        | null;
 
-      if (!response.ok) {
-        setEntries([]);
-        setErrorMessage(payload?.message ?? "Lead records could not be loaded.");
+      if (!leadResponse.ok) {
+        setLeads([]);
+        setAssessments([]);
+        setErrorMessage(leadPayload?.message ?? "Lead records could not be loaded.");
+        return;
+      }
+
+      if (!assessmentResponse.ok) {
+        setLeads([]);
+        setAssessments([]);
+        setErrorMessage(assessmentPayload?.message ?? "Assessment records could not be loaded.");
         return;
       }
 
       sessionStorage.setItem("lead-capture-admin-key", key.trim());
-      setEntries(payload?.entries ?? []);
-      setStatusMessage(`Loaded ${payload?.entries?.length ?? 0} lead records.`);
+      setLeads(leadPayload?.entries ?? []);
+      setAssessments(assessmentPayload?.entries ?? []);
+      setStatusMessage(
+        `Loaded ${leadPayload?.entries?.length ?? 0} leads and ${assessmentPayload?.entries?.length ?? 0} assessments.`,
+      );
     } catch {
-      setErrorMessage("Lead records could not be loaded.");
+      setErrorMessage("Records could not be loaded.");
     } finally {
       setIsLoading(false);
     }
   }, [adminKey]);
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteLead = async (id: string) => {
     if (!window.confirm("Delete this lead record?")) {
       return;
     }
 
-    setIsDeletingId(id);
+    setIsDeletingLeadId(id);
     setErrorMessage("");
     setStatusMessage("");
 
     try {
       const response = await fetch(`/api/lead-capture?id=${id}`, {
         method: "DELETE",
-        headers: {
-          "x-admin-key": adminKey.trim(),
-        },
+        headers: { "x-admin-key": adminKey.trim() },
       });
       const payload = (await response.json().catch(() => null)) as { message?: string } | null;
 
@@ -154,12 +262,42 @@ export default function LeadAdminPage() {
         return;
       }
 
-      setEntries((current) => current.filter((entry) => entry.id !== id));
+      setLeads((current) => current.filter((entry) => entry.id !== id));
       setStatusMessage("Lead record deleted.");
     } catch {
       setErrorMessage("Lead record could not be deleted.");
     } finally {
-      setIsDeletingId(null);
+      setIsDeletingLeadId(null);
+    }
+  };
+
+  const handleDeleteAssessment = async (id: string) => {
+    if (!window.confirm("Delete this assessment record?")) {
+      return;
+    }
+
+    setIsDeletingAssessmentId(id);
+    setErrorMessage("");
+    setStatusMessage("");
+
+    try {
+      const response = await fetch(`/api/assessment-submissions?id=${id}`, {
+        method: "DELETE",
+        headers: { "x-admin-key": adminKey.trim() },
+      });
+      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+
+      if (!response.ok) {
+        setErrorMessage(payload?.message ?? "Assessment record could not be deleted.");
+        return;
+      }
+
+      setAssessments((current) => current.filter((entry) => entry.id !== id));
+      setStatusMessage("Assessment record deleted.");
+    } catch {
+      setErrorMessage("Assessment record could not be deleted.");
+    } finally {
+      setIsDeletingAssessmentId(null);
     }
   };
 
@@ -171,13 +309,14 @@ export default function LeadAdminPage() {
     }
   }, [loadEntries]);
 
-  const filteredEntries = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) {
-      return entries;
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const filteredLeads = useMemo(() => {
+    if (!normalizedQuery) {
+      return leads;
     }
 
-    return entries.filter((entry) =>
+    return leads.filter((entry) =>
       [
         entry.firstName,
         entry.lastName,
@@ -188,12 +327,35 @@ export default function LeadAdminPage() {
       ]
         .join(" ")
         .toLowerCase()
-        .includes(normalized),
+        .includes(normalizedQuery),
     );
-  }, [entries, query]);
+  }, [leads, normalizedQuery]);
 
-  const consentedCount = entries.filter((entry) => entry.consentToContact).length;
-  const uniqueCompanies = new Set(entries.map((entry) => entry.company.toLowerCase())).size;
+  const filteredAssessments = useMemo(() => {
+    if (!normalizedQuery) {
+      return assessments;
+    }
+
+    return assessments.filter((entry) =>
+      [
+        entry.firstName,
+        entry.lastName,
+        entry.workEmail,
+        entry.company,
+        entry.jobTitle,
+        entry.countryRegion,
+        PROCESS_PROFILE_MAP[entry.processProfileId]?.label ?? entry.processProfileId,
+        LIFECYCLE_STAGE_MAP[entry.lifecycleStageId]?.label ?? entry.lifecycleStageId,
+        entry.fitBand,
+        entry.executiveSummary,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
+  }, [assessments, normalizedQuery]);
+
+  const uniqueCompanies = new Set(leads.map((entry) => entry.company.toLowerCase())).size;
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 lg:px-8">
@@ -203,13 +365,13 @@ export default function LeadAdminPage() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                  Lead management
+                  Capture management
                 </p>
                 <CardTitle className="mt-2 font-heading text-[2.2rem] tracking-[-0.04em]">
-                  Review captured BioPilot entries
+                  Review BioPilot leads and submitted assessments
                 </CardTitle>
                 <CardDescription className="mt-2 max-w-4xl text-lg leading-7 text-[color:var(--muted-foreground)]">
-                  Load, search, export, and remove lead records stored in Render Postgres.
+                  Load, search, export, and remove contact records and full assessment submissions stored in Render Postgres.
                 </CardDescription>
               </div>
               <div className={cn(SOFT_CARD, "flex items-center gap-3 px-4 py-3")}>
@@ -229,7 +391,7 @@ export default function LeadAdminPage() {
                 Admin access
               </CardTitle>
               <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
-                Use the admin key to connect this page to stored lead records.
+                Use the admin key to connect this page to stored lead and assessment records.
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-4 grid gap-3 p-0">
@@ -247,16 +409,11 @@ export default function LeadAdminPage() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Button className={PRIMARY_BUTTON} onClick={() => void loadEntries()}>
-                  {isLoading ? "Loading..." : "Load entries"}
+                  {isLoading ? "Loading..." : "Load records"}
                 </Button>
-                <Button
-                  variant="outline"
-                  className={SECONDARY_BUTTON}
-                  onClick={() => exportCsv(filteredEntries)}
-                  disabled={!filteredEntries.length}
-                >
-                  <Download className="size-4" />
-                  Export CSV
+                <Button variant="outline" className={SECONDARY_BUTTON} onClick={() => void loadEntries()}>
+                  <RefreshCw className="size-4" />
+                  Refresh
                 </Button>
               </div>
               {errorMessage ? (
@@ -268,10 +425,11 @@ export default function LeadAdminPage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             {[
-              { label: "Stored entries", value: String(entries.length) },
-              { label: "Consented", value: String(consentedCount) },
+              { label: "Lead records", value: String(leads.length) },
+              { label: "Assessments", value: String(assessments.length) },
+              { label: "Consented", value: String(leads.filter((entry) => entry.consentToContact).length) },
               { label: "Companies", value: String(uniqueCompanies) },
             ].map((item) => (
               <Card key={item.label} className={cn(PANEL_CARD, "p-5")}>
@@ -293,27 +451,45 @@ export default function LeadAdminPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <CardTitle className="font-heading text-[1.5rem] tracking-[-0.03em]">
+                  Search records
+                </CardTitle>
+                <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
+                  Search both lead captures and submitted assessments by contact, company, process, or summary.
+                </CardDescription>
+              </div>
+              <div className="relative min-w-[280px]">
+                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[color:var(--muted-foreground)]" />
+                <Input
+                  className={cn(INPUT_CLASS, "pl-11")}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search records"
+                />
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <Card className={cn(PANEL_CARD, "p-5")}>
+          <CardHeader className="p-0">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle className="font-heading text-[1.5rem] tracking-[-0.03em]">
                   Lead records
                 </CardTitle>
                 <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
-                  Search by name, email, company, title, or region.
+                  Stored contact records captured from the assessment gate.
                 </CardDescription>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="relative min-w-[280px]">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[color:var(--muted-foreground)]" />
-                  <Input
-                    className={cn(INPUT_CLASS, "pl-11")}
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search leads"
-                  />
-                </div>
-                <Button variant="outline" className={SECONDARY_BUTTON} onClick={() => void loadEntries()}>
-                  <RefreshCw className="size-4" />
-                  Refresh
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                className={SECONDARY_BUTTON}
+                onClick={() => exportLeadCsv(filteredLeads)}
+                disabled={!filteredLeads.length}
+              >
+                <Download className="size-4" />
+                Export leads
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="mt-4 p-0">
@@ -333,8 +509,8 @@ export default function LeadAdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredEntries.length ? (
-                      filteredEntries.map((entry) => (
+                    {filteredLeads.length ? (
+                      filteredLeads.map((entry) => (
                         <tr key={entry.id} className="border-b border-[color:var(--border)] last:border-b-0">
                           <td className="px-4 py-4 align-top">
                             <p className="text-base font-semibold text-[color:var(--foreground)]">
@@ -362,12 +538,12 @@ export default function LeadAdminPage() {
                           <td className="px-4 py-4 align-top">
                             <Button
                               variant="outline"
-                              className={cn(SECONDARY_BUTTON, "h-[42px] px-3 text-sm")}
-                              onClick={() => void handleDelete(entry.id)}
-                              disabled={isDeletingId === entry.id}
+                              className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
+                              onClick={() => void handleDeleteLead(entry.id)}
+                              disabled={isDeletingLeadId === entry.id}
                             >
                               <Trash2 className="size-4" />
-                              {isDeletingId === entry.id ? "Deleting..." : "Delete"}
+                              {isDeletingLeadId === entry.id ? "Deleting..." : "Delete"}
                             </Button>
                           </td>
                         </tr>
@@ -378,9 +554,118 @@ export default function LeadAdminPage() {
                           colSpan={7}
                           className="px-4 py-10 text-center text-base text-[color:var(--muted-foreground)]"
                         >
-                          {entries.length
+                          {leads.length
                             ? "No lead records match the current search."
                             : "No lead records loaded yet."}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={cn(PANEL_CARD, "p-5")}>
+          <CardHeader className="p-0">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle className="font-heading text-[1.5rem] tracking-[-0.03em]">
+                  Assessment submissions
+                </CardTitle>
+                <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
+                  Full saved BioPilot reports tied to the submitted contact and operating inputs.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                className={SECONDARY_BUTTON}
+                onClick={() => exportAssessmentCsv(filteredAssessments)}
+                disabled={!filteredAssessments.length}
+              >
+                <Download className="size-4" />
+                Export assessments
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="mt-4 p-0">
+            <div className={cn(SOFT_CARD, "overflow-hidden")}>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse">
+                  <thead className="bg-[color:var(--surface-elevated)]">
+                    <tr className="text-left">
+                      {["Contact", "Process", "Stage", "Fit", "Annual Value", "ROI", "Captured", "Actions"].map((label) => (
+                        <th
+                          key={label}
+                          className="border-b border-[color:var(--border)] px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]"
+                        >
+                          {label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAssessments.length ? (
+                      filteredAssessments.map((entry) => (
+                        <tr key={entry.id} className="border-b border-[color:var(--border)] last:border-b-0">
+                          <td className="px-4 py-4 align-top">
+                            <p className="text-base font-semibold text-[color:var(--foreground)]">
+                              {entry.firstName} {entry.lastName}
+                            </p>
+                            <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+                              {entry.workEmail}
+                            </p>
+                            <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+                              {entry.company}
+                            </p>
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {PROCESS_PROFILE_MAP[entry.processProfileId]?.label ?? entry.processProfileId}
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {LIFECYCLE_STAGE_MAP[entry.lifecycleStageId]?.label ?? entry.lifecycleStageId}
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.fitBand}
+                            <div className="text-[color:var(--muted-foreground)]">
+                              {percentFormatter.format(entry.fitScore)}%
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {currencyFormatter.format(entry.annualValuePotential)}
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {percentFormatter.format(entry.threeYearRoi)}%
+                            <div className="text-[color:var(--muted-foreground)]">
+                              {entry.paybackMonths.toFixed(1)} mo payback
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--muted-foreground)]">
+                            {formatDateTime(entry.createdAt)}
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <Button
+                              variant="outline"
+                              className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
+                              onClick={() => void handleDeleteAssessment(entry.id)}
+                              disabled={isDeletingAssessmentId === entry.id}
+                            >
+                              <Trash2 className="size-4" />
+                              {isDeletingAssessmentId === entry.id ? "Deleting..." : "Delete"}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={8}
+                          className="px-4 py-10 text-center text-base text-[color:var(--muted-foreground)]"
+                        >
+                          {assessments.length
+                            ? "No assessment records match the current search."
+                            : "No assessment records loaded yet."}
                         </td>
                       </tr>
                     )}
