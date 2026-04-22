@@ -1,5 +1,5 @@
-import { CalculatorApp } from "@/components/calculator-app";
+import { BioPilotFitAssessmentApp } from "@/components/biopilot-fit-assessment-app";
 
 export default function Home() {
-  return <CalculatorApp />;
+  return <BioPilotFitAssessmentApp />;
 }

@@ -117,7 +117,7 @@ const buildBiotechExpansionModel = () => {
     reviewerName: "Commercial strategy lead",
     reviewedAt: "2026-03-15",
     reviewNotes:
-      "Illustrative governed demo dataset for internal business-case review and product walkthroughs.",
+      "Sample dataset prepared from directional public ranges for digital bioprocess integration and planning discussions.",
     internalDiscussionApproval: true,
   };
   model.scenarioJustifications.expected = {
@@ -192,30 +192,30 @@ const buildCdmoScaleUpModel = () => {
     annualSupportCost: 145000,
     oneTimeImplementationCost: 510000,
     validationCost: 210000,
-    valuePerWeekOfAcceleration: 148000,
-    costPerTransferDelayEvent: 215000,
+    valuePerWeekOfAcceleration: 110000,
+    costPerTransferDelayEvent: 180000,
   };
   model.scenarios.expected.improvementAssumptions = {
-    reductionInDataAggregation: 22,
-    reductionInReporting: 20,
-    reductionInTroubleshooting: 17,
-    reductionInManualWorkflowExecution: 21,
+    reductionInDataAggregation: 20,
+    reductionInReporting: 18,
+    reductionInTroubleshooting: 15,
+    reductionInManualWorkflowExecution: 18,
     reductionInReruns: 12,
     reductionInFailedRuns: 8,
     reductionInDeviations: 15,
-    reductionInCampaignDuration: 8,
-    reductionInTransferPreparation: 23,
-    reductionInOnboarding: 24,
-    reductionInDecisionLag: 18,
-    reductionInTransferDelayRisk: 11,
+    reductionInCampaignDuration: 6,
+    reductionInTransferPreparation: 20,
+    reductionInOnboarding: 19,
+    reductionInDecisionLag: 15,
+    reductionInTransferDelayRisk: 9,
   };
   model.scenarios.expected.riskAndRealization = {
     laborTreatmentMode: "mixed",
     mixedLaborHardSavingsShare: 42,
-    captureFactor: 60,
-    confidenceFactor: 70,
+    captureFactor: 56,
+    confidenceFactor: 68,
     adoptionRampMonths: 7,
-    firstYearRealization: 58,
+    firstYearRealization: 55,
     integrationComplexity: "medium",
     validationIntensity: "intensive",
     changeManagementRisk: "medium",
@@ -231,7 +231,7 @@ const buildCdmoScaleUpModel = () => {
     reviewerName: "CDMO operations planning",
     reviewedAt: "2026-03-16",
     reviewNotes:
-      "Illustrative scale-up and transfer demo dataset intended to exercise transfer and risk mechanics.",
+      "Sample scale-up dataset built from directional public ranges to highlight transfer planning, operational risk, and rollout timing.",
     internalDiscussionApproval: false,
   };
   model.scenarioJustifications.expected = {
@@ -251,22 +251,164 @@ const buildCdmoScaleUpModel = () => {
   return model;
 };
 
+const buildCellGeneTransferModel = () => {
+  const model = cloneDefaultModel();
+
+  model.organizationProfile = {
+    organizationType: "Cell and Gene Therapy Developer",
+    modality: "Viral Vector",
+    processStage: "Tech Transfer",
+    processType: "Integrated",
+    activeProgramsPerYear: 5,
+    runsPerMonth: 16,
+    users: 64,
+    sites: 3,
+    scaleRange: "Clinical to Commercial",
+    instrumentsPerWorkflow: 18,
+    vendorsPerWorkflow: 6,
+    transferEventsPerYear: 10,
+    newUsersPerYear: 18,
+  };
+
+  for (const scenarioId of ["conservative", "expected", "aggressive"] as const) {
+    model.scenarios[scenarioId].currentState = {
+      ...model.scenarios[scenarioId].currentState,
+      scientistDataAggregationHoursPerRun: 6.2,
+      engineerDataAggregationHoursPerRun: 4.7,
+      technicianDataAggregationHoursPerRun: 2.8,
+      reportingHoursPerRun: 5,
+      troubleshootingHoursPerRun: 4.3,
+      manualWorkflowExecutionHoursPerRun: 4.1,
+      averageRerunRate: 12,
+      averageFailedRunRate: 5,
+      deviationsPerYear: 38,
+      investigationHoursPerDeviation: 16,
+      campaignDurationWeeks: 22,
+      transferPackagePreparationHours: 132,
+      onboardingHoursPerUser: 34,
+      timeToDecisionLagHours: 28,
+    };
+  }
+
+  model.scenarios.expected.costBasis = {
+    ...model.scenarios.expected.costBasis,
+    scientistHourlyCost: 185,
+    engineerHourlyCost: 170,
+    technicianHourlyCost: 112,
+    qaHourlyCost: 158,
+    costPerRerun: 32000,
+    costPerFailedRun: 88000,
+    costPerDeviation: 13500,
+    annualSoftwareCost: 295000,
+    annualSupportCost: 135000,
+    oneTimeImplementationCost: 540000,
+    validationCost: 240000,
+    valuePerWeekOfAcceleration: 145000,
+    costPerTransferDelayEvent: 210000,
+  };
+
+  model.scenarios.expected.improvementAssumptions = {
+    reductionInDataAggregation: 26,
+    reductionInReporting: 24,
+    reductionInTroubleshooting: 18,
+    reductionInManualWorkflowExecution: 21,
+    reductionInReruns: 10,
+    reductionInFailedRuns: 8,
+    reductionInDeviations: 16,
+    reductionInCampaignDuration: 7,
+    reductionInTransferPreparation: 24,
+    reductionInOnboarding: 27,
+    reductionInDecisionLag: 22,
+    reductionInTransferDelayRisk: 12,
+  };
+
+  model.scenarios.expected.riskAndRealization = {
+    laborTreatmentMode: "mixed",
+    mixedLaborHardSavingsShare: 35,
+    captureFactor: 54,
+    confidenceFactor: 62,
+    adoptionRampMonths: 7,
+    firstYearRealization: 54,
+    integrationComplexity: "high",
+    validationIntensity: "intensive",
+    changeManagementRisk: "medium",
+    accelerationValueCategory: "capacity",
+  };
+
+  model.scenarios.conservative.improvementAssumptions = {
+    ...model.scenarios.expected.improvementAssumptions,
+    reductionInDataAggregation: 18,
+    reductionInReporting: 16,
+    reductionInCampaignDuration: 4,
+    reductionInTransferPreparation: 15,
+    reductionInDecisionLag: 14,
+  };
+
+  model.scenarios.aggressive.improvementAssumptions = {
+    ...model.scenarios.expected.improvementAssumptions,
+    reductionInDataAggregation: 32,
+    reductionInReporting: 30,
+    reductionInCampaignDuration: 10,
+    reductionInTransferPreparation: 30,
+    reductionInDecisionLag: 28,
+  };
+
+  model.advancedSettings = {
+    ...model.advancedSettings,
+    enableStrategicProxyValues: true,
+    strategicProxyPerMaturityPoint: 30000,
+  };
+
+  model.reviewAndSignOff = {
+    reviewStatus: "Under Review",
+    reviewerName: "Advanced therapies program lead",
+    reviewedAt: "2026-03-18",
+    reviewNotes:
+      "Sample tech-transfer dataset prepared from directional public workflow patterns for complex advanced-therapy handoffs and multi-system review burdens.",
+    internalDiscussionApproval: false,
+  };
+
+  model.scenarioJustifications.expected = {
+    hardSavingsClassification: "",
+    mixedLaborSplit:
+      "The mixed split assumes some effort is redeployed into faster transfer readiness while a limited share offsets external analytical and coordination burden.",
+    strategicProxyActivation:
+      "Strategic proxy is kept separate to reflect timing-sensitive program value without merging it into direct savings.",
+    highCaptureFactor: "",
+    highConfidenceFactor: "",
+    aggressiveScenarioUse: "",
+    stretchAssumption: "",
+    transferDelayAvoidance:
+      "Transfer delay avoidance is included because late evidence packages and multi-site coordination can materially delay advanced-therapy readiness.",
+  };
+
+  return model;
+};
+
 export const TEST_DATASETS: TestDatasetPreset[] = [
   {
     id: "biotech-expansion-demo",
-    label: "Biotech Expansion Demo",
+    label: "Sample Biotech Program",
     description:
-      "Illustrative mid-scale biotech dataset with strategic proxy enabled and moderate realization assumptions.",
+      "A mid-scale biotech example built from directional public ranges, with optional strategic value and moderate ramp assumptions.",
     preferredScenario: "expected",
     model: buildBiotechExpansionModel(),
   },
   {
     id: "cdmo-scale-up-demo",
-    label: "CDMO Scale-Up Demo",
+    label: "Sample CDMO Scale-Up",
     description:
-      "Illustrative multi-site CDMO dataset emphasizing transfer preparation, deviations, and capacity-oriented acceleration.",
+      "A multi-site CDMO example built from directional public ranges, focused on transfer preparation, deviations, and capacity gains.",
     preferredScenario: "expected",
     model: buildCdmoScaleUpModel(),
+  },
+  {
+    id: "cell-gene-transfer-demo",
+    label: "Sample Advanced Therapy Transfer",
+    description:
+      "A complex tech-transfer example with higher evidence-packaging, onboarding, and decision-lag burden across multiple sites.",
+    preferredScenario: "expected",
+    model: buildCellGeneTransferModel(),
   },
 ];
 

@@ -50,11 +50,11 @@ export type ReviewStatus =
   | "Reviewed"
   | "Approved for Internal Discussion";
 export type OverrideType =
-  | "Routine Override"
-  | "Material Override"
-  | "Credibility-Sensitive Override"
-  | "Benchmark Override"
-  | "Post-Review Override";
+  | "Standard Note"
+  | "Material Change"
+  | "High-Confidence Input"
+  | "Benchmark Adjustment"
+  | "Post-Review Update";
 export type SourceLabel = "User" | "Default" | "Derived";
 export type ProvenanceClass =
   | "user_entered"
@@ -298,28 +298,73 @@ const selectOptions = {
     { value: "Innovator Pharma", label: "Innovator Pharma" },
     { value: "Biotech", label: "Biotech" },
     { value: "CDMO", label: "Contract Development and Manufacturing Organization (CDMO)" },
+    {
+      value: "Biologics Manufacturer",
+      label: "Biologics Manufacturer",
+    },
+    {
+      value: "Vaccine Developer or Manufacturer",
+      label: "Vaccine Developer or Manufacturer",
+    },
+    {
+      value: "Cell and Gene Therapy Developer",
+      label: "Cell and Gene Therapy Developer",
+    },
+    {
+      value: "Cell and Gene Therapy CDMO",
+      label: "Cell and Gene Therapy CDMO",
+    },
+    {
+      value: "Microbial Fermentation Operator",
+      label: "Microbial Fermentation Operator",
+    },
+    {
+      value: "Academic or Translational Center",
+      label: "Academic or Translational Center",
+    },
   ],
   modality: [
     { value: "Monoclonal Antibody", label: "Monoclonal Antibody" },
     { value: "Cell Therapy", label: "Cell Therapy" },
     { value: "Gene Therapy", label: "Gene Therapy" },
     { value: "Recombinant Protein", label: "Recombinant Protein" },
+    { value: "Viral Vector", label: "Viral Vector" },
+    { value: "Vaccine", label: "Vaccine" },
+    { value: "Microbial Fermentation", label: "Microbial Fermentation" },
+    { value: "Plasmid DNA", label: "Plasmid DNA" },
+    { value: "mRNA or RNA", label: "mRNA or RNA" },
+    { value: "Bispecific or Complex Biologic", label: "Bispecific or Complex Biologic" },
+    { value: "Enzyme or Industrial Biologic", label: "Enzyme or Industrial Biologic" },
+    { value: "Exosome or Extracellular Vesicle", label: "Exosome or Extracellular Vesicle" },
   ],
   processStage: [
     { value: "Discovery", label: "Discovery" },
+    {
+      value: "Cell Line or Strain Development",
+      label: "Cell Line or Strain Development",
+    },
     { value: "Process Development", label: "Process Development" },
     { value: "Scale-Up", label: "Scale-Up" },
     { value: "Tech Transfer", label: "Tech Transfer" },
+    { value: "Clinical Manufacturing", label: "Clinical Manufacturing" },
+    { value: "Commercial Manufacturing", label: "Commercial Manufacturing" },
+    { value: "Lifecycle Optimization", label: "Lifecycle Optimization" },
   ],
   processType: [
     { value: "Upstream", label: "Upstream" },
+    { value: "Harvest or Clarification", label: "Harvest or Clarification" },
     { value: "Downstream", label: "Downstream" },
+    { value: "Analytical/QC", label: "Analytical / QC" },
+    { value: "Fill-Finish", label: "Fill-Finish" },
+    { value: "Manufacturing Data & Quality", label: "Manufacturing Data & Quality" },
     { value: "Integrated", label: "Integrated" },
   ],
   scaleRange: [
+    { value: "Screening to Bench", label: "Screening to Bench" },
     { value: "Bench to Pilot", label: "Bench to Pilot" },
     { value: "Pilot to Clinical", label: "Pilot to Clinical" },
     { value: "Clinical to Commercial", label: "Clinical to Commercial" },
+    { value: "Commercial or Multi-Site", label: "Commercial or Multi-Site" },
   ],
   laborTreatmentMode: [
     { value: "hard_savings", label: "Hard Savings" },
@@ -363,7 +408,7 @@ export const GLOBAL_FIELD_GROUPS: FieldGroup[] = [
     id: "organizationProfile",
     title: "Organization Profile",
     description:
-      "Define the operating context the model will be applied to. These values are global and shared by each scenario.",
+      "Describe the operating environment for this estimate. These inputs apply across every scenario.",
     scenarioScoped: false,
     fields: [
       {
@@ -479,7 +524,7 @@ export const GLOBAL_FIELD_GROUPS: FieldGroup[] = [
     id: "advancedSettings",
     title: "Advanced Settings",
     description:
-      "These switches govern optional proxy logic, display behavior, and export formatting. Optional value remains visibly separated.",
+      "Control optional value categories, display preferences, and export settings.",
     scenarioScoped: false,
     fields: [
       {
@@ -537,7 +582,7 @@ export const GLOBAL_FIELD_GROUPS: FieldGroup[] = [
     id: "reviewAndSignOff",
     title: "Review and Sign-Off",
     description:
-      "Review metadata never upgrades readiness by itself. Approval is limited to internal discussion and not to correctness or regulatory acceptance.",
+      "Track review progress and internal notes. Status helps frame discussion, but it does not certify results.",
     scenarioScoped: false,
     fields: [
       {
@@ -717,7 +762,7 @@ export const SCENARIO_FIELD_GROUPS: FieldGroup[] = [
     id: "costBasis",
     title: "Cost Basis",
     description:
-      "Define direct costs, labor rates, implementation cost, support cost, and discounting assumptions used by the financial metrics.",
+      "Enter direct costs, labor rates, implementation cost, support cost, and discounting assumptions used in the financial results.",
     scenarioScoped: true,
     fields: [
       {
@@ -888,7 +933,7 @@ export const SCENARIO_FIELD_GROUPS: FieldGroup[] = [
     id: "improvementAssumptions",
     title: "Improvement Assumptions",
     description:
-      "Scenario-specific improvement assumptions are the main sensitivity drivers. Benchmarks are contextual only and never overwrite the entered value.",
+      "Set the expected improvement range for each workflow area. Reference benchmarks are directional only and never replace your inputs.",
     scenarioScoped: true,
     fields: [
       {
@@ -1017,7 +1062,7 @@ export const SCENARIO_FIELD_GROUPS: FieldGroup[] = [
     id: "riskAndRealization",
     title: "Risk & Realization",
     description:
-      "Risk adjustments apply to acceleration and realization, not to every value stream. High-confidence settings require documented justification.",
+      "Adjust how much value is expected to be captured, how quickly benefits ramp, and which delivery risks may affect timing.",
     scenarioScoped: true,
     fields: [
       {
@@ -1106,7 +1151,7 @@ export const SCENARIO_FIELD_GROUPS: FieldGroup[] = [
     id: "scenarioJustification",
     title: "Scenario Justification",
     description:
-      "Use structured rationale for credibility-sensitive settings. Missing justification lowers readiness and may trigger model risk warnings.",
+      "Use this space to explain aggressive or high-confidence inputs so reviewers understand the rationale behind the scenario.",
     scenarioScoped: true,
     fields: [
       {
@@ -1556,7 +1601,7 @@ export const defaultEditableModel: EditableModel = {
     reviewerName: "Internal business case owner",
     reviewedAt: "YYYY-MM-DD",
     reviewNotes:
-      "Review metadata supports internal discussion only and does not certify correctness, guarantee outcome, or constitute financial or regulatory approval.",
+      "Use this section to capture internal review notes, open questions, and planning decisions.",
     internalDiscussionApproval: false,
   },
   scenarioJustifications: {
@@ -1714,4 +1759,4 @@ export const buildEmptyJustification = (): ScenarioJustification => ({
 });
 
 export const REVIEW_APPROVAL_DISCLAIMER =
-  "Approval indicates suitability for internal discussion only and does not certify correctness, guarantee outcome, or constitute financial or regulatory approval.";
+  "Review status helps your team track progress. It does not guarantee outcomes or replace financial, quality, or regulatory review.";

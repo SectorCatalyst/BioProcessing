@@ -553,6 +553,14 @@ const buildNarrative = (params: {
   const { scenarioId, readinessStatus, metrics, engineResults, paybackDescriptor, model } = params;
   const topDriver = [...engineResults].sort((left, right) => right.total - left.total)[0];
   const strategicEnabled = model.advancedSettings.enableStrategicProxyValues;
+  const readinessSentence =
+    readinessStatus === "Decision-Support Ready"
+      ? "The scenario is detailed enough to support planning discussions."
+      : readinessStatus === "Review-Ready"
+        ? "The scenario is detailed enough for team review."
+        : readinessStatus === "Minimally Calculable"
+          ? "The scenario currently supports an early directional estimate."
+          : "The scenario still needs more complete inputs before it should be shared broadly.";
   const strategicSentence = strategicEnabled
     ? `Strategic proxy value is shown separately at ${formatCurrency(
         metrics.annualStrategicValue,
@@ -578,7 +586,7 @@ const buildNarrative = (params: {
       topDriver.total,
       model.advancedSettings.currencyCode,
       0,
-    )} annually. Readiness status is ${readinessStatus}, which means the result should be interpreted as a governed estimate rather than a decision substitute.`,
+    )} annually. ${readinessSentence}`,
     `${strategicSentence} Review status remains ${model.reviewAndSignOff.reviewStatus}. ${REVIEW_APPROVAL_DISCLAIMER}`,
   ].join(" ");
 };

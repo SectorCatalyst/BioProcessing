@@ -8,6 +8,7 @@ import {
   buildInitialProvenanceMap,
   buildImportedProvenanceMap,
   defaultEditableModel,
+  getSectionLabel,
   type ChangeLogEntry,
   type EditableModel,
   type LeadCaptureRecord,
@@ -123,8 +124,8 @@ const initialState = {
   overrides: [] as OverrideRecord[],
   changeLog: [
     createChangeLogEntry(
-      "Model Created",
-      "Initialized the governed calculator with default placeholders and scenario baselines.",
+      "Calculator Started",
+      "Started a new calculator session with default values and scenario baselines.",
     ),
   ],
   versioning: createVersioningState(),
@@ -232,7 +233,7 @@ export const useCalculatorStore = create<CalculatorStoreState>()(
             changeLog: [
               createChangeLogEntry(
                 "Scenario Copied",
-                `Copied ${from} scenario inputs and justifications into ${to}.`,
+                `Copied ${from} scenario inputs and notes into ${to}.`,
               ),
               ...state.changeLog,
             ],
@@ -257,9 +258,9 @@ export const useCalculatorStore = create<CalculatorStoreState>()(
         set((state) => ({
           overrides: [override, ...state.overrides],
           changeLog: [
-            createChangeLogEntry(
-              "Override Logged",
-              `${override.type} recorded for ${override.field} in ${override.section}.`,
+              createChangeLogEntry(
+              "Change Note Saved",
+              `${override.type} saved for ${override.field} in ${override.section === "export" ? "Export" : getSectionLabel(override.section)}.`,
             ),
             ...state.changeLog,
           ],
@@ -275,9 +276,9 @@ export const useCalculatorStore = create<CalculatorStoreState>()(
             modelLastCalculatedAt: new Date().toISOString(),
           },
           changeLog: [
-            createChangeLogEntry(
-              "Model Calculated",
-              `Recomputed governed outputs for the ${scenario} scenario.`,
+              createChangeLogEntry(
+              "Results Refreshed",
+              `Refreshed the results for the ${scenario} scenario.`,
             ),
             ...state.changeLog,
           ],
@@ -291,9 +292,9 @@ export const useCalculatorStore = create<CalculatorStoreState>()(
             exportCount: state.versioning.exportCount + 1,
           },
           changeLog: [
-            createChangeLogEntry(
-              "Model Exported",
-              `Generated a ${format} export from the current calculator state.`,
+              createChangeLogEntry(
+              "Export Created",
+              `Created a ${format} export from the current calculator state.`,
             ),
             ...state.changeLog,
           ],
@@ -303,9 +304,9 @@ export const useCalculatorStore = create<CalculatorStoreState>()(
         set((state) => ({
           leadCapture,
           changeLog: [
-            createChangeLogEntry(
-              "Lead Capture Completed",
-              `Unlocked the calculator for ${leadCapture.workEmail} using ${leadCapture.storageMode} storage mode.`,
+              createChangeLogEntry(
+              "Contact Saved",
+              `Opened the calculator for ${leadCapture.workEmail}.`,
             ),
             ...state.changeLog,
           ],
@@ -315,9 +316,9 @@ export const useCalculatorStore = create<CalculatorStoreState>()(
         set((state) => ({
           leadCapture: null,
           changeLog: [
-            createChangeLogEntry(
-              "Lead Capture Cleared",
-              "Removed the stored lead-capture details and re-locked the calculator.",
+              createChangeLogEntry(
+              "Contact Cleared",
+              "Removed the saved contact details and locked the calculator again.",
             ),
             ...state.changeLog,
           ],
@@ -326,7 +327,7 @@ export const useCalculatorStore = create<CalculatorStoreState>()(
       applyTestDataset: ({ datasetLabel, model }) => {
         const timestamp = new Date().toISOString();
         const importedProvenance = buildImportedProvenanceMap(
-          `Loaded from the ${datasetLabel} test dataset on ${timestamp}.`,
+          `Loaded from the ${datasetLabel} sample data set on ${timestamp}.`,
         );
 
         set((state) => ({
@@ -357,9 +358,9 @@ export const useCalculatorStore = create<CalculatorStoreState>()(
             ],
           },
           changeLog: [
-            createChangeLogEntry(
-              "Test Dataset Loaded",
-              `Applied the ${datasetLabel} governed test dataset to the calculator.`,
+              createChangeLogEntry(
+              "Sample Data Loaded",
+              `Loaded the ${datasetLabel} sample data set into the calculator.`,
             ),
             ...state.changeLog,
           ],
@@ -388,9 +389,9 @@ export const useCalculatorStore = create<CalculatorStoreState>()(
             },
             changeLog: [
               createChangeLogEntry(
-                "Working Model Restored",
-                "Restored the pre-demo working model from the local backup.",
-              ),
+              "Saved Inputs Restored",
+              "Restored the inputs that were in place before sample data was loaded.",
+            ),
               ...state.changeLog,
             ],
             resetKey: state.resetKey + 1,
@@ -410,9 +411,9 @@ export const useCalculatorStore = create<CalculatorStoreState>()(
             selectedScenarioAtLastSave: state.versioning.selectedScenarioAtLastSave,
           },
           changeLog: [
-            createChangeLogEntry(
-              "Model Reset",
-              "Reset the calculator to the governed default placeholder state.",
+              createChangeLogEntry(
+              "Calculator Reset",
+              "Reset the calculator to its default starting values.",
             ),
             ...state.changeLog,
           ],

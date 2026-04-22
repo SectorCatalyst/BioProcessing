@@ -64,13 +64,16 @@ To persist the lead gate into Render-hosted Postgres, create:
 
 1. A Render Postgres instance in the same region as the web service.
 2. A `DATABASE_URL` environment variable on the web service, using the database's internal connection string.
-3. A redeploy of the web service after the env var is present.
+3. A `LEAD_CAPTURE_ADMIN_KEY` environment variable on the web service for protected lead-management access.
+4. A redeploy of the web service after the env vars are present.
 
 Once `DATABASE_URL` is available, the built-in [`/api/lead-capture`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/api/lead-capture/route.ts) route will:
 
 - validate the incoming lead payload
 - create the `roi_lead_captures` table automatically if it does not exist
 - upsert lead records by work email
+- preserve the first capture timestamp and update `updated_at` on later submissions from the same email
+- expose guarded read/delete access for lead management when `LEAD_CAPTURE_ADMIN_KEY` is configured
 
 If `DATABASE_URL` is missing or the insert fails, the gate still unlocks using local-only capture so the app remains usable during setup.
 
@@ -79,6 +82,7 @@ If `DATABASE_URL` is missing or the insert fails, the gate still unlocks using l
 - Browser traffic posts only to the app's own `/api/lead-capture` route.
 - The database is never called directly from the browser.
 - No separate API service is required unless you want one; the existing Next.js app can own the lead-capture endpoint.
+- Lead management is available at [`/admin/leads`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/admin/leads/page.tsx) and requires the same `LEAD_CAPTURE_ADMIN_KEY` value entered into the admin page.
 - For local development, leave `DATABASE_URL` unset if you want to test the local-only fallback. Use `.env.example` as the env var template.
 
 ## Modeling Notes

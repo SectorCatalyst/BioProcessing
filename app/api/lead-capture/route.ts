@@ -23,6 +23,18 @@ const getPool = () => {
   return global.__leadCapturePool;
 };
 
+const getAdminKey = () => process.env.LEAD_CAPTURE_ADMIN_KEY?.trim() ?? "";
+
+const isAuthorizedAdmin = (request: Request) => {
+  const configuredKey = getAdminKey();
+  if (!configuredKey) {
+    return false;
+  }
+
+  const presentedKey = request.headers.get("x-admin-key")?.trim();
+  return Boolean(presentedKey && presentedKey === configuredKey);
+};
+
 const ensureLeadCaptureTable = async (pool: Pool) => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS roi_lead_captures (
@@ -35,8 +47,14 @@ const ensureLeadCaptureTable = async (pool: Pool) => {
       country_region TEXT NOT NULL,
       consent_to_contact BOOLEAN NOT NULL DEFAULT TRUE,
       source TEXT NOT NULL DEFAULT 'bioprocess-roi-calculator',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await pool.query(`
+    ALTER TABLE roi_lead_captures
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
   `);
 
   await pool.query(`
@@ -45,6 +63,87 @@ const ensureLeadCaptureTable = async (pool: Pool) => {
   `);
 };
 
+export async function GET(request: Request) {
+  const pool = getPool();
+
+  if (!pool) {
+    return NextResponse.json(
+      {
+        message: "Lead storage is not connected. Set DATABASE_URL on the web service.",
+      },
+      { status: 503 },
+    );
+  }
+
+  if (!isAuthorizedAdmin(request)) {
+    return NextResponse.json(
+      {
+        message: "Admin authorization is required.",
+      },
+      { status: 401 },
+    );
+  }
+
+  try {
+    await ensureLeadCaptureTable(pool);
+
+    const result = await pool.query<{
+      id: string;
+      first_name: string;
+      last_name: string;
+      work_email: string;
+      company: string;
+      job_title: string;
+      country_region: string;
+      consent_to_contact: boolean;
+      source: string;
+      created_at: string;
+      updated_at: string;
+    }>(`
+      SELECT
+        id,
+        first_name,
+        last_name,
+        work_email,
+        company,
+        job_title,
+        country_region,
+        consent_to_contact,
+        source,
+        created_at,
+        updated_at
+      FROM roi_lead_captures
+      ORDER BY updated_at DESC, id DESC
+      LIMIT 500
+    `);
+
+    return NextResponse.json({
+      entries: result.rows.map((row) => ({
+        id: row.id,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        workEmail: row.work_email,
+        company: row.company,
+        jobTitle: row.job_title,
+        countryRegion: row.country_region,
+        consentToContact: row.consent_to_contact,
+        source: row.source,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      })),
+    });
+  } catch (error) {
+    console.error("Lead capture read failed", error);
+
+    return NextResponse.json(
+      {
+        message: "Lead records could not be loaded right now.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null);
   const parsed = leadCaptureSchema.safeParse(payload);
@@ -52,7 +151,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       {
-        message: "Lead capture payload did not pass validation.",
+        message: "We could not save your details. Please review the form and try again.",
         issues: parsed.error.flatten(),
       },
       { status: 400 },
@@ -66,7 +165,7 @@ export async function POST(request: Request) {
       {
         storageMode: "local_only" as const,
         message:
-          "Lead details were captured locally because DATABASE_URL is not configured on the server.",
+          "Your details were saved for this browser session. Server-side follow-up is not connected yet.",
       },
       { status: 202 },
     );
@@ -95,7 +194,7 @@ export async function POST(request: Request) {
           job_title = EXCLUDED.job_title,
           country_region = EXCLUDED.country_region,
           consent_to_contact = EXCLUDED.consent_to_contact,
-          created_at = NOW();
+          updated_at = NOW();
       `,
       [
         parsed.data.firstName,
@@ -111,8 +210,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         storageMode: "database" as const,
-        message:
-          "Lead details were stored in Postgres through the built-in lead-capture API route.",
+        message: "Your details were saved successfully for follow-up.",
       },
       { status: 201 },
     );
@@ -123,9 +221,78 @@ export async function POST(request: Request) {
       {
         storageMode: "local_only" as const,
         message:
-          "Lead details were captured locally because the Postgres insert failed. Check DATABASE_URL and database access on Render.",
+          "Your details were saved for this browser session. Server-side follow-up is not available right now.",
       },
       { status: 202 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const pool = getPool();
+
+  if (!pool) {
+    return NextResponse.json(
+      {
+        message: "Lead storage is not connected. Set DATABASE_URL on the web service.",
+      },
+      { status: 503 },
+    );
+  }
+
+  if (!isAuthorizedAdmin(request)) {
+    return NextResponse.json(
+      {
+        message: "Admin authorization is required.",
+      },
+      { status: 401 },
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const idParam = searchParams.get("id");
+  const id = Number(idParam);
+
+  if (!Number.isInteger(id) || id < 1) {
+    return NextResponse.json(
+      {
+        message: "A valid lead id is required.",
+      },
+      { status: 400 },
+    );
+  }
+
+  try {
+    await ensureLeadCaptureTable(pool);
+
+    const result = await pool.query(
+      `
+        DELETE FROM roi_lead_captures
+        WHERE id = $1
+      `,
+      [id],
+    );
+
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        {
+          message: "Lead record not found.",
+        },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
+      message: "Lead record deleted.",
+    });
+  } catch (error) {
+    console.error("Lead capture delete failed", error);
+
+    return NextResponse.json(
+      {
+        message: "Lead record could not be deleted right now.",
+      },
+      { status: 500 },
     );
   }
 }
