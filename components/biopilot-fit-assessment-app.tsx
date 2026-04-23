@@ -342,8 +342,8 @@ const FIELD_COPY: Record<
 
 const INPUT_SECTIONS = [
   {
-    title: "Business context",
-    description: "Size the opportunity and the directional value at stake.",
+    title: "Operating frame",
+    description: "Enter the scale, economics, and transfer footprint of the current operating model.",
     fields: [
       "activePrograms",
       "runsPerYear",
@@ -1295,15 +1295,18 @@ function InputsStep({
   reportError: string | null;
   isGeneratingReport: boolean;
 }) {
-  const [selectedSampleId, setSelectedSampleId] = useState(BIOPILOT_SAMPLE_CONFIGS[0]?.id ?? "");
+  const [selectedSampleId, setSelectedSampleId] = useState("");
   const profile = PROCESS_PROFILE_MAP[inputs.processProfileId];
   const stage = LIFECYCLE_STAGE_MAP[inputs.lifecycleStageId];
-  const selectedSample =
-    BIOPILOT_SAMPLE_CONFIGS.find((item) => item.id === selectedSampleId) ??
-    BIOPILOT_SAMPLE_CONFIGS[0];
+  const selectedSample = BIOPILOT_SAMPLE_CONFIGS.find((item) => item.id === selectedSampleId) ?? null;
   const operatingFootprintSection = INPUT_SECTIONS[0];
   const connectedStackSection = INPUT_SECTIONS[1];
   const manualBurdenSection = INPUT_SECTIONS[2];
+
+  const handleResetInputs = () => {
+    setSelectedSampleId("");
+    onReset();
+  };
 
   return (
     <div className="grid gap-4">
@@ -1317,156 +1320,173 @@ function InputsStep({
           </CardDescription>
         </CardHeader>
         <CardContent className="mt-6 grid gap-5 p-0">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(360px,0.82fr)]">
-            <div className={cn(PANEL_CARD, "overflow-hidden p-0")}>
-              <div className="grid gap-0 lg:grid-cols-[minmax(0,1.06fr)_320px]">
-                <div className="px-5 py-5">
-                  <p className="text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">
+          <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
+            <Card className={cn(PANEL_CARD, "p-5")}>
+              <CardHeader className="p-0">
+                <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
+                  Selected process family
+                </CardTitle>
+                <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                  Keep the chosen process visible here. Use the back action only if the family itself needs to change.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="mt-4 grid gap-4 p-0">
+                <div>
+                  <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                     Process family
                   </p>
-                  <p className="mt-2 font-heading text-[2rem] tracking-[-0.04em] text-[color:var(--foreground)]">
+                  <p className="mt-2 font-heading text-[1.85rem] tracking-[-0.04em] text-[color:var(--foreground)]">
                     {profile.label}
                   </p>
-                  <p className="mt-3 max-w-[64ch] text-lg leading-7 text-[color:var(--muted-foreground)]">
-                    {profile.bioPilotFit}
+                  <p className="mt-3 text-base leading-7 text-[color:var(--muted-foreground)]">
+                    {profile.summary}
                   </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {profile.focusAreas.slice(0, 3).map((focus) => (
-                      <span
-                        key={focus}
-                        className="rounded-full border border-[rgba(11,79,155,0.12)] bg-[rgba(0,79,155,0.05)] px-3 py-1.5 text-sm font-semibold text-[color:var(--brand-blue)]"
-                      >
-                        {focus}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-5 rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(243,248,252,0.96))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-                    <ProcessFamilyIllustration profileId={profile.id} variant="panel" />
-                  </div>
                 </div>
-                <div className="border-t border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(246,249,252,0.96),rgba(239,245,251,0.98))] px-5 py-5 lg:border-t-0 lg:border-l">
-                  <p className="text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">
-                    Operating frame
-                  </p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                    <ContextMetric label="Active programs" value={formatNumber(inputs.activePrograms)} />
-                    <ContextMetric label="Runs per year" value={formatNumber(inputs.runsPerYear)} />
-                    <ContextMetric label="Sites or partners" value={formatNumber(inputs.sites)} />
-                    <ContextMetric label="Transfer events" value={formatNumber(inputs.transferEventsPerYear)} />
-                  </div>
-                  <div className="mt-5 grid gap-3">
-                    {profile.instrumentStack.slice(0, 3).map((item) => (
-                      <div key={item.category} className={cn(SOFT_CARD, "p-4")}>
-                        <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                          {item.category}
-                        </p>
-                        <p className="mt-2 text-base leading-6 text-[color:var(--foreground)]">
-                          {item.whyItMatters}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4">
-              <Card className={cn(PANEL_CARD, "p-5")}>
-                <CardHeader className="p-0">
-                  <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
-                    Assessment setup
-                  </CardTitle>
-                  <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                    Set the stage and use a sample session when you want a fast walkthrough.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="mt-4 grid gap-4 p-0">
-                  <div className="grid gap-2">
-                    <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                      Lifecycle stage
-                    </p>
-                    <Select
-                      value={inputs.lifecycleStageId}
-                      onValueChange={(value) => {
-                        const nextStage = LIFECYCLE_STAGE_MAP[value as keyof typeof LIFECYCLE_STAGE_MAP];
-                        if (!nextStage) {
-                          return;
-                        }
-
-                        onPatch({
-                          lifecycleStageId: nextStage.id,
-                          plannedProgramInvestment: nextStage.annualProgramInvestment,
-                        });
-                      }}
+                <div className="flex flex-wrap gap-2">
+                  {profile.focusAreas.slice(0, 3).map((focus) => (
+                    <span
+                      key={focus}
+                      className="rounded-full border border-[rgba(11,79,155,0.12)] bg-[rgba(0,79,155,0.05)] px-3 py-1.5 text-sm font-semibold text-[color:var(--brand-blue)]"
                     >
-                      <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
-                        <SelectValue placeholder="Choose lifecycle stage">
-                          {LIFECYCLE_STAGE_MAP[inputs.lifecycleStageId]?.label}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className={SELECT_CONTENT_CLASS}>
-                        {LIFECYCLE_STAGES.map((nextStage) => (
-                          <SelectItem className={SELECT_ITEM_CLASS} key={nextStage.id} value={nextStage.id}>
-                            {nextStage.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className={cn(SOFT_CARD, "p-4")}>
-                      <p className="text-base leading-6 text-[color:var(--muted-foreground)]">{stage.summary}</p>
-                    </div>
-                  </div>
+                      {focus}
+                    </span>
+                  ))}
+                </div>
+                <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={onBack}>
+                  <ChevronLeft className="size-4" />
+                  Change process family
+                </Button>
+              </CardContent>
+            </Card>
 
-                  <div className="grid gap-2">
-                    <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                      Sample session
-                    </p>
-                    <Select
-                      value={selectedSampleId}
-                      onValueChange={(value) =>
-                        setSelectedSampleId(value ?? BIOPILOT_SAMPLE_CONFIGS[0]?.id ?? "")
+            <Card className={cn(PANEL_CARD, "p-5")}>
+              <CardHeader className="p-0">
+                <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
+                  Stage and optional sample data
+                </CardTitle>
+                <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                  Lifecycle stage affects the assumptions. Sample data only applies if you explicitly load it.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="mt-4 grid gap-4 p-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+                <div className="grid gap-2">
+                  <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                    Lifecycle stage
+                  </p>
+                  <Select
+                    value={inputs.lifecycleStageId}
+                    onValueChange={(value) => {
+                      const nextStage = LIFECYCLE_STAGE_MAP[value as keyof typeof LIFECYCLE_STAGE_MAP];
+                      if (!nextStage) {
+                        return;
                       }
-                    >
-                      <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
-                        <SelectValue placeholder="Choose sample inputs">
-                          {selectedSample?.label}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent className={SELECT_CONTENT_CLASS}>
-                        {BIOPILOT_SAMPLE_CONFIGS.map((sample) => (
-                          <SelectItem className={SELECT_ITEM_CLASS} key={sample.id} value={sample.id}>
-                            {sample.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
-                      {selectedSample?.description}
-                    </p>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Button
-                        type="button"
-                        className={ACCENT_BUTTON}
-                        onClick={() => onLoadSample(selectedSampleId)}
-                      >
-                        Load sample data
-                      </Button>
-                      <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={onReset}>
-                        Reset inputs
-                      </Button>
-                    </div>
+
+                      onPatch({
+                        lifecycleStageId: nextStage.id,
+                        plannedProgramInvestment: nextStage.annualProgramInvestment,
+                      });
+                    }}
+                  >
+                    <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
+                      <SelectValue placeholder="Choose lifecycle stage">
+                        {LIFECYCLE_STAGE_MAP[inputs.lifecycleStageId]?.label}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className={SELECT_CONTENT_CLASS}>
+                      {LIFECYCLE_STAGES.map((nextStage) => (
+                        <SelectItem className={SELECT_ITEM_CLASS} key={nextStage.id} value={nextStage.id}>
+                          {nextStage.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className={cn(SOFT_CARD, "p-4")}>
+                    <p className="text-base leading-6 text-[color:var(--muted-foreground)]">{stage.summary}</p>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                    Optional sample data
+                  </p>
+                  <Select value={selectedSampleId || undefined} onValueChange={setSelectedSampleId}>
+                    <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
+                      <SelectValue placeholder="Select a sample session" />
+                    </SelectTrigger>
+                    <SelectContent className={SELECT_CONTENT_CLASS}>
+                      {BIOPILOT_SAMPLE_CONFIGS.map((sample) => (
+                        <SelectItem className={SELECT_ITEM_CLASS} key={sample.id} value={sample.id}>
+                          {sample.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className={cn(SOFT_CARD, "p-4")}>
+                    <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
+                      {selectedSample
+                        ? selectedSample.description
+                        : "No sample data is loaded. Your own entries remain active unless you click Load sample data."}
+                    </p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Button
+                      type="button"
+                      className={ACCENT_BUTTON}
+                      onClick={() => {
+                        if (selectedSampleId) {
+                          onLoadSample(selectedSampleId);
+                        }
+                      }}
+                      disabled={!selectedSampleId}
+                    >
+                      Load sample data
+                    </Button>
+                    <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={handleResetInputs}>
+                      Reset inputs
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <InputSectionCard section={connectedStackSection} inputs={inputs} onPatch={onPatch} />
+          <InputSectionCard section={operatingFootprintSection} inputs={inputs} onPatch={onPatch} />
 
           <div className="grid gap-4 xl:grid-cols-2">
-            <InputSectionCard section={operatingFootprintSection} inputs={inputs} onPatch={onPatch} />
+            <InputSectionCard section={connectedStackSection} inputs={inputs} onPatch={onPatch} />
             <InputSectionCard section={manualBurdenSection} inputs={inputs} onPatch={onPatch} />
           </div>
+
+          <Card className={cn(PANEL_CARD, "p-5")}>
+            <CardHeader className="p-0">
+              <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
+                Process context reference
+              </CardTitle>
+              <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                Supporting context for this process family, kept below the editable inputs so the form stays primary.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-4 grid gap-4 p-0 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+              <div className="grid gap-4">
+                <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(243,248,252,0.96))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                  <ProcessFamilyIllustration profileId={profile.id} variant="panel" />
+                </div>
+                <p className="text-base leading-7 text-[color:var(--muted-foreground)]">{profile.bioPilotFit}</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                {profile.instrumentStack.slice(0, 3).map((item) => (
+                  <div key={item.category} className={cn(SOFT_CARD, "p-4")}>
+                    <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                      {item.category}
+                    </p>
+                    <p className="mt-2 text-base leading-6 text-[color:var(--foreground)]">
+                      {item.whyItMatters}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
           <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
             <CircleAlert className="size-4 text-[color:var(--brand-blue)]" />
@@ -1960,7 +1980,16 @@ export function BioPilotFitAssessmentApp() {
   };
 
   const handleResetInputs = () => {
-    setInputs(DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
+    setInputs((current) => {
+      const currentStage = LIFECYCLE_STAGE_MAP[current.lifecycleStageId];
+
+      return normalizeAssessmentInputs({
+        ...DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
+        processProfileId: current.processProfileId,
+        lifecycleStageId: current.lifecycleStageId,
+        plannedProgramInvestment: currentStage.annualProgramInvestment,
+      });
+    });
     setReportError(null);
     setAssessmentStorageMode(null);
     setAssessmentStorageMessage(null);
