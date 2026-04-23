@@ -1047,7 +1047,7 @@ function IntroStep({
             </ul>
             <div className="mt-6">
               <a
-                href="https://www.yokogawa.com/mx/solutions/products-and-services/solutions/production-management/biopilot/"
+                href="https://www.yokogawa.com/us/solutions/products-and-services/solutions/production-management/biopilot/"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex h-11 items-center justify-center rounded-[14px] border border-white/14 bg-white/8 px-4 text-[0.95rem] font-semibold text-white shadow-[0_10px_24px_rgba(5,20,39,0.14)] backdrop-blur-sm transition-colors duration-150 hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(8,34,67,0.9)]"
