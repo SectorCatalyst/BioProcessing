@@ -128,48 +128,48 @@ const FIELD_COPY: Record<
   }
 > = {
   activePrograms: {
-    label: "Active programs",
-    description: "How many assets, programs, or campaigns this operating model supports.",
+    label: "Active programs in scope",
+    description: "Number of products, campaigns, or programs using this operating model in the next 12 months.",
     min: 1,
     max: 18,
     step: 1,
     kind: "number",
   },
   runsPerYear: {
-    label: "Runs per year",
-    description: "Annual upstream or end-to-end process runs in this scope.",
-    min: 12,
+    label: "Process runs per year",
+    description: "Number of upstream or end-to-end runs expected in this scope over the next 12 months.",
+    min: 1,
     max: 220,
     step: 1,
     kind: "number",
   },
   sites: {
-    label: "Sites or major partners",
-    description: "How many sites or external partners need the process story to travel cleanly.",
+    label: "Sites or partners in scope",
+    description: "Number of facilities, CDMOs, or major partners that must reproduce or review this process.",
     min: 1,
     max: 8,
     step: 1,
     kind: "number",
   },
   transferEventsPerYear: {
-    label: "Transfer events per year",
-    description: "Internal or external handoffs that need a clean, reusable package.",
+    label: "Annual transfer events",
+    description: "Number of scale-up, site-transfer, validation, or partner handoff packages expected in the next 12 months.",
     min: 0,
     max: 12,
     step: 1,
     kind: "number",
   },
   vendorPlatforms: {
-    label: "Vendor platforms in scope",
-    description: "How many separate equipment or software stacks the team is coordinating today.",
+    label: "Data platforms in scope",
+    description: "Number of separate bioreactor, analyzer, historian, LIMS/MES, modeling, or spreadsheet systems used for one process record.",
     min: 1,
     max: 8,
     step: 1,
     kind: "number",
   },
   blendedHourlyRate: {
-    label: "Blended hourly rate",
-    description: "Estimated loaded rate for scientists, engineers, operations, and review teams.",
+    label: "Loaded labor rate",
+    description: "Average fully loaded USD/hr rate for scientists, engineers, operators, QA, and review contributors.",
     min: 80,
     max: 260,
     step: 5,
@@ -177,8 +177,8 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   costPerFailedRun: {
-    label: "Cost per failed run",
-    description: "Estimated value at risk when a run is materially lost or unusable.",
+    label: "Failed-run impact",
+    description: "USD impact of one lost, unusable, or repeated run including materials, labor, analytics, and schedule drag.",
     min: 15000,
     max: 250000,
     step: 5000,
@@ -186,8 +186,8 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   valuePerDayAcceleration: {
-    label: "Value per day of acceleration",
-    description: "Estimated value of compressing a key decision or campaign day.",
+    label: "Value of one day faster",
+    description: "USD value of moving one key process decision, transfer milestone, or campaign release forward by one day.",
     min: 10000,
     max: 150000,
     step: 5000,
@@ -195,8 +195,8 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   plannedProgramInvestment: {
-    label: "Planned BioPilot investment",
-    description: "Estimated first-wave investment used for the ROI view.",
+    label: "First-wave BioPilot investment",
+    description: "Estimated first-wave BioPilot software, services, and implementation investment for this scope.",
     min: 100000,
     max: 900000,
     step: 10000,
@@ -205,7 +205,7 @@ const FIELD_COPY: Record<
   },
   bioreactorConnectivity: {
     label: "Bioreactor connectivity",
-    description: "How connected the bioreactor and control layer is to the wider workflow.",
+    description: "Score 0-100: share of reactor and control data available in a shared digital operating view.",
     min: 0,
     max: 100,
     step: 1,
@@ -214,7 +214,7 @@ const FIELD_COPY: Record<
   },
   sensorCoverage: {
     label: "Core sensor coverage",
-    description: "How fully the process is covered by standard process signals and alarms.",
+    description: "Score 0-100: share of critical process parameters captured digitally with timestamped signal history.",
     min: 0,
     max: 100,
     step: 1,
@@ -223,7 +223,7 @@ const FIELD_COPY: Record<
   },
   patCoverage: {
     label: "PAT coverage",
-    description: "How much process understanding is supported by PAT instead of manual interpretation.",
+    description: "Score 0-100: share of process understanding supported by PAT or online measurements instead of offline interpretation.",
     min: 0,
     max: 100,
     step: 1,
@@ -232,7 +232,7 @@ const FIELD_COPY: Record<
   },
   analyzerConnectivity: {
     label: "Analyzer connectivity",
-    description: "How well at-line and off-line analyzers are tied back to the process context.",
+    description: "Score 0-100: share of at-line and offline analyzer results linked to batch, unit operation, and time context.",
     min: 0,
     max: 100,
     step: 1,
@@ -241,7 +241,7 @@ const FIELD_COPY: Record<
   },
   downstreamVisibility: {
     label: "Downstream visibility",
-    description: "How visible purification, filtration, and downstream evidence is in one view.",
+    description: "Score 0-100: share of purification, filtration, and downstream evidence visible with upstream context.",
     min: 0,
     max: 100,
     step: 1,
@@ -250,7 +250,7 @@ const FIELD_COPY: Record<
   },
   dataContextualization: {
     label: "Data contextualization",
-    description: "How consistently run context, process data, and evidence are linked together.",
+    description: "Score 0-100: share of run data linked to recipe, phase, intervention, sample, and deviation context.",
     min: 0,
     max: 100,
     step: 1,
@@ -259,7 +259,7 @@ const FIELD_COPY: Record<
   },
   sopAutomation: {
     label: "SOP automation",
-    description: "How much execution is guided digitally instead of manually coordinated.",
+    description: "Score 0-100: share of execution steps guided, captured, or checked digitally instead of manually coordinated.",
     min: 0,
     max: 100,
     step: 1,
@@ -268,7 +268,7 @@ const FIELD_COPY: Record<
   },
   reviewByException: {
     label: "Review-by-exception readiness",
-    description: "How close the organization is to review-ready evidence instead of post-run assembly.",
+    description: "Score 0-100: share of review evidence that is already complete, contextualized, and exception-ready after each run.",
     min: 0,
     max: 100,
     step: 1,
@@ -277,7 +277,7 @@ const FIELD_COPY: Record<
   },
   crossSiteCollaboration: {
     label: "Cross-site collaboration",
-    description: "How consistently sites or partners can work from one digital operating story.",
+    description: "Score 0-100: share of site or partner work that can rely on one reusable digital operating record.",
     min: 0,
     max: 100,
     step: 1,
@@ -286,7 +286,7 @@ const FIELD_COPY: Record<
   },
   manualTranscriptionShare: {
     label: "Manual transcription share",
-    description: "How much of the run and review workflow still depends on manual entry or spreadsheet stitching.",
+    description: "Percent of run execution, analysis, and review work still dependent on manual entry or spreadsheet stitching.",
     min: 0,
     max: 100,
     step: 1,
@@ -295,7 +295,7 @@ const FIELD_COPY: Record<
   },
   offlineDataDelayHours: {
     label: "Offline data delay",
-    description: "Average delay before offline or analyzer evidence is usable in the decision flow.",
+    description: "Average hours between sample collection and analyzer evidence becoming usable for process decisions.",
     min: 1,
     max: 36,
     step: 1,
@@ -304,7 +304,7 @@ const FIELD_COPY: Record<
   },
   batchReviewHours: {
     label: "Batch review hours",
-    description: "Average specialist review time required per run today.",
+    description: "Average specialist hours required to assemble, check, and review the evidence package for one run.",
     min: 2,
     max: 48,
     step: 1,
@@ -313,7 +313,7 @@ const FIELD_COPY: Record<
   },
   deviationInvestigationHours: {
     label: "Deviation investigation hours",
-    description: "Average hours spent when a deviation or investigation event opens.",
+    description: "Average investigation hours required when one deviation, excursion, or unexplained process event opens.",
     min: 2,
     max: 48,
     step: 1,
@@ -322,7 +322,7 @@ const FIELD_COPY: Record<
   },
   techTransferPackageHours: {
     label: "Transfer package hours",
-    description: "Hours currently required to assemble the handoff or transfer story.",
+    description: "Average hours required to assemble one scale-up, site-transfer, or partner handoff package.",
     min: 8,
     max: 160,
     step: 2,
@@ -331,7 +331,7 @@ const FIELD_COPY: Record<
   },
   onboardingDays: {
     label: "Operator ramp days",
-    description: "Typical days needed before a new user can work confidently in the process.",
+    description: "Typical calendar days before a new operator, scientist, or reviewer can work independently in this process.",
     min: 3,
     max: 40,
     step: 1,
@@ -343,7 +343,7 @@ const FIELD_COPY: Record<
 const INPUT_SECTIONS = [
   {
     title: "Operating frame",
-    description: "Enter the scale, economics, and transfer footprint of the current operating model.",
+    description: "Enter count, rate, and USD assumptions for the current 12-month operating model.",
     fields: [
       "activePrograms",
       "runsPerYear",
@@ -358,7 +358,7 @@ const INPUT_SECTIONS = [
   },
   {
     title: "Connected bioprocess stack",
-    description: "Describe how connected the current instruments and evidence feel today.",
+    description: "Use 0-100 scores to estimate current digital coverage across instruments, data, and review evidence.",
     fields: [
       "bioreactorConnectivity",
       "sensorCoverage",
@@ -373,7 +373,7 @@ const INPUT_SECTIONS = [
   },
   {
     title: "Manual burden and review drag",
-    description: "Show where the team is still carrying friction through manual work and delayed evidence.",
+    description: "Enter current delay, review, investigation, transfer, and ramp effort as measurable time assumptions.",
     fields: [
       "manualTranscriptionShare",
       "offlineDataDelayHours",
@@ -1365,10 +1365,10 @@ function InputsStep({
             <Card className={cn(PANEL_CARD, "p-5")}>
               <CardHeader className="p-0">
                 <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
-                  Assessment settings
+                  Scenario setup
                 </CardTitle>
                 <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                  Choose the lifecycle stage and load a sample only if you want a fast walkthrough.
+                  Set the lifecycle stage, or apply a sample scenario before editing the numbers.
                 </CardDescription>
               </CardHeader>
               <CardContent className="mt-4 grid gap-4 p-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
@@ -1405,6 +1405,9 @@ function InputsStep({
                   </Select>
                   <div className={cn(SOFT_CARD, "p-4")}>
                     <p className="text-base leading-6 text-[color:var(--muted-foreground)]">{stage.summary}</p>
+                    <p className="mt-2 text-sm font-semibold text-[color:var(--brand-blue)]">
+                      Changing the stage updates stage assumptions and the investment default.
+                    </p>
                   </div>
                 </div>
 
@@ -1430,8 +1433,8 @@ function InputsStep({
                   <div className={cn(SOFT_CARD, "p-4")}>
                     <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
                       {selectedSample
-                        ? selectedSample.description
-                        : "No sample data is loaded. Your own entries stay active unless you choose a sample and click Load sample data."}
+                        ? `${selectedSample.description} Click Apply sample data to replace the fields below.`
+                        : "Choose a sample to preview it. The fields below will not change until you click Apply sample data."}
                     </p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -1445,7 +1448,7 @@ function InputsStep({
                       }}
                       disabled={!selectedSampleId}
                     >
-                      Load sample data
+                      Apply sample data
                     </Button>
                     <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={handleResetInputs}>
                       Reset inputs

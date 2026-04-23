@@ -7,7 +7,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "BioPilot Fit Assessment + Business Case Builder",
   description:
-    "A premium client-facing closing tool for Yokogawa BioPilot that qualifies bioprocess fit, manual burden, digital gaps, and directional business value.",
+    "A BioPilot assessment tool for identifying bioprocess gaps, estimating improvement potential, and building a practical ROI view.",
 };
 
 export default function RootLayout({

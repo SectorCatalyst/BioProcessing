@@ -158,7 +158,7 @@ export const bioPilotAssessmentInputsSchema = z.object({
   processProfileId: z.enum(PROCESS_PROFILE_IDS),
   lifecycleStageId: z.enum(LIFECYCLE_STAGE_IDS),
   activePrograms: boundedNumber(1, 18),
-  runsPerYear: boundedNumber(12, 220),
+  runsPerYear: boundedNumber(1, 220),
   sites: boundedNumber(1, 8),
   transferEventsPerYear: boundedNumber(0, 12),
   vendorPlatforms: boundedNumber(1, 8),
@@ -917,7 +917,7 @@ export function buildRandomizedSampleInputs(sampleId: string): BioPilotAssessmen
   return {
     ...normalized,
     activePrograms: jitter(normalized.activePrograms, 1.5, 1, 12),
-    runsPerYear: jitter(normalized.runsPerYear, Math.max(8, normalized.runsPerYear * 0.14), 12, 220),
+    runsPerYear: jitter(normalized.runsPerYear, Math.max(4, normalized.runsPerYear * 0.14), 1, 220),
     sites: Math.round(jitter(normalized.sites, 0.75, 1, 6)),
     transferEventsPerYear: Math.round(jitter(normalized.transferEventsPerYear, 1.5, 0, 12)),
     vendorPlatforms: Math.round(jitter(normalized.vendorPlatforms, 1, 1, 8)),
