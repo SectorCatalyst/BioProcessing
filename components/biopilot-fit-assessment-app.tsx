@@ -1409,7 +1409,10 @@ function InputsStep({
                   <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                     Optional sample data
                   </p>
-                  <Select value={selectedSampleId || undefined} onValueChange={setSelectedSampleId}>
+                  <Select
+                    value={selectedSampleId || undefined}
+                    onValueChange={(value) => setSelectedSampleId(value ?? "")}
+                  >
                     <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
                       <SelectValue placeholder="Select a sample session" />
                     </SelectTrigger>
