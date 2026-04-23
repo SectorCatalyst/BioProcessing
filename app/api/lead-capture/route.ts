@@ -112,7 +112,7 @@ export async function POST(request: Request) {
       {
         storageMode: "local_only" as const,
         message:
-          "Your details were saved for this browser session. Server-side follow-up is not connected yet.",
+          "Your details are saved on this device for now. Online submission is not available at the moment.",
       },
       { status: 202 },
     );
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         storageMode: "database" as const,
-        message: "Your details were saved successfully for follow-up.",
+        message: "Your details were saved successfully.",
       },
       { status: 201 },
     );
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
       {
         storageMode: "local_only" as const,
         message:
-          "Your details were saved for this browser session. Server-side follow-up is not available right now.",
+          "Your details are saved on this device for now. Online submission is not available right now.",
       },
       { status: 202 },
     );

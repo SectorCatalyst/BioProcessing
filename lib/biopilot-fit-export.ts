@@ -218,7 +218,7 @@ export async function exportBioPilotAssessmentPdf(params: {
       lineColor: [224, 231, 239],
       lineWidth: 0.2,
     },
-    head: [["Measure", "Current", "BioPilot-enabled"]],
+    head: [["Measure", "Current", "With BioPilot"]],
     headStyles: {
       fillColor: [236, 244, 252],
       textColor: [0, 49, 108],
@@ -297,7 +297,7 @@ export async function exportBioPilotAssessmentPdf(params: {
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
   y = ensurePage(doc, y);
-  y = drawSectionHeading(doc, "Business-case levers", y);
+  y = drawSectionHeading(doc, "Value drivers", y);
 
   autoTable(doc, {
     startY: y,
@@ -336,7 +336,7 @@ export async function exportBioPilotAssessmentPdf(params: {
   y = ensurePage(doc, y + 2);
   drawParagraph(
     doc,
-    "This report is directional. Validate the submitted operating numbers before using it as a formal budget, quality, or approval document.",
+    "This estimate reflects the submitted inputs. Confirm the most important operating numbers before relying on it for formal planning.",
     y,
   );
 

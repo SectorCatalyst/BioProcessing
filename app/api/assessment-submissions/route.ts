@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       {
         storageMode: "local_only" as const,
         message:
-          "The report was generated, but server-side assessment storage is not connected yet.",
+          "The report was created, but online saving is not available at the moment.",
         results: computedResults,
       },
       { status: 202 },
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         storageMode: "database" as const,
-        message: "The assessment report was saved successfully for follow-up.",
+        message: "The report was saved successfully.",
         assessmentId: inserted.assessmentId,
         results: inserted.results,
       },
@@ -162,7 +162,7 @@ export async function POST(request: Request) {
       {
         storageMode: "local_only" as const,
         message:
-          "The report was generated, but server-side assessment storage is not available right now.",
+          "The report was created, but online saving is not available right now.",
         results: computedResults,
       },
       { status: 202 },

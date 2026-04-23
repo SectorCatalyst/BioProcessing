@@ -1028,12 +1028,12 @@ export function assessBioPilotFit(
 
   const fitBand =
     fitScore >= 80
-      ? "Very strong BioPilot relevance"
+      ? "Very strong BioPilot fit"
       : fitScore >= 64
-        ? "Strong BioPilot relevance"
+        ? "Strong BioPilot fit"
         : fitScore >= 48
-          ? "Moderate BioPilot relevance"
-          : "Lower immediate BioPilot relevance";
+          ? "Moderate BioPilot fit"
+          : "Emerging BioPilot fit";
 
   const currentManualHoursPerRun = clamp(
     profile.base.manualHoursPerRun *
@@ -1205,7 +1205,7 @@ export function assessBioPilotFit(
       label: "Avoided failed or materially degraded runs",
       annualValue: avoidedFailedRuns * inputs.costPerFailedRun,
       summary:
-        "Uses the modeled change in run success as a directional proxy for avoidable loss.",
+        "Estimated from the modeled improvement in run success and fewer lost batches.",
     },
     {
       id: "acceleration",
@@ -1215,7 +1215,7 @@ export function assessBioPilotFit(
         inputs.valuePerDayAcceleration *
         0.58,
       summary:
-        "Uses lower delay between operational events and usable context as a directional acceleration proxy.",
+        "Estimated from faster access to usable process context and earlier decisions.",
     },
   ].sort((left, right) => right.annualValue - left.annualValue);
 
@@ -1350,7 +1350,7 @@ export function assessBioPilotFit(
       summary:
         "How efficiently the process can be packaged, explained, and repeated across sites or partners.",
       leverage:
-        "This is often the closing wedge when BioPilot must justify value beyond one lab or one reactor train.",
+        "This area becomes more important as the process expands beyond one lab or one reactor train.",
     },
   ];
 
@@ -1511,11 +1511,11 @@ export function assessBioPilotFit(
   const topPlay = plays[0];
   const topSignal = buyingSignals[0];
 
-  const executiveSummary = `${profile.label} in ${stage.label.toLowerCase()} shows ${fitBand.charAt(0).toLowerCase()}${fitBand.slice(1)} because the operation still carries ${Math.round(manualBurdenIndex)} / 100 manual burden and only ${Math.round(digitalCoverage)} / 100 digital coverage. The most relevant BioPilot capability is ${topPlay?.title.toLowerCase() ?? "data and workflow unification"}, which points to a modeled ${annualRecoveredHours.toFixed(0)} annual hours recovered and ${topLever ? `about ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(topLever.annualValue)} in the largest value lever` : "a meaningful operational value story"}.`;
+  const executiveSummary = `${profile.label} in ${stage.label.toLowerCase()} shows ${fitBand.charAt(0).toLowerCase()}${fitBand.slice(1)} because the operation still carries ${Math.round(manualBurdenIndex)} / 100 manual burden and only ${Math.round(digitalCoverage)} / 100 digital coverage. The strongest BioPilot priority is ${topPlay?.title.toLowerCase() ?? "data and workflow unification"}, which points to an estimated ${annualRecoveredHours.toFixed(0)} annual hours recovered and ${topLever ? `about ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(topLever.annualValue)} in the largest value driver` : "a meaningful value opportunity"}.`;
 
   const nextStep = topSignal
-    ? `Validate the process around ${topSignal.title.toLowerCase()}, then confirm three operating values before finalizing the business case: actual review hours, current failed-run cost, and the true transfer package effort.`
-    : "Validate the real operating data behind the top value lever before finalizing the business case.";
+    ? `Confirm the process around ${topSignal.title.toLowerCase()}, then verify three inputs before relying on the estimate: actual review hours, current failed-run cost, and transfer package effort.`
+    : "Confirm the operating data behind the top value driver before relying on the estimate.";
 
   return {
     profile,

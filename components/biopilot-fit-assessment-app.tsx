@@ -169,7 +169,7 @@ const FIELD_COPY: Record<
   },
   blendedHourlyRate: {
     label: "Blended hourly rate",
-    description: "Directional loaded rate for scientists, engineers, operations, and review teams.",
+    description: "Estimated loaded rate for scientists, engineers, operations, and review teams.",
     min: 80,
     max: 260,
     step: 5,
@@ -178,7 +178,7 @@ const FIELD_COPY: Record<
   },
   costPerFailedRun: {
     label: "Cost per failed run",
-    description: "Directional value at risk when a run is materially lost or unusable.",
+    description: "Estimated value at risk when a run is materially lost or unusable.",
     min: 15000,
     max: 250000,
     step: 5000,
@@ -187,7 +187,7 @@ const FIELD_COPY: Record<
   },
   valuePerDayAcceleration: {
     label: "Value per day of acceleration",
-    description: "Directional value of compressing a key decision or campaign day.",
+    description: "Estimated value of compressing a key decision or campaign day.",
     min: 10000,
     max: 150000,
     step: 5000,
@@ -196,7 +196,7 @@ const FIELD_COPY: Record<
   },
   plannedProgramInvestment: {
     label: "Planned BioPilot investment",
-    description: "Directional first-wave investment used for the business-case view.",
+    description: "Estimated first-wave investment used for the ROI view.",
     min: 100000,
     max: 900000,
     step: 10000,
@@ -387,8 +387,8 @@ const INPUT_SECTIONS = [
 
 const HERO_SUPPORT_BULLETS = [
   "Map bioreactors, PAT, analyzers, and review friction in one flow.",
-  "Compare the current state to a BioPilot-enabled operating model.",
-  "Leave with a fit score, value case, and next commercial step.",
+  "Compare the current state to an estimated BioPilot operating model.",
+  "Leave with a fit score, estimated value, and a recommended next step.",
 ] as const;
 
 const PROCESS_FAMILY_TAGS: Record<ProcessProfileId, string> = {
@@ -437,6 +437,9 @@ const REPORT_CHANGE_ITEMS = [
     currentSuffix: " days",
   },
 ] as const;
+
+const REPORT_FRAME_CARD =
+  "rounded-[30px] border border-[#c7daec] bg-[#e9f3fb] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]";
 
 function loadInitialInputs(): BioPilotAssessmentInputs {
   if (typeof window === "undefined") {
@@ -586,7 +589,7 @@ function LaneScoreCard({
         </div>
         <div>
           <div className="mb-1 flex items-center justify-between text-[13px] uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-            <span>BioPilot-enabled</span>
+            <span>With BioPilot</span>
             <span>{formatPercent(enabledScore)}</span>
           </div>
           <div className="h-2.5 rounded-full bg-[rgba(11,79,155,0.08)]">
@@ -786,10 +789,10 @@ function WorkspaceSidebar({
           </button>
           <div className="mt-4">
             <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-              Assessment workspace
+              Assessment overview
             </p>
             <p className="mt-2 text-lg leading-7 text-[color:var(--foreground)]">
-              Structured fit assessment and business-case builder for BioPilot.
+              Assess BioPilot fit and estimate the value of a more connected operating model.
             </p>
           </div>
         </CardContent>
@@ -964,7 +967,7 @@ function IntroStep({
     setIsSubmitting(true);
 
     let storageMode: LeadCaptureRecord["storageMode"] = "local_only";
-    let storageMessage = "Your details were saved for this browser session.";
+    let storageMessage = "Your details are saved on this device for now.";
 
     try {
       const response = await fetch("/api/lead-capture", {
@@ -981,7 +984,7 @@ function IntroStep({
         storageMessage = payload?.message ?? storageMessage;
       }
     } catch {
-      storageMessage = "Your details were saved for this browser session.";
+      storageMessage = "Your details are saved on this device for now.";
     } finally {
       setIsSubmitting(false);
     }
@@ -1324,10 +1327,10 @@ function InputsStep({
             <Card className={cn(PANEL_CARD, "p-5")}>
               <CardHeader className="p-0">
                 <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
-                  Selected process family
+                  Process family
                 </CardTitle>
                 <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                  Keep the chosen process visible here. Use the back action only if the family itself needs to change.
+                  Review the selected process family or go back to choose a different one.
                 </CardDescription>
               </CardHeader>
               <CardContent className="mt-4 grid gap-4 p-0">
@@ -1362,10 +1365,10 @@ function InputsStep({
             <Card className={cn(PANEL_CARD, "p-5")}>
               <CardHeader className="p-0">
                 <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
-                  Stage and optional sample data
+                  Assessment settings
                 </CardTitle>
                 <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                  Lifecycle stage affects the assumptions. Sample data only applies if you explicitly load it.
+                  Choose the lifecycle stage and load a sample only if you want a fast walkthrough.
                 </CardDescription>
               </CardHeader>
               <CardContent className="mt-4 grid gap-4 p-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
@@ -1407,14 +1410,14 @@ function InputsStep({
 
                 <div className="grid gap-2">
                   <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                    Optional sample data
+                    Sample scenario
                   </p>
                   <Select
                     value={selectedSampleId || undefined}
                     onValueChange={(value) => setSelectedSampleId(value ?? "")}
                   >
                     <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
-                      <SelectValue placeholder="Select a sample session" />
+                      <SelectValue placeholder="Select a sample scenario" />
                     </SelectTrigger>
                     <SelectContent className={SELECT_CONTENT_CLASS}>
                       {BIOPILOT_SAMPLE_CONFIGS.map((sample) => (
@@ -1428,7 +1431,7 @@ function InputsStep({
                     <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
                       {selectedSample
                         ? selectedSample.description
-                        : "No sample data is loaded. Your own entries remain active unless you click Load sample data."}
+                        : "No sample data is loaded. Your own entries stay active unless you choose a sample and click Load sample data."}
                     </p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -1460,43 +1463,11 @@ function InputsStep({
             <InputSectionCard section={manualBurdenSection} inputs={inputs} onPatch={onPatch} />
           </div>
 
-          <Card className={cn(PANEL_CARD, "p-5")}>
-            <CardHeader className="p-0">
-              <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
-                Process context reference
-              </CardTitle>
-              <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                Supporting context for this process family, kept below the editable inputs so the form stays primary.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="mt-4 grid gap-4 p-0 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-              <div className="grid gap-4">
-                <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(243,248,252,0.96))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-                  <ProcessFamilyIllustration profileId={profile.id} variant="panel" />
-                </div>
-                <p className="text-base leading-7 text-[color:var(--muted-foreground)]">{profile.bioPilotFit}</p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                {profile.instrumentStack.slice(0, 3).map((item) => (
-                  <div key={item.category} className={cn(SOFT_CARD, "p-4")}>
-                    <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                      {item.category}
-                    </p>
-                    <p className="mt-2 text-base leading-6 text-[color:var(--foreground)]">
-                      {item.whyItMatters}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
           <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
             <CircleAlert className="size-4 text-[color:var(--brand-blue)]" />
-            <AlertTitle>Directional report</AlertTitle>
+            <AlertTitle>Planning estimate</AlertTitle>
             <AlertDescription>
-              This assessment is directional. Validate the real operating numbers before using the
-              final report in a budget or approval review.
+              This estimate reflects the submitted inputs. Confirm the most important operating numbers before using it for formal planning.
             </AlertDescription>
           </Alert>
 
@@ -1603,16 +1574,18 @@ function ReportStep({
               </CardDescription>
             </CardHeader>
             <CardContent className="relative z-10 mt-6 grid gap-4 p-0 lg:grid-cols-[minmax(0,1fr)_280px]">
-              <div className={cn(DARK_SOFT, "p-4")}>
-                <p className="text-[12px] uppercase tracking-[0.18em] text-white/52">Process frame</p>
-                <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.04] p-3">
+              <div className={cn(REPORT_FRAME_CARD, "p-4")}>
+                <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--brand-blue)]/80">
+                  Process frame
+                </p>
+                <div className="mt-4 rounded-[24px] border border-[#c7daec] bg-white/80 p-3">
                   <ProcessFamilyIllustration profileId={results.profile.id} variant="report" />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {results.profile.focusAreas.slice(0, 3).map((focus) => (
                     <span
                       key={focus}
-                      className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-sm font-semibold text-white/82"
+                      className="rounded-full border border-[#c7daec] bg-white px-3 py-1.5 text-sm font-semibold text-[color:var(--brand-blue)]"
                     >
                       {focus}
                     </span>
@@ -1620,21 +1593,25 @@ function ReportStep({
                 </div>
               </div>
               <div className="grid gap-3">
-                <div className={cn(DARK_SOFT, "p-4")}>
-                  <p className="text-[12px] uppercase tracking-[0.18em] text-white/52">Digital coverage</p>
-                  <p className="mt-3 text-display text-[2.2rem] leading-none tracking-[-0.05em] text-white">
+                <div className={cn(REPORT_FRAME_CARD, "p-4")}>
+                  <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--brand-blue)]/80">
+                    Digital coverage
+                  </p>
+                  <p className="mt-3 text-display text-[2.2rem] leading-none tracking-[-0.05em] text-[color:var(--brand-indigo)]">
                     {formatPercent(results.digitalCoverage)}
                   </p>
-                  <p className="mt-3 text-[0.96rem] leading-6 text-white/70">
+                  <p className="mt-3 text-[0.96rem] leading-6 text-[color:var(--brand-indigo)]/78">
                     Current connected operating coverage across instruments, data, and guided workflow.
                   </p>
                 </div>
-                <div className={cn(DARK_SOFT, "p-4")}>
-                  <p className="text-[12px] uppercase tracking-[0.18em] text-white/52">Manual burden</p>
-                  <p className="mt-3 text-display text-[2.2rem] leading-none tracking-[-0.05em] text-white">
+                <div className={cn(REPORT_FRAME_CARD, "p-4")}>
+                  <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--brand-blue)]/80">
+                    Manual burden
+                  </p>
+                  <p className="mt-3 text-display text-[2.2rem] leading-none tracking-[-0.05em] text-[color:var(--brand-indigo)]">
                     {formatPercent(results.manualBurdenIndex)}
                   </p>
-                  <p className="mt-3 text-[0.96rem] leading-6 text-white/70">
+                  <p className="mt-3 text-[0.96rem] leading-6 text-[color:var(--brand-indigo)]/78">
                     Current reliance on manual transcription, review assembly, and delayed evidence.
                   </p>
                 </div>
@@ -1652,31 +1629,31 @@ function ReportStep({
               <ReportMetricCard
                 label="Annual value"
                 value={formatCurrency(results.annualValuePotential)}
-                detail="Directional annual value from the submitted assumptions."
+                detail="Estimated annual value from the submitted assumptions."
               />
               <ReportMetricCard
                 label="3-year ROI"
                 value={formatPercent(results.threeYearRoi)}
-                detail="Directional return against the submitted first-wave investment."
+                detail="Estimated 3-year return against the submitted investment."
               />
               <ReportMetricCard
                 label="Payback"
                 value={`${formatDecimal(results.paybackMonths)} mo`}
-                detail="Modeled payback period for the submitted scenario."
+                detail="Estimated payback period for the submitted scenario."
               />
             </div>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-        <Card className={cn(PANEL_CARD, "p-5")}>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
           <CardHeader className="p-0">
             <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-              Recommended BioPilot plays
+              Recommended BioPilot priorities
             </CardTitle>
             <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-              These are the BioPilot motions most relevant to the submitted operating state.
+              These areas are most likely to improve the submitted operating profile.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-5 grid gap-3 p-0">
@@ -1701,13 +1678,13 @@ function ReportStep({
           </CardContent>
         </Card>
 
-        <Card className={cn(PANEL_CARD, "p-5")}>
+        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
           <CardHeader className="p-0">
             <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-              Operating lane uplift
+              Estimated operating improvement
             </CardTitle>
             <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-              Current readiness against the modeled BioPilot-enabled state.
+              Current state compared with the estimated state after BioPilot adoption.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-5 grid gap-3 p-0">
@@ -1725,14 +1702,14 @@ function ReportStep({
         </Card>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.98fr)_minmax(0,1.02fr)]">
-        <Card className={cn(PANEL_CARD, "p-5")}>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,0.98fr)_minmax(0,1.02fr)]">
+        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
           <CardHeader className="p-0">
             <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-              Top operating signals
+              Main improvement opportunities
             </CardTitle>
             <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-              The main shortfalls affecting the BioPilot business case.
+              The operating gaps with the biggest effect on process performance and value.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-5 grid gap-3 p-0">
@@ -1762,13 +1739,13 @@ function ReportStep({
           </CardContent>
         </Card>
 
-        <Card className={cn(PANEL_CARD, "p-5")}>
+        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
           <CardHeader className="p-0">
             <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-              Business-case levers
+              Value drivers
             </CardTitle>
             <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-              The value bridge behind the final ROI story.
+              The main sources of estimated value in this report.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-5 grid gap-3 p-0">
@@ -1785,14 +1762,14 @@ function ReportStep({
         </Card>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
-        <Card className={cn(PANEL_CARD, "p-5")}>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
+        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
           <CardHeader className="p-0">
             <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
               Operating change summary
             </CardTitle>
             <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-              Submitted state versus the modeled BioPilot-enabled state.
+              Submitted state compared with the estimated state after BioPilot adoption.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-5 grid gap-3 p-0">
@@ -1816,7 +1793,7 @@ function ReportStep({
                 <ArrowRight className="hidden size-4 text-[color:var(--muted-foreground)] md:block" />
                 <div className="md:text-right">
                   <p className="text-[12px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    BioPilot-enabled
+                    With BioPilot
                   </p>
                   <p className="mt-1 font-heading text-[1.25rem] tracking-[-0.03em] text-[color:var(--brand-blue)]">
                     {formatChangeValue(item.currentKey, results.bioPilotState[item.currentKey])}
@@ -1831,10 +1808,10 @@ function ReportStep({
           <Card className={cn(PANEL_CARD, "p-5")}>
             <CardHeader className="p-0">
               <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                Submitted process context
+                Submitted process profile
               </CardTitle>
               <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                The report stays tied to the selected process family and operating scope.
+                Reference details captured with this assessment.
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-5 grid gap-4 p-0">
@@ -1854,9 +1831,9 @@ function ReportStep({
 
           <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
             <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
-            <AlertTitle>Use this report correctly</AlertTitle>
+            <AlertTitle>Use this estimate as a planning tool</AlertTitle>
             <AlertDescription>
-              Validate the top operating numbers before using this report for a formal budget or approval decision.
+              Confirm the most important operating numbers before relying on this report for formal planning.
             </AlertDescription>
           </Alert>
         </div>
@@ -1866,7 +1843,7 @@ function ReportStep({
         <CardHeader className="p-0">
           <CardTitle className="font-heading text-[1.8rem] tracking-[-0.03em]">Next move</CardTitle>
           <CardDescription className="text-xl leading-8 text-[color:var(--muted-foreground)]">
-            Keep the next discussion tied to operating evidence.
+            Recommended next step based on the submitted operating profile.
           </CardDescription>
         </CardHeader>
         <CardContent className="mt-5 grid gap-4 p-0 xl:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.05fr)] xl:items-start">
@@ -1882,15 +1859,15 @@ function ReportStep({
             <Button variant="outline" className={SECONDARY_BUTTON} onClick={onEditInputs}>
               Edit inputs
             </Button>
-            <Button className={PRIMARY_BUTTON} onClick={handleExportPdf} disabled={isExportingPdf}>
-              <FileDown className="size-4" />
-              {isExportingPdf ? "Preparing PDF..." : "Export PDF"}
+            <Button variant="outline" className={SECONDARY_BUTTON} onClick={onChangeContact}>
+              Change contact
             </Button>
             <Button className={PRIMARY_BUTTON} onClick={onNewAssessment}>
               Start another assessment
             </Button>
-            <Button variant="outline" className={SECONDARY_BUTTON} onClick={onChangeContact}>
-              Change contact
+            <Button className={PRIMARY_BUTTON} onClick={handleExportPdf} disabled={isExportingPdf}>
+              <FileDown className="size-4" />
+              {isExportingPdf ? "Preparing PDF..." : "Export PDF"}
             </Button>
           </div>
         </CardContent>
@@ -1922,7 +1899,7 @@ function ReportStep({
                 )}
               />
               <AlertTitle>
-                {storageMode === "database" ? "Assessment saved" : "Assessment generated locally"}
+                {storageMode === "database" ? "Assessment saved" : "Saved on this device"}
               </AlertTitle>
               <AlertDescription>{storageMessage}</AlertDescription>
             </Alert>
@@ -2060,7 +2037,7 @@ export function BioPilotFitAssessmentApp() {
       setAssessmentStorageMode(payload?.storageMode ?? "local_only");
       setAssessmentStorageMessage(
         payload?.message ??
-          "The assessment report was generated. Server-side storage status was not returned.",
+          "Your report was created. Online saving status was not returned.",
       );
       setCurrentStep("report");
     } catch (error) {
@@ -2094,12 +2071,12 @@ export function BioPilotFitAssessmentApp() {
   };
 
   const handleUseSampleContact = () => {
-    completeLeadCapture({
-      ...SAMPLE_LEAD,
-      submittedAt: new Date().toISOString(),
-      storageMode: "local_only",
-      storageMessage: "Sample session saved for this browser session.",
-    });
+      completeLeadCapture({
+        ...SAMPLE_LEAD,
+        submittedAt: new Date().toISOString(),
+        storageMode: "local_only",
+        storageMessage: "Sample session loaded on this device.",
+      });
     setInputs(BIOPILOT_SAMPLE_CONFIGS[0]?.inputs ?? DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
     setCurrentStep("profile");
   };
