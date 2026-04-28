@@ -1519,6 +1519,8 @@ function ReportStep({
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const maxLeverValue = results.valueLevers[0]?.annualValue ?? 0;
+  const topValueLever = results.valueLevers[0];
+  const topPriority = results.plays[0];
 
   const formatChangeValue = (
     key: (typeof REPORT_CHANGE_ITEMS)[number]["currentKey"],
@@ -1621,7 +1623,7 @@ function ReportStep({
             </CardContent>
           </div>
 
-          <div className="border-t border-white/8 bg-white/[0.03] p-6 xl:border-t-0 xl:border-l">
+          <div className="flex h-full flex-col border-t border-white/8 bg-white/[0.03] p-6 xl:border-t-0 xl:border-l">
             <div className="grid gap-3 sm:grid-cols-2">
               <ReportMetricCard
                 label="Fit score"
@@ -1644,169 +1646,197 @@ function ReportStep({
                 detail="Estimated payback period for the submitted scenario."
               />
             </div>
+            <div className={cn(DARK_SOFT, "mt-3 flex-1 p-4")}>
+              <p className="text-[12px] uppercase tracking-[0.18em] text-white/52">
+                Modeled basis
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <p className="font-heading text-[1.55rem] leading-none tracking-[-0.05em] text-[#9bdaf7]">
+                    {formatNumber(results.annualRecoveredHours)}
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-white/66">hours recovered per year</p>
+                </div>
+                <div>
+                  <p className="font-heading text-[1.55rem] leading-none tracking-[-0.05em] text-[#9bdaf7]">
+                    {formatDecimal(results.avoidedFailedRuns)}
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-white/66">failed or degraded runs avoided</p>
+                </div>
+                <div>
+                  <p className="font-heading text-[1.55rem] leading-none tracking-[-0.05em] text-[#9bdaf7]">
+                    {topValueLever ? formatCurrency(topValueLever.annualValue) : "$0"}
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-white/66">largest annual value driver</p>
+                </div>
+              </div>
+              {topPriority ? (
+                <p className="mt-4 border-t border-white/8 pt-3 text-[0.96rem] leading-6 text-white/72">
+                  Strongest priority: {topPriority.title.toLowerCase()}.
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
       </section>
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
-        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
-          <CardHeader className="p-0">
-            <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-              Recommended BioPilot priorities
-            </CardTitle>
-            <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-              These areas are most likely to improve the submitted operating profile.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="mt-5 grid gap-3 p-0">
-            {results.plays.map((play) => (
-              <div key={play.id} className={cn(SOFT_CARD, "p-4")}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-lg font-semibold text-[color:var(--foreground)]">
-                    {play.title}
+        <div className="grid gap-4">
+          <Card className={cn(PANEL_CARD, "h-fit p-5")}>
+            <CardHeader className="p-0">
+              <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+                Recommended BioPilot priorities
+              </CardTitle>
+              <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                These areas are most likely to improve the submitted operating profile.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-5 grid gap-3 p-0">
+              {results.plays.map((play) => (
+                <div key={play.id} className={cn(SOFT_CARD, "p-4")}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-lg font-semibold text-[color:var(--foreground)]">
+                      {play.title}
+                    </p>
+                    <span className="rounded-full bg-[rgba(0,79,155,0.08)] px-3 py-1 text-sm font-semibold text-[color:var(--brand-blue)]">
+                      {formatPercent(play.relevanceScore)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-base leading-6 text-[color:var(--muted-foreground)]">
+                    {play.summary}
                   </p>
-                  <span className="rounded-full bg-[rgba(0,79,155,0.08)] px-3 py-1 text-sm font-semibold text-[color:var(--brand-blue)]">
-                    {formatPercent(play.relevanceScore)}
-                  </span>
-                </div>
-                <p className="mt-2 text-base leading-6 text-[color:var(--muted-foreground)]">
-                  {play.summary}
-                </p>
-                <p className="mt-3 text-base leading-6 text-[color:var(--foreground)]">
-                  {play.whyBioPilot}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
-          <CardHeader className="p-0">
-            <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-              Estimated operating improvement
-            </CardTitle>
-            <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-              Current state compared with the estimated state after BioPilot adoption.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="mt-5 grid gap-3 p-0">
-            {results.laneScores.map((lane) => (
-              <LaneScoreCard
-                key={lane.id}
-                label={lane.label}
-                currentScore={lane.currentScore}
-                enabledScore={lane.enabledScore}
-                summary={lane.summary}
-                leverage={lane.leverage}
-              />
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,0.98fr)_minmax(0,1.02fr)]">
-        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
-          <CardHeader className="p-0">
-            <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-              Main improvement opportunities
-            </CardTitle>
-            <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-              The operating gaps with the biggest effect on process performance and value.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="mt-5 grid gap-3 p-0">
-            {results.buyingSignals.map((signal) => (
-              <div key={signal.id} className={cn(SOFT_CARD, "p-4")}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-lg font-semibold text-[color:var(--foreground)]">{signal.title}</p>
-                  <Badge
-                    className={cn(
-                      "rounded-full px-2.5 py-1",
-                      signal.severity === "Critical"
-                        ? "bg-[color:var(--brand-indigo)] text-white"
-                        : signal.severity === "Material"
-                          ? "bg-[color:var(--brand-blue)] text-white"
-                          : "bg-[color:var(--brand-yellow)] text-[color:var(--brand-indigo)]",
-                    )}
-                  >
-                    {signal.severity}
-                  </Badge>
-                </div>
-                <p className="mt-2 text-base leading-6 text-[color:var(--muted-foreground)]">
-                  {signal.summary}
-                </p>
-                <p className="mt-3 text-base leading-6 text-[color:var(--foreground)]">{signal.action}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
-          <CardHeader className="p-0">
-            <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-              Value drivers
-            </CardTitle>
-            <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-              The main sources of estimated value in this report.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="mt-5 grid gap-3 p-0">
-            {results.valueLevers.map((lever) => (
-              <ValueLeverCard
-                key={lever.id}
-                label={lever.label}
-                annualValue={lever.annualValue}
-                summary={lever.summary}
-                maxValue={maxLeverValue}
-              />
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
-        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
-          <CardHeader className="p-0">
-            <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-              Operating change summary
-            </CardTitle>
-            <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-              Submitted state compared with the estimated state after BioPilot adoption.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="mt-5 grid gap-3 p-0">
-            {REPORT_CHANGE_ITEMS.map((item) => (
-              <div
-                key={item.label}
-                className={cn(
-                  SOFT_CARD,
-                  "grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-center",
-                )}
-              >
-                <p className="text-lg font-semibold text-[color:var(--foreground)]">{item.label}</p>
-                <div className="md:text-right">
-                  <p className="text-[12px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    Current
-                  </p>
-                  <p className="mt-1 font-heading text-[1.25rem] tracking-[-0.03em] text-[color:var(--foreground)]">
-                    {formatChangeValue(item.currentKey, results.currentState[item.currentKey])}
+                  <p className="mt-3 text-base leading-6 text-[color:var(--foreground)]">
+                    {play.whyBioPilot}
                   </p>
                 </div>
-                <ArrowRight className="hidden size-4 text-[color:var(--muted-foreground)] md:block" />
-                <div className="md:text-right">
-                  <p className="text-[12px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    With BioPilot
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className={cn(PANEL_CARD, "h-fit p-5")}>
+            <CardHeader className="p-0">
+              <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+                Main improvement opportunities
+              </CardTitle>
+              <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                The operating gaps with the biggest effect on process performance and value.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-5 grid gap-3 p-0">
+              {results.buyingSignals.map((signal) => (
+                <div key={signal.id} className={cn(SOFT_CARD, "p-4")}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-lg font-semibold text-[color:var(--foreground)]">{signal.title}</p>
+                    <Badge
+                      className={cn(
+                        "rounded-full px-2.5 py-1",
+                        signal.severity === "Critical"
+                          ? "bg-[color:var(--brand-indigo)] text-white"
+                          : signal.severity === "Material"
+                            ? "bg-[color:var(--brand-blue)] text-white"
+                            : "bg-[color:var(--brand-yellow)] text-[color:var(--brand-indigo)]",
+                      )}
+                    >
+                      {signal.severity}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-base leading-6 text-[color:var(--muted-foreground)]">
+                    {signal.summary}
                   </p>
-                  <p className="mt-1 font-heading text-[1.25rem] tracking-[-0.03em] text-[color:var(--brand-blue)]">
-                    {formatChangeValue(item.currentKey, results.bioPilotState[item.currentKey])}
-                  </p>
+                  <p className="mt-3 text-base leading-6 text-[color:var(--foreground)]">{signal.action}</p>
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className={cn(PANEL_CARD, "h-fit p-5")}>
+            <CardHeader className="p-0">
+              <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+                Operating change summary
+              </CardTitle>
+              <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                Submitted state compared with the estimated state after BioPilot adoption.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-5 grid gap-3 p-0">
+              {REPORT_CHANGE_ITEMS.map((item) => (
+                <div
+                  key={item.label}
+                  className={cn(
+                    SOFT_CARD,
+                    "grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-center",
+                  )}
+                >
+                  <p className="text-lg font-semibold text-[color:var(--foreground)]">{item.label}</p>
+                  <div className="md:text-right">
+                    <p className="text-[12px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                      Current
+                    </p>
+                    <p className="mt-1 font-heading text-[1.25rem] tracking-[-0.03em] text-[color:var(--foreground)]">
+                      {formatChangeValue(item.currentKey, results.currentState[item.currentKey])}
+                    </p>
+                  </div>
+                  <ArrowRight className="hidden size-4 text-[color:var(--muted-foreground)] md:block" />
+                  <div className="md:text-right">
+                    <p className="text-[12px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                      With BioPilot
+                    </p>
+                    <p className="mt-1 font-heading text-[1.25rem] tracking-[-0.03em] text-[color:var(--brand-blue)]">
+                      {formatChangeValue(item.currentKey, results.bioPilotState[item.currentKey])}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="grid gap-4">
+          <Card className={cn(PANEL_CARD, "h-fit p-5")}>
+            <CardHeader className="p-0">
+              <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+                Estimated operating improvement
+              </CardTitle>
+              <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                Current state compared with the estimated state after BioPilot adoption.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-5 grid gap-3 p-0">
+              {results.laneScores.map((lane) => (
+                <LaneScoreCard
+                  key={lane.id}
+                  label={lane.label}
+                  currentScore={lane.currentScore}
+                  enabledScore={lane.enabledScore}
+                  summary={lane.summary}
+                  leverage={lane.leverage}
+                />
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className={cn(PANEL_CARD, "h-fit p-5")}>
+            <CardHeader className="p-0">
+              <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+                Value drivers
+              </CardTitle>
+              <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                The main sources of estimated value in this report.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-5 grid gap-3 p-0">
+              {results.valueLevers.map((lever) => (
+                <ValueLeverCard
+                  key={lever.id}
+                  label={lever.label}
+                  annualValue={lever.annualValue}
+                  summary={lever.summary}
+                  maxValue={maxLeverValue}
+                />
+              ))}
+            </CardContent>
+          </Card>
+
           <Card className={cn(PANEL_CARD, "p-5")}>
             <CardHeader className="p-0">
               <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
