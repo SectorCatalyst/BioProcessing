@@ -196,7 +196,8 @@ const FIELD_COPY: Record<
   },
   plannedProgramInvestment: {
     label: "First-wave BioPilot investment",
-    description: "Estimated first-wave BioPilot software, services, and implementation investment for this scope.",
+    description:
+      "Estimated first-wave BioPilot investment used to convert the opportunity into directional ROI. Refine this once proposal pricing is known.",
     min: 100000,
     max: 900000,
     step: 10000,
@@ -400,9 +401,6 @@ const PROCESS_FAMILY_TAGS: Record<ProcessProfileId, string> = {
   "viral-vector": "Vector",
   "plasmid-dna": "Plasmid",
   "mrna-rna": "RNA",
-  sirna: "Oligo",
-  "cell-therapy": "Cell",
-  "regenerative-medicine": "Regenerative",
 };
 
 const REPORT_CHANGE_ITEMS = [
@@ -453,7 +451,7 @@ function loadInitialInputs(): BioPilotAssessmentInputs {
 
   try {
     const parsed = JSON.parse(saved) as Partial<BioPilotAssessmentInputs>;
-    return { ...DEFAULT_BIOPILOT_ASSESSMENT_INPUTS, ...parsed };
+    return normalizeAssessmentInputs(parsed);
   } catch {
     window.localStorage.removeItem(STORAGE_KEY);
     return DEFAULT_BIOPILOT_ASSESSMENT_INPUTS;
@@ -1470,7 +1468,8 @@ function InputsStep({
             <CircleAlert className="size-4 text-[color:var(--brand-blue)]" />
             <AlertTitle>Planning estimate</AlertTitle>
             <AlertDescription>
-              This estimate reflects the submitted inputs. Confirm the most important operating numbers before using it for formal planning.
+              The report estimates value from recoverable time, avoided failed runs, faster decisions,
+              and cleaner transfer work. Confirm proposal pricing before treating ROI as final.
             </AlertDescription>
           </Alert>
 

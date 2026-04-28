@@ -9,9 +9,6 @@ export const PROCESS_PROFILE_IDS = [
   "viral-vector",
   "plasmid-dna",
   "mrna-rna",
-  "sirna",
-  "cell-therapy",
-  "regenerative-medicine",
 ] as const;
 
 export type ProcessProfileId = (typeof PROCESS_PROFILE_IDS)[number];
@@ -507,133 +504,6 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
       },
     ],
   },
-  {
-    id: "sirna",
-    label: "siRNA and Oligonucleotide Therapeutics",
-    modality:
-      "siRNA, antisense, and related oligonucleotide workflows spanning synthesis, purification, formulation, and analytical release.",
-    summary:
-      "Best for teams that need cleaner continuity from oligo synthesis or assembly through purification, formulation, and release review.",
-    bioPilotFit:
-      "BioPilot is relevant when synthesis records, purification evidence, formulation context, and analytical release data still have to be reconciled manually across teams and systems.",
-    base: {
-      manualHoursPerRun: 19,
-      reviewHours: 19,
-      decisionLagHours: 13,
-      transferPackageHours: 70,
-      runSuccessRate: 87,
-      deviationRate: 0.1,
-    },
-    focusAreas: [
-      "Synthesis-to-batch context continuity",
-      "Purification and formulation visibility",
-      "Analytical release readiness",
-      "Cross-site transfer discipline",
-    ],
-    instrumentStack: [
-      {
-        category: "Synthesis and reaction operations",
-        examples:
-          "Oligonucleotide synthesizers, reaction skids, cleavage and deprotection steps, controlled hold conditions",
-        whyItMatters:
-          "The operating record has to stay coherent from synthesis through downstream handling.",
-      },
-      {
-        category: "Purification and formulation",
-        examples:
-          "Chromatography, TFF, filtration, buffer exchange, LNP mixing, controlled formulation equipment",
-        whyItMatters:
-          "Product quality decisions depend on linking purification and formulation evidence back to the run context.",
-      },
-      {
-        category: "Analytics and digital review",
-        examples:
-          "HPLC, UV, LC-MS support data, particle characterization, contextualized review records, guided SOPs",
-        whyItMatters:
-          "Manual stitching between synthesis, analytics, and release evidence creates avoidable review and transfer drag.",
-      },
-    ],
-  },
-  {
-    id: "cell-therapy",
-    label: "Cell Therapy",
-    modality: "Autologous or allogeneic workflows where chain of identity, coordination, and operator consistency dominate execution risk.",
-    summary:
-      "Best for teams where orchestration, manual SOP execution, deviations, and training consistency are limiting throughput or release confidence.",
-    bioPilotFit:
-      "BioPilot fits when cross-functional execution is still manual and the organization needs a stronger digital operating layer across instruments and evidence.",
-    base: {
-      manualHoursPerRun: 28,
-      reviewHours: 22,
-      decisionLagHours: 14,
-      transferPackageHours: 72,
-      runSuccessRate: 84,
-      deviationRate: 0.13,
-    },
-    focusAreas: [
-      "Guided execution and SOP adherence",
-      "Operator ramp and repeatability",
-      "Evidence capture for review",
-      "Cross-functional coordination",
-    ],
-    instrumentStack: [
-      {
-        category: "Bioprocess equipment",
-        examples: "Cell culture systems, incubators, closed processing equipment, centrifuges",
-        whyItMatters: "Execution consistency matters as much as instrument data.",
-      },
-      {
-        category: "Measurement and analytics",
-        examples: "Cell counters, viability analyzers, environmental monitoring, offline assays",
-        whyItMatters: "The decision chain often depends on evidence collected from several locations.",
-      },
-      {
-        category: "Digital execution",
-        examples: "Guided SOPs, run records, exception handling, review-ready context",
-        whyItMatters: "BioPilot can add most value where manual coordination is still the bottleneck.",
-      },
-    ],
-  },
-  {
-    id: "regenerative-medicine",
-    label: "Regenerative Medicine and Stem Cell",
-    modality: "Stem cell, iPSC, organoid, and regenerative medicine workflows where operator consistency, growth conditions, and traceable evidence are critical.",
-    summary:
-      "Best for teams that need more disciplined execution, stronger evidence capture, and a clearer digital operating layer across sensitive workflows.",
-    bioPilotFit:
-      "BioPilot is relevant when regenerative workflows still depend on local know-how, manual SOP follow-through, and fragmented evidence capture.",
-    base: {
-      manualHoursPerRun: 26,
-      reviewHours: 20,
-      decisionLagHours: 15,
-      transferPackageHours: 70,
-      runSuccessRate: 85,
-      deviationRate: 0.11,
-    },
-    focusAreas: [
-      "Guided operator execution",
-      "Culture condition traceability",
-      "Evidence capture for review",
-      "Process repeatability during scale and transfer",
-    ],
-    instrumentStack: [
-      {
-        category: "Culture and processing systems",
-        examples: "Bioreactors, incubators, closed processing equipment, centrifuges, controlled environments",
-        whyItMatters: "Execution consistency has to be preserved across a sensitive workflow.",
-      },
-      {
-        category: "Monitoring and analytics",
-        examples: "Cell counters, viability analyzers, metabolite checks, environmental monitoring, offline assays",
-        whyItMatters: "The team needs faster access to evidence without losing context.",
-      },
-      {
-        category: "Execution and review systems",
-        examples: "Guided SOPs, event records, review dashboards, exception handling, release packages",
-        whyItMatters: "This is where BioPilot can reduce training burden and review drag.",
-      },
-    ],
-  },
 ];
 
 export const LIFECYCLE_STAGES: LifecycleStage[] = [
@@ -809,41 +679,6 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
       deviationInvestigationHours: 22,
       techTransferPackageHours: 102,
       onboardingDays: 20,
-    },
-  },
-  {
-    id: "sirna-launch-readiness",
-    label: "siRNA Launch Readiness",
-    description:
-      "An oligonucleotide program carrying synthesis, purification, formulation, and release evidence across several systems with heavy review drag.",
-    inputs: {
-      ...DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
-      processProfileId: "sirna",
-      lifecycleStageId: "late-development",
-      activePrograms: 3,
-      runsPerYear: 48,
-      sites: 2,
-      transferEventsPerYear: 4,
-      vendorPlatforms: 5,
-      blendedHourlyRate: 160,
-      costPerFailedRun: 95000,
-      valuePerDayAcceleration: 46000,
-      plannedProgramInvestment: 290000,
-      bioreactorConnectivity: 20,
-      sensorCoverage: 46,
-      patCoverage: 28,
-      analyzerConnectivity: 38,
-      downstreamVisibility: 44,
-      dataContextualization: 26,
-      sopAutomation: 24,
-      reviewByException: 18,
-      crossSiteCollaboration: 34,
-      manualTranscriptionShare: 61,
-      offlineDataDelayHours: 15,
-      batchReviewHours: 22,
-      deviationInvestigationHours: 17,
-      techTransferPackageHours: 76,
-      onboardingDays: 15,
     },
   },
 ];

@@ -21,9 +21,6 @@ const PROCESS_VISUAL_META: Record<
   "viral-vector": { accent: "#2BB3CF", secondary: "#00316C", badge: "AAV" },
   "plasmid-dna": { accent: "#12B4C7", secondary: "#00316C", badge: "DNA" },
   "mrna-rna": { accent: "#2FC6C7", secondary: "#0B4F9B", badge: "RNA" },
-  sirna: { accent: "#26B9C6", secondary: "#00316C", badge: "siRNA" },
-  "cell-therapy": { accent: "#14B4B1", secondary: "#00316C", badge: "CELL" },
-  "regenerative-medicine": { accent: "#00A04C", secondary: "#00316C", badge: "REGEN" },
 };
 
 function Frame({
@@ -233,27 +230,6 @@ function Plasmid({ x, y, accent, secondary }: { x: number; y: number; accent: st
   );
 }
 
-function Cells({ x, y, accent, secondary }: { x: number; y: number; accent: string; secondary: string }) {
-  const cells = [
-    [0, 0, 12, accent],
-    [20, -8, 9, secondary],
-    [24, 18, 11, accent],
-    [-18, 14, 10, secondary],
-    [4, 28, 8, accent],
-  ] as const;
-
-  return (
-    <g transform={`translate(${x} ${y})`}>
-      {cells.map(([dx, dy, radius, color], index) => (
-        <g key={index}>
-          <circle cx={dx} cy={dy} r={radius} fill={`${color}18`} stroke={color} strokeWidth="2.2" />
-          <circle cx={dx} cy={dy} r={radius / 2.5} fill={color} opacity="0.55" />
-        </g>
-      ))}
-    </g>
-  );
-}
-
 function VaccineVial({ x, y, accent, secondary }: { x: number; y: number; accent: string; secondary: string }) {
   return (
     <g>
@@ -274,48 +250,6 @@ function TrendScreen({ x, y, accent, secondary }: { x: number; y: number; accent
       <path d={`M${x + 10} ${y + 30} C${x + 18} ${y + 18} ${x + 24} ${y + 34} ${x + 34} ${y + 18} C${x + 44} ${y + 2} ${x + 52} ${y + 26} ${x + 64} ${y + 10}`} stroke={accent} strokeWidth="3" fill="none" strokeLinecap="round" />
       <path d={`M${x + 18} ${y + 56} H${x + 54}`} stroke={secondary} strokeWidth="4" strokeLinecap="round" />
       <path d={`M${x + 36} ${y + 48} V${y + 56}`} stroke={secondary} strokeWidth="3" strokeLinecap="round" />
-    </g>
-  );
-}
-
-function BioBag({ x, y, accent, secondary }: { x: number; y: number; accent: string; secondary: string }) {
-  return (
-    <g>
-      <path d={`M${x + 14} ${y} H${x + 36}`} stroke="#c7d8e8" strokeWidth="5" strokeLinecap="round" />
-      <path d={`M${x + 18} ${y} V${y + 10}`} stroke="#c7d8e8" strokeWidth="3" />
-      <path d={`M${x + 32} ${y} V${y + 10}`} stroke="#c7d8e8" strokeWidth="3" />
-      <path
-        d={`M${x + 12} ${y + 10} H${x + 38} L${x + 42} ${y + 22} V${y + 70} Q${x + 26} ${y + 86} ${x + 8} ${y + 70} V${y + 22} Z`}
-        fill="none"
-        stroke={secondary}
-        strokeWidth="3"
-      />
-      <path
-        d={`M${x + 12} ${y + 52} Q${x + 26} ${y + 46} ${x + 42} ${y + 52} V${y + 68} Q${x + 26} ${y + 78} ${x + 12} ${y + 68} Z`}
-        fill={`${accent}18`}
-        stroke={accent}
-        strokeWidth="1.8"
-      />
-      <circle cx={x + 22} cy={y + 40} r="5" fill={`${accent}18`} stroke={accent} strokeWidth="1.8" />
-      <circle cx={x + 32} cy={y + 33} r="4" fill={`${secondary}14`} stroke={secondary} strokeWidth="1.6" />
-    </g>
-  );
-}
-
-function Scaffold({ x, y, accent, secondary }: { x: number; y: number; accent: string; secondary: string }) {
-  return (
-    <g>
-      <rect x={x} y={y} width="62" height="62" rx="16" fill="none" stroke={secondary} strokeWidth="3" />
-      {[1, 2, 3].map((index) => (
-        <path key={`v-${index}`} d={`M${x + 14 * index} ${y + 10} V${y + 52}`} stroke="#d6e3ef" strokeWidth="2" />
-      ))}
-      {[1, 2, 3].map((index) => (
-        <path key={`h-${index}`} d={`M${x + 10} ${y + 14 * index} H${x + 52}`} stroke="#d6e3ef" strokeWidth="2" />
-      ))}
-      <circle cx={x + 18} cy={y + 22} r="5" fill={`${accent}18`} stroke={accent} strokeWidth="1.8" />
-      <circle cx={x + 34} cy={y + 34} r="6" fill={`${secondary}16`} stroke={secondary} strokeWidth="1.8" />
-      <circle cx={x + 46} cy={y + 20} r="4.5" fill={`${accent}18`} stroke={accent} strokeWidth="1.8" />
-      <path d={`M${x + 74} ${y + 10} C${x + 88} ${y - 4} ${x + 106} ${y + 10} ${x + 106} ${y + 30} C${x + 106} ${y + 52} ${x + 88} ${y + 66} ${x + 74} ${y + 54}`} stroke={accent} strokeWidth="3" fill="none" strokeLinecap="round" />
     </g>
   );
 }
@@ -426,37 +360,6 @@ function renderGraphic(profileId: ProcessProfileId, accent: string, secondary: s
           <RNA x={68} y={58} accent={accent} secondary={secondary} />
           <TrendScreen x={124} y={46} accent={accent} secondary={secondary} />
           {!compact ? <Chip x={42} y={126} width={76} label="CHAIN" value="RNA LIVE" accent={secondary} /> : null}
-        </>
-      );
-    case "sirna":
-      return (
-        <>
-          <RNA x={52} y={54} accent={accent} secondary={secondary} compact />
-          <RNA x={52} y={82} accent={secondary} secondary={accent} compact />
-          <g>
-            <rect x="152" y="48" width="16" height="56" rx="8" fill="none" stroke={secondary} strokeWidth="2.6" />
-            <rect x="176" y="48" width="16" height="56" rx="8" fill="none" stroke={secondary} strokeWidth="2.6" />
-            <path d="M160 54 V98" stroke={accent} strokeWidth="2" strokeDasharray="3 3" />
-            <path d="M184 58 V92" stroke={accent} strokeWidth="2" strokeDasharray="3 3" />
-          </g>
-          {!compact ? <Chip x={126} y={124} width={88} label="PURIFY" value="OLIGO FLOW" accent={accent} /> : null}
-        </>
-      );
-    case "cell-therapy":
-      return (
-        <>
-          <BioBag x={82} y={42} accent={accent} secondary={secondary} />
-          <Cells x={164} y={78} accent={accent} secondary={secondary} />
-          {!compact ? <Chip x={34} y={124} width={82} label="CHAIN" value="CUSTODY" accent={secondary} /> : null}
-          {!compact ? <Chip x={136} y={124} width={78} label="CELLS" value="VIABILITY" accent={accent} /> : null}
-        </>
-      );
-    case "regenerative-medicine":
-      return (
-        <>
-          <Scaffold x={74} y={46} accent={accent} secondary={secondary} />
-          {!compact ? <Chip x={36} y={126} width={88} label="TISSUE" value="SCAFFOLD" accent={secondary} /> : null}
-          {!compact ? <Chip x={138} y={126} width={76} label="PROCESS" value="GUIDED" accent={accent} /> : null}
         </>
       );
   }

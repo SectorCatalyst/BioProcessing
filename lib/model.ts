@@ -325,7 +325,6 @@ const selectOptions = {
   ],
   modality: [
     { value: "Monoclonal Antibody", label: "Monoclonal Antibody" },
-    { value: "Cell Therapy", label: "Cell Therapy" },
     { value: "Gene Therapy", label: "Gene Therapy" },
     { value: "Recombinant Protein", label: "Recombinant Protein" },
     { value: "Viral Vector", label: "Viral Vector" },
