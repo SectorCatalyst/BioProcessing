@@ -1352,6 +1352,7 @@ function InputsStep({
   const incompleteSections = INPUT_SECTIONS.filter(
     (section) => !completedSectionSet.has(section.id),
   );
+  const allInputSectionsComplete = incompleteSections.length === 0;
 
   const handleResetInputs = () => {
     setSelectedSampleId("");
@@ -1677,10 +1678,27 @@ function InputsStep({
               <ChevronLeft className="size-4" />
               Back
             </Button>
-            <Button type="button" className={PRIMARY_BUTTON} onClick={handleGenerateClick} disabled={isGeneratingReport}>
-              {isGeneratingReport ? "Generating report..." : "Generate final report"}
-              <ChevronRight className="size-4" />
-            </Button>
+            {allInputSectionsComplete ? (
+              <Button
+                type="button"
+                className={PRIMARY_BUTTON}
+                onClick={handleGenerateClick}
+                disabled={isGeneratingReport}
+              >
+                {isGeneratingReport ? "Generating report..." : "Generate final report"}
+                <ChevronRight className="size-4" />
+              </Button>
+            ) : (
+              <div
+                className={cn(
+                  SOFT_CARD,
+                  "flex min-h-11 items-center justify-center px-4 py-2 text-center text-sm font-semibold text-[color:var(--muted-foreground)]",
+                )}
+                role="status"
+              >
+                Confirm all input sections to unlock the final report.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
