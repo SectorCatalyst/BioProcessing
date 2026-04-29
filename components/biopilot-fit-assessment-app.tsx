@@ -85,6 +85,23 @@ const SELECT_CONTENT_CLASS =
   "border-[color:var(--border)] bg-[color:var(--popover)] text-[color:var(--foreground)] text-lg shadow-[0_24px_50px_rgba(11,28,59,0.16)] backdrop-blur-xl";
 const SELECT_ITEM_CLASS = "min-h-[48px] px-3 py-2 text-lg leading-7";
 
+const schedulePageTopScroll = () => {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  const animationFrame = window.requestAnimationFrame(() => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    window.scrollTo({
+      top: 0,
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  });
+
+  return () => window.cancelAnimationFrame(animationFrame);
+};
+
 const SAMPLE_LEAD: LeadCaptureFormInput = {
   firstName: "Sample",
   lastName: "Reviewer",
@@ -1359,6 +1376,8 @@ function InputsStep({
     completedSectionSet.has(section.id),
   );
 
+  useEffect(() => schedulePageTopScroll(), [activeInputSectionId]);
+
   const handleResetInputs = () => {
     setSelectedSampleId("");
     setCompletionError(null);
@@ -2469,17 +2488,7 @@ export function BioPilotFitAssessmentApp() {
   >(() => buildInputSources("default"));
   const [usedSampleData, setUsedSampleData] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const handle = window.requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-
-    return () => window.cancelAnimationFrame(handle);
-  }, [currentStep]);
+  useEffect(() => schedulePageTopScroll(), [currentStep]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
