@@ -135,10 +135,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        storageMode: "local_only" as const,
-        message: "Feedback was captured, but online saving is not available right now.",
+        message: "Feedback could not be saved right now.",
       },
-      { status: 202 },
+      { status: 500 },
     );
   }
 }
