@@ -2,6 +2,7 @@ import { Pool } from "pg";
 
 import {
   assessBioPilotFit,
+  type AssessmentEvidenceMeta,
   type BioPilotAssessmentInputs,
   type BioPilotAssessmentResults,
 } from "@/lib/biopilot-fit-assessment";
@@ -29,9 +30,28 @@ export interface AssessmentSubmissionRecord {
   paybackMonths: number;
   digitalCoverage: number;
   manualBurdenIndex: number;
+  digitalPlantMaturityScore: number | null;
+  digitalPlantMaturityLevel: number | null;
+  evidenceConfidenceScore: number | null;
+  evidenceConfidenceBand: string | null;
+  topPriority: string;
+  salesFollowUp: string;
   executiveSummary: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FeedbackEntryRecord {
+  id: string;
+  assessmentId: string | null;
+  workEmail: string;
+  company: string;
+  rating: number;
+  usefulness: number;
+  clarity: number;
+  comment: string;
+  page: string;
+  createdAt: string;
 }
 
 export const getPool = () => {
@@ -108,12 +128,18 @@ export const ensureAssessmentTable = async (pool: Pool) => {
       payback_months DOUBLE PRECISION NOT NULL,
       digital_coverage DOUBLE PRECISION NOT NULL,
       manual_burden_index DOUBLE PRECISION NOT NULL,
+      evidence_meta JSONB NOT NULL DEFAULT '{}'::jsonb,
       submitted_inputs JSONB NOT NULL,
       generated_report JSONB NOT NULL,
       source TEXT NOT NULL DEFAULT 'biopilot-fit-assessment',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await pool.query(`
+    ALTER TABLE roi_assessment_submissions
+    ADD COLUMN IF NOT EXISTS evidence_meta JSONB NOT NULL DEFAULT '{}'::jsonb;
   `);
 
   await pool.query(`
@@ -127,9 +153,37 @@ export const ensureAssessmentTable = async (pool: Pool) => {
   `);
 };
 
+export const ensureFeedbackTable = async (pool: Pool) => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS roi_feedback_entries (
+      id BIGSERIAL PRIMARY KEY,
+      assessment_id BIGINT REFERENCES roi_assessment_submissions(id) ON DELETE SET NULL,
+      work_email TEXT NOT NULL DEFAULT '',
+      company TEXT NOT NULL DEFAULT '',
+      rating INTEGER NOT NULL,
+      usefulness INTEGER NOT NULL,
+      clarity INTEGER NOT NULL,
+      comment TEXT NOT NULL DEFAULT '',
+      page TEXT NOT NULL DEFAULT 'final-report',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS roi_feedback_entries_created_at_idx
+      ON roi_feedback_entries (created_at DESC, id DESC);
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS roi_feedback_entries_work_email_idx
+      ON roi_feedback_entries (work_email);
+  `);
+};
+
 export const ensurePersistenceTables = async (pool: Pool) => {
   await ensureLeadCaptureTable(pool);
   await ensureAssessmentTable(pool);
+  await ensureFeedbackTable(pool);
 };
 
 export const upsertLeadCapture = async (pool: Pool, lead: LeadCaptureFormInput) => {
@@ -174,13 +228,15 @@ export const insertAssessmentSubmission = async ({
   pool,
   lead,
   inputs,
+  evidenceMeta,
 }: {
   pool: Pool;
   lead: LeadCaptureFormInput;
   inputs: BioPilotAssessmentInputs;
+  evidenceMeta?: AssessmentEvidenceMeta | null;
 }) => {
   const leadCaptureId = await upsertLeadCapture(pool, lead);
-  const results = assessBioPilotFit(inputs);
+  const results = assessBioPilotFit(inputs, evidenceMeta);
 
   const insertResult = await pool.query<{ id: string; created_at: string; updated_at: string }>(
     `
@@ -201,12 +257,13 @@ export const insertAssessmentSubmission = async ({
         payback_months,
         digital_coverage,
         manual_burden_index,
+        evidence_meta,
         submitted_inputs,
         generated_report
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7,
-        $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::jsonb, $18::jsonb
+        $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::jsonb, $18::jsonb, $19::jsonb
       )
       RETURNING id, created_at, updated_at
     `,
@@ -227,6 +284,7 @@ export const insertAssessmentSubmission = async ({
       results.paybackMonths,
       results.digitalCoverage,
       results.manualBurdenIndex,
+      JSON.stringify(evidenceMeta ?? {}),
       JSON.stringify(inputs),
       JSON.stringify(results),
     ],
@@ -282,7 +340,91 @@ export const mapAssessmentAdminRow = (
   paybackMonths: row.payback_months,
   digitalCoverage: row.digital_coverage,
   manualBurdenIndex: row.manual_burden_index,
+  digitalPlantMaturityScore: row.generated_report?.digitalPlantMaturity?.score ?? null,
+  digitalPlantMaturityLevel: row.generated_report?.digitalPlantMaturity?.level ?? null,
+  evidenceConfidenceScore: row.generated_report?.evidenceConfidence?.score ?? null,
+  evidenceConfidenceBand: row.generated_report?.evidenceConfidence?.band ?? null,
+  topPriority: row.generated_report?.salesFollowUp?.priority ?? row.generated_report?.plays?.[0]?.title ?? "",
+  salesFollowUp: row.generated_report?.salesFollowUp?.recommendedAction ?? "",
   executiveSummary: row.generated_report?.executiveSummary ?? "",
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+});
+
+export const insertFeedbackEntry = async ({
+  pool,
+  assessmentId,
+  workEmail,
+  company,
+  rating,
+  usefulness,
+  clarity,
+  comment,
+  page,
+}: {
+  pool: Pool;
+  assessmentId?: number | null;
+  workEmail?: string | null;
+  company?: string | null;
+  rating: number;
+  usefulness: number;
+  clarity: number;
+  comment?: string | null;
+  page?: string | null;
+}) => {
+  const result = await pool.query<{ id: string; created_at: string }>(
+    `
+      INSERT INTO roi_feedback_entries (
+        assessment_id,
+        work_email,
+        company,
+        rating,
+        usefulness,
+        clarity,
+        comment,
+        page
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, created_at
+    `,
+    [
+      assessmentId ?? null,
+      workEmail?.trim().toLowerCase() ?? "",
+      company?.trim() ?? "",
+      rating,
+      usefulness,
+      clarity,
+      comment?.trim() ?? "",
+      page?.trim() || "final-report",
+    ],
+  );
+
+  return {
+    id: result.rows[0]?.id ?? null,
+    createdAt: result.rows[0]?.created_at ?? new Date().toISOString(),
+  };
+};
+
+export const mapFeedbackAdminRow = (row: {
+  id: string;
+  assessment_id: string | null;
+  work_email: string;
+  company: string;
+  rating: number;
+  usefulness: number;
+  clarity: number;
+  comment: string;
+  page: string;
+  created_at: string;
+}): FeedbackEntryRecord => ({
+  id: row.id,
+  assessmentId: row.assessment_id,
+  workEmail: row.work_email,
+  company: row.company,
+  rating: row.rating,
+  usefulness: row.usefulness,
+  clarity: row.clarity,
+  comment: row.comment,
+  page: row.page,
+  createdAt: row.created_at,
 });

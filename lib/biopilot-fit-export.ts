@@ -169,11 +169,84 @@ export async function exportBioPilotAssessmentPdf(params: {
       ["Payback", `${formatDecimal(results.paybackMonths)} months`],
       ["Recovered hours", `${formatNumber(results.annualRecoveredHours)} hours / year`],
       ["Decision days recovered", `${formatDecimal(results.annualDecisionDaysRecovered)} days / year`],
+      ["DPMM level", `Level ${results.digitalPlantMaturity.level}: ${results.digitalPlantMaturity.label}`],
+      ["DPMM score", formatPercent(results.digitalPlantMaturity.score)],
+      ["Evidence confidence", `${results.evidenceConfidence.band} (${formatPercent(results.evidenceConfidence.score)})`],
     ],
     margin: { left: 14, right: 14 },
   });
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
+  y = ensurePage(doc, y);
+  y = drawSectionHeading(doc, "Digital plant maturity", y);
+
+  autoTable(doc, {
+    startY: y,
+    theme: "grid",
+    styles: {
+      fontSize: 9.5,
+      cellPadding: 3,
+      textColor: [34, 45, 58],
+      lineColor: [224, 231, 239],
+      lineWidth: 0.2,
+      overflow: "linebreak",
+    },
+    head: [["Domain", "Score", "Why it matters"]],
+    headStyles: {
+      fillColor: [236, 244, 252],
+      textColor: [0, 49, 108],
+      fontStyle: "bold",
+    },
+    body: results.digitalPlantMaturity.domains.map((domain) => [
+      domain.label,
+      formatPercent(domain.score),
+      domain.rationale,
+    ]),
+    margin: { left: 14, right: 14 },
+    columnStyles: {
+      0: { cellWidth: 44 },
+      1: { cellWidth: 24 },
+      2: { cellWidth: 112 },
+    },
+  });
+
+  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
+  y = ensurePage(doc, y);
+  y = drawSectionHeading(doc, "Evidence confidence and calculation basis", y);
+  y = drawParagraph(doc, results.evidenceConfidence.summary, y);
+
+  autoTable(doc, {
+    startY: y,
+    theme: "grid",
+    styles: {
+      fontSize: 9.5,
+      cellPadding: 3,
+      textColor: [34, 45, 58],
+      lineColor: [224, 231, 239],
+      lineWidth: 0.2,
+      overflow: "linebreak",
+    },
+    head: [["Area", "Basis", "Formula"]],
+    headStyles: {
+      fillColor: [236, 244, 252],
+      textColor: [0, 49, 108],
+      fontStyle: "bold",
+    },
+    body: results.assumptionTransparency.items.map((item) => [
+      item.label,
+      item.basis,
+      item.formula,
+    ]),
+    margin: { left: 14, right: 14 },
+    columnStyles: {
+      0: { cellWidth: 38 },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 72 },
+    },
+  });
+
+  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
+  y = ensurePage(doc, y);
   y = drawSectionHeading(doc, "Submitted process context", y);
 
   autoTable(doc, {

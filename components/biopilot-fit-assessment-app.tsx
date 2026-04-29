@@ -16,6 +16,8 @@ import { useShallow } from "zustand/react/shallow";
 
 import {
   assessBioPilotFit,
+  BIOPILOT_ADJUSTABLE_INPUT_KEYS,
+  BIOPILOT_INPUT_SECTION_IDS,
   BIOPILOT_SAMPLE_CONFIGS,
   buildRandomizedSampleInputs,
   DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
@@ -26,6 +28,10 @@ import {
   PROCESS_PROFILE_MAP,
   type BioPilotAssessmentInputs,
   type BioPilotAssessmentResults,
+  type AssessmentEvidenceMeta,
+  type AssessmentInputSource,
+  type BioPilotAdjustableInputKey,
+  type BioPilotInputSectionId,
   type ProcessProfileId,
 } from "@/lib/biopilot-fit-assessment";
 import {
@@ -53,6 +59,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 
 const STORAGE_KEY = "biopilot-fit-assessment-state-v1";
 
@@ -97,10 +104,7 @@ const STEP_ORDER = [
 
 type AssessmentStep = (typeof STEP_ORDER)[number]["id"];
 
-type AdjustableFieldKey = Exclude<
-  keyof BioPilotAssessmentInputs,
-  "processProfileId" | "lifecycleStageId"
->;
+type AdjustableFieldKey = BioPilotAdjustableInputKey;
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -393,6 +397,15 @@ const INPUT_SECTIONS = [
 
 type InputSectionId = (typeof INPUT_SECTIONS)[number]["id"];
 
+const INPUT_SECTION_GUIDANCE: Record<InputSectionId, string> = {
+  "operating-frame":
+    "These values set the scale of the business case. Annual run count, failed-run cost, and investment assumptions usually move the ROI most.",
+  "connected-stack":
+    "These 0-100 scores define the digital plant maturity baseline across instruments, PAT, analyzer context, and operating evidence.",
+  "manual-burden":
+    "These time assumptions directly drive recoverable hours. Use recent run reviews or team estimates when exact data is not available.",
+};
+
 const HERO_SUPPORT_BULLETS = [
   "Map bioreactors, PAT, analyzers, and review friction in one flow.",
   "Compare the current state to an estimated BioPilot operating model.",
@@ -465,6 +478,12 @@ function loadInitialInputs(): BioPilotAssessmentInputs {
   }
 }
 
+function buildInputSources(source: AssessmentInputSource) {
+  return Object.fromEntries(
+    BIOPILOT_ADJUSTABLE_INPUT_KEYS.map((key) => [key, source]),
+  ) as Partial<Record<AdjustableFieldKey, AssessmentInputSource>>;
+}
+
 function mapLeadToFormDefaults(
   leadCapture: LeadCaptureRecord | null,
 ): LeadCaptureFormInput {
@@ -501,11 +520,16 @@ function InputSectionCard({
         <p className="mt-2 font-heading text-[1.45rem] tracking-[-0.03em] text-[color:var(--foreground)]">
           {section.title}
         </p>
-        <p className="mt-1 max-w-[60ch] text-lg leading-7 text-[color:var(--muted-foreground)]">
+        <p className="mt-1 max-w-[70ch] text-base leading-6 text-[color:var(--muted-foreground)]">
           {section.description}
         </p>
+        <Alert className="mt-4 border-[color:var(--border)] bg-[color:var(--surface-2)]">
+          <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
+          <AlertTitle>Evidence guidance</AlertTitle>
+          <AlertDescription>{INPUT_SECTION_GUIDANCE[section.id]}</AlertDescription>
+        </Alert>
       </div>
-      <div className="grid auto-rows-fr gap-4 px-5 py-5 md:grid-cols-2">
+      <div className="grid auto-rows-fr gap-3 px-4 py-4 md:grid-cols-2 2xl:grid-cols-3">
         {section.fields.map((field) =>
           FIELD_COPY[field].kind === "range" ? (
             <RangeField
@@ -858,11 +882,11 @@ function RangeField({
   const copy = FIELD_COPY[field];
 
   return (
-    <div className={cn(SOFT_CARD, "flex h-full min-h-[260px] flex-col p-4")}>
+    <div className={cn(SOFT_CARD, "flex h-full min-h-[200px] flex-col p-4")}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-lg font-semibold text-[color:var(--foreground)]">{copy.label}</p>
-          <p className="mt-1 text-lg leading-7 text-[color:var(--muted-foreground)]">
+          <p className="text-base font-semibold text-[color:var(--foreground)]">{copy.label}</p>
+          <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
             {copy.description}
           </p>
         </div>
@@ -870,7 +894,7 @@ function RangeField({
           {copy.suffix === "%" ? formatPercent(value) : `${formatNumber(value)} ${copy.suffix ?? ""}`}
         </div>
       </div>
-      <div className="mt-auto pt-5">
+      <div className="mt-auto pt-4">
         <input
           aria-label={copy.label}
           className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-[rgba(0,79,155,0.12)] accent-[color:var(--brand-blue)]"
@@ -921,14 +945,14 @@ function NumberField({
   };
 
   return (
-    <div className={cn(SOFT_CARD, "flex h-full min-h-[260px] flex-col p-4")}>
+    <div className={cn(SOFT_CARD, "flex h-full min-h-[200px] flex-col p-4")}>
       <div>
-        <p className="text-lg font-semibold text-[color:var(--foreground)]">{copy.label}</p>
-        <p className="mt-1 text-lg leading-7 text-[color:var(--muted-foreground)]">
+        <p className="text-base font-semibold text-[color:var(--foreground)]">{copy.label}</p>
+        <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
           {copy.description}
         </p>
       </div>
-      <div className="mt-auto flex items-center gap-3 pt-5">
+      <div className="mt-auto flex items-center gap-3 pt-4">
         <Input
           className={INPUT_CLASS}
           type="text"
@@ -1289,6 +1313,9 @@ function InputsStep({
   onPatch,
   onLoadSample,
   onReset,
+  completedInputSectionIds,
+  onCompleteInputSection,
+  onInvalidateInputSection,
   onBack,
   onGenerate,
   reportError,
@@ -1298,6 +1325,9 @@ function InputsStep({
   onPatch: (patch: Partial<BioPilotAssessmentInputs>) => void;
   onLoadSample: (sampleId: string) => void;
   onReset: () => void;
+  completedInputSectionIds: InputSectionId[];
+  onCompleteInputSection: (sectionId: InputSectionId) => void;
+  onInvalidateInputSection: (sectionId: InputSectionId) => void;
   onBack: () => void;
   onGenerate: () => void;
   reportError: string | null;
@@ -1307,19 +1337,59 @@ function InputsStep({
   const [activeInputSectionId, setActiveInputSectionId] = useState<InputSectionId>(
     INPUT_SECTIONS[0].id,
   );
+  const [completionError, setCompletionError] = useState<string | null>(null);
   const profile = PROCESS_PROFILE_MAP[inputs.processProfileId];
   const stage = LIFECYCLE_STAGE_MAP[inputs.lifecycleStageId];
   const selectedSample = BIOPILOT_SAMPLE_CONFIGS.find((item) => item.id === selectedSampleId) ?? null;
+  const completedSectionSet = new Set(completedInputSectionIds);
   const activeInputSectionIndex = Math.max(
     INPUT_SECTIONS.findIndex((section) => section.id === activeInputSectionId),
     0,
   );
   const activeInputSection = INPUT_SECTIONS[activeInputSectionIndex];
-  const inputSectionProgress = ((activeInputSectionIndex + 1) / INPUT_SECTIONS.length) * 100;
+  const inputSectionProgress =
+    (completedInputSectionIds.length / INPUT_SECTIONS.length) * 100;
+  const incompleteSections = INPUT_SECTIONS.filter(
+    (section) => !completedSectionSet.has(section.id),
+  );
 
   const handleResetInputs = () => {
     setSelectedSampleId("");
+    setCompletionError(null);
     onReset();
+  };
+
+  const handleLoadSelectedSample = () => {
+    if (!selectedSampleId) {
+      return;
+    }
+
+    setCompletionError(null);
+    onLoadSample(selectedSampleId);
+  };
+
+  const handleCompleteSection = (sectionId: InputSectionId) => {
+    setCompletionError(null);
+    onCompleteInputSection(sectionId);
+
+    const nextSection = INPUT_SECTIONS[activeInputSectionIndex + 1];
+
+    if (nextSection) {
+      setActiveInputSectionId(nextSection.id);
+    }
+  };
+
+  const handleGenerateClick = () => {
+    if (incompleteSections.length) {
+      setCompletionError(
+        `Confirm ${incompleteSections[0].title.toLowerCase()} before generating the final report.`,
+      );
+      setActiveInputSectionId(incompleteSections[0].id);
+      return;
+    }
+
+    setCompletionError(null);
+    onGenerate();
   };
 
   const handleInputSectionChange = (value: string | null) => {
@@ -1407,6 +1477,7 @@ function InputsStep({
                         lifecycleStageId: nextStage.id,
                         plannedProgramInvestment: nextStage.annualProgramInvestment,
                       });
+                      onInvalidateInputSection("operating-frame");
                     }}
                   >
                     <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
@@ -1460,11 +1531,7 @@ function InputsStep({
                     <Button
                       type="button"
                       className={ACCENT_BUTTON}
-                      onClick={() => {
-                        if (selectedSampleId) {
-                          onLoadSample(selectedSampleId);
-                        }
-                      }}
+                      onClick={handleLoadSelectedSample}
                       disabled={!selectedSampleId}
                     >
                       Apply sample data
@@ -1480,7 +1547,7 @@ function InputsStep({
 
           <Card className={cn(PANEL_CARD, "overflow-hidden p-0")}>
             <CardHeader className="border-b border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,250,252,0.96))] px-5 py-4">
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.42fr)] lg:items-end">
+              <div className="grid gap-4">
                 <div>
                   <p className="text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">
                     Input progress
@@ -1494,7 +1561,7 @@ function InputsStep({
                 </div>
                 <div>
                   <div className="mb-2 flex items-center justify-between text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    <span>Section {activeInputSectionIndex + 1} of {INPUT_SECTIONS.length}</span>
+                    <span>{completedInputSectionIds.length} of {INPUT_SECTIONS.length} sections confirmed</span>
                     <span>{Math.round(inputSectionProgress)}%</span>
                   </div>
                   <Progress
@@ -1510,14 +1577,21 @@ function InputsStep({
                 onValueChange={handleInputSectionChange}
                 className="gap-5"
               >
-                <TabsList className="grid h-auto w-full grid-cols-1 gap-2 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-2 md:grid-cols-3">
+                <TabsList className="grid !h-auto w-full grid-cols-1 gap-2 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-2 md:grid-cols-3">
                   {INPUT_SECTIONS.map((section, index) => (
                     <TabsTrigger
                       key={section.id}
                       value={section.id}
-                      className="h-auto justify-start rounded-[18px] border border-transparent px-4 py-3 text-left text-base font-semibold text-[color:var(--muted-foreground)] data-active:border-[rgba(0,79,155,0.18)] data-active:bg-white data-active:text-[color:var(--brand-blue)] data-active:shadow-[0_10px_24px_rgba(11,28,59,0.08)]"
+                      className="h-auto justify-start rounded-[18px] border border-transparent px-4 py-3 text-left text-base font-semibold text-[color:var(--muted-foreground)] after:hidden data-active:border-[rgba(0,79,155,0.24)] data-active:bg-[color:var(--brand-indigo)] data-active:text-white data-active:shadow-[0_10px_24px_rgba(11,28,59,0.1)]"
                     >
-                      <span className="mr-2 rounded-full bg-[rgba(0,79,155,0.08)] px-2 py-0.5 text-sm text-[color:var(--brand-blue)]">
+                      <span
+                        className={cn(
+                          "mr-2 rounded-full px-2 py-0.5 text-sm",
+                          completedSectionSet.has(section.id)
+                            ? "bg-[rgba(24,184,199,0.18)] text-[color:var(--brand-blue)]"
+                            : "bg-[rgba(0,79,155,0.08)] text-[color:var(--brand-blue)]",
+                        )}
+                      >
                         {index + 1}
                       </span>
                       {section.title}
@@ -1526,7 +1600,47 @@ function InputsStep({
                 </TabsList>
                 {INPUT_SECTIONS.map((section) => (
                   <TabsContent key={section.id} value={section.id} className="mt-0">
-                    <InputSectionCard section={section} inputs={inputs} onPatch={onPatch} />
+                    <InputSectionCard
+                      section={section}
+                      inputs={inputs}
+                      onPatch={(patch) => {
+                        onPatch(patch);
+                        onInvalidateInputSection(section.id);
+                      }}
+                    />
+                    <div className="mt-4 grid gap-3 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+                      <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
+                        {completedSectionSet.has(section.id)
+                          ? "This section is confirmed. Updating any field will mark it for review again."
+                          : "Confirm this section once the values are suitable for the estimate."}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={SECONDARY_BUTTON}
+                        onClick={() => {
+                          const previousSection =
+                            INPUT_SECTIONS[Math.max(activeInputSectionIndex - 1, 0)];
+                          setActiveInputSectionId(previousSection.id);
+                        }}
+                        disabled={activeInputSectionIndex === 0}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        type="button"
+                        className={
+                          completedSectionSet.has(section.id)
+                            ? SECONDARY_BUTTON
+                            : PRIMARY_BUTTON
+                        }
+                        onClick={() => handleCompleteSection(section.id)}
+                      >
+                        {activeInputSectionIndex === INPUT_SECTIONS.length - 1
+                          ? "Confirm section"
+                          : "Confirm and continue"}
+                      </Button>
+                    </div>
                   </TabsContent>
                 ))}
               </Tabs>
@@ -1550,12 +1664,20 @@ function InputsStep({
             </Alert>
           ) : null}
 
+          {completionError ? (
+            <Alert className="border-[color:var(--destructive)]/20 bg-[color:var(--surface-2)]">
+              <CircleAlert className="size-4 text-[color:var(--destructive)]" />
+              <AlertTitle>Complete the input sections</AlertTitle>
+              <AlertDescription>{completionError}</AlertDescription>
+            </Alert>
+          ) : null}
+
           <div className="grid gap-3 sm:grid-cols-2">
             <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={onBack}>
               <ChevronLeft className="size-4" />
               Back
             </Button>
-            <Button type="button" className={PRIMARY_BUTTON} onClick={onGenerate} disabled={isGeneratingReport}>
+            <Button type="button" className={PRIMARY_BUTTON} onClick={handleGenerateClick} disabled={isGeneratingReport}>
               {isGeneratingReport ? "Generating report..." : "Generate final report"}
               <ChevronRight className="size-4" />
             </Button>
@@ -1570,6 +1692,7 @@ function ReportStep({
   inputs,
   results,
   leadCapture,
+  assessmentId,
   storageMode,
   storageMessage,
   onEditInputs,
@@ -1579,6 +1702,7 @@ function ReportStep({
   inputs: BioPilotAssessmentInputs;
   results: BioPilotAssessmentResults;
   leadCapture: LeadCaptureRecord | null;
+  assessmentId: string | null;
   storageMode: "database" | "local_only" | null;
   storageMessage: string | null;
   onEditInputs: () => void;
@@ -1587,6 +1711,13 @@ function ReportStep({
 }) {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState(4);
+  const [feedbackUsefulness, setFeedbackUsefulness] = useState(4);
+  const [feedbackClarity, setFeedbackClarity] = useState(4);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const maxLeverValue = results.valueLevers[0]?.annualValue ?? 0;
   const topValueLever = results.valueLevers[0];
   const topPriority = results.plays[0];
@@ -1622,6 +1753,45 @@ function ReportStep({
       .finally(() => {
         setIsExportingPdf(false);
       });
+  };
+
+  const handleSubmitFeedback = async () => {
+    setIsSubmittingFeedback(true);
+    setFeedbackMessage(null);
+    setFeedbackError(null);
+
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          assessmentId: assessmentId ? Number(assessmentId) : null,
+          workEmail: leadCapture?.workEmail ?? "",
+          company: leadCapture?.company ?? "",
+          rating: feedbackRating,
+          usefulness: feedbackUsefulness,
+          clarity: feedbackClarity,
+          comment: feedbackComment,
+          page: "final-report",
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.message ?? "Feedback could not be saved.");
+      }
+
+      setFeedbackMessage(payload?.message ?? "Feedback saved.");
+      setFeedbackComment("");
+    } catch (error) {
+      setFeedbackError(
+        error instanceof Error ? error.message : "Feedback could not be saved.",
+      );
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
   };
 
   return (
@@ -1748,6 +1918,142 @@ function ReportStep({
           </div>
         </div>
       </section>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <Card className={cn(PANEL_CARD, "h-fit p-5")}>
+          <CardHeader className="p-0">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+                  Digital plant maturity
+                </CardTitle>
+                <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                  {results.digitalPlantMaturity.summary}
+                </CardDescription>
+              </div>
+              <Badge className="rounded-full bg-[color:var(--brand-blue)] px-3 py-1.5 text-white">
+                Level {results.digitalPlantMaturity.level}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="mt-5 grid gap-4 p-0">
+            <div className={cn(SOFT_CARD, "p-4")}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-base font-semibold text-[color:var(--foreground)]">
+                  {results.digitalPlantMaturity.label}
+                </p>
+                <p className="font-heading text-[1.75rem] leading-none tracking-[-0.05em] text-[color:var(--brand-blue)]">
+                  {formatPercent(results.digitalPlantMaturity.score)}
+                </p>
+              </div>
+              <div className="mt-3 h-2 rounded-full bg-[rgba(0,79,155,0.12)]">
+                <div
+                  className="h-2 rounded-full bg-[linear-gradient(90deg,#004f9b,#18b8c7)]"
+                  style={{ width: `${Math.round(results.digitalPlantMaturity.score)}%` }}
+                />
+              </div>
+              <p className="mt-3 text-base leading-6 text-[color:var(--muted-foreground)]">
+                {results.digitalPlantMaturity.nextStep}
+              </p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {results.digitalPlantMaturity.domains.map((domain) => (
+                <div key={domain.id} className={cn(SOFT_CARD, "p-4")}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-base font-semibold text-[color:var(--foreground)]">
+                      {domain.label}
+                    </p>
+                    <span className="rounded-full bg-[rgba(0,79,155,0.08)] px-3 py-1 text-sm font-semibold text-[color:var(--brand-blue)]">
+                      {formatPercent(domain.score)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-5 text-[color:var(--muted-foreground)]">
+                    {domain.rationale}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4">
+          <Card className={cn(PANEL_CARD, "h-fit p-5")}>
+            <CardHeader className="p-0">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+                    Evidence confidence
+                  </CardTitle>
+                  <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                    {results.evidenceConfidence.summary}
+                  </CardDescription>
+                </div>
+                <Badge className="rounded-full bg-[color:var(--brand-indigo)] px-3 py-1.5 text-white">
+                  {results.evidenceConfidence.band}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="mt-5 grid gap-4 p-0">
+              <div className={cn(SOFT_CARD, "p-4")}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-base font-semibold text-[color:var(--foreground)]">
+                    Confidence score
+                  </p>
+                  <p className="font-heading text-[1.75rem] leading-none tracking-[-0.05em] text-[color:var(--brand-blue)]">
+                    {formatPercent(results.evidenceConfidence.score)}
+                  </p>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm leading-5 text-[color:var(--muted-foreground)] sm:grid-cols-3">
+                  <span>{results.evidenceConfidence.userEnteredFields} user-entered fields</span>
+                  <span>{results.evidenceConfidence.sampleFields} sample fields</span>
+                  <span>{results.evidenceConfidence.defaultFields} default fields</span>
+                </div>
+              </div>
+              {results.evidenceConfidence.warnings.length ? (
+                <Alert className="border-[color:var(--brand-yellow)]/40 bg-[rgba(255,238,0,0.08)]">
+                  <CircleAlert className="size-4 text-[color:var(--brand-indigo)]" />
+                  <AlertTitle>Before formal planning</AlertTitle>
+                  <AlertDescription>
+                    {results.evidenceConfidence.warnings.join(" ")}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card className={cn(PANEL_CARD, "h-fit p-5")}>
+            <CardHeader className="p-0">
+              <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+                How the estimate was calculated
+              </CardTitle>
+              <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+                {results.assumptionTransparency.summary}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="mt-5 grid gap-3 p-0">
+              {results.assumptionTransparency.items.map((item) => (
+                <details key={item.label} className={cn(SOFT_CARD, "group p-4")}>
+                  <summary className="cursor-pointer text-base font-semibold text-[color:var(--foreground)]">
+                    {item.label}
+                  </summary>
+                  <div className="mt-3 grid gap-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
+                    <p>{item.basis}</p>
+                    <p>{item.formula}</p>
+                    <p>{item.sensitivity}</p>
+                  </div>
+                </details>
+              ))}
+              <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
+                <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
+                <AlertTitle>Planning basis</AlertTitle>
+                <AlertDescription>
+                  {results.assumptionTransparency.planningCaveat}
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
         <div className="grid gap-4">
@@ -1949,7 +2255,7 @@ function ReportStep({
             Recommended next step based on the submitted operating profile.
           </CardDescription>
         </CardHeader>
-        <CardContent className="mt-5 grid gap-4 p-0 xl:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.05fr)] xl:items-start">
+        <CardContent className="mt-5 grid gap-4 p-0">
           <div className={cn(SOFT_CARD, "min-w-0 p-4")}>
             <p className="text-[13px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
               Recommended next step
@@ -1958,7 +2264,25 @@ function ReportStep({
               {results.nextStep}
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={cn(SOFT_CARD, "grid gap-3 p-4 lg:grid-cols-[0.72fr_1.28fr]")}>
+            <div>
+              <p className="text-[13px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                Follow-up focus
+              </p>
+              <p className="mt-2 text-lg font-semibold leading-7 text-[color:var(--foreground)]">
+                {results.salesFollowUp.priority}
+              </p>
+            </div>
+            <div className="grid gap-2 text-base leading-6 text-[color:var(--muted-foreground)]">
+              {results.salesFollowUp.discoveryFocus.map((item) => (
+                <p key={item}>- {item}</p>
+              ))}
+              <p className="font-semibold text-[color:var(--foreground)]">
+                {results.salesFollowUp.recommendedAction}
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Button variant="outline" className={SECONDARY_BUTTON} onClick={onEditInputs}>
               Edit inputs
             </Button>
@@ -2009,6 +2333,90 @@ function ReportStep({
           </CardContent>
         ) : null}
       </Card>
+
+      <Card className={cn(PANEL_CARD, "p-6")}>
+        <CardHeader className="p-0">
+          <CardTitle className="font-heading text-[1.8rem] tracking-[-0.03em]">
+            Improve this assessment
+          </CardTitle>
+          <CardDescription className="text-xl leading-8 text-[color:var(--muted-foreground)]">
+            Share quick feedback to help refine this assessment experience.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="mt-5 grid gap-4 p-0">
+          <div className="grid gap-3 md:grid-cols-3">
+            {[
+              {
+                label: "Overall",
+                value: feedbackRating,
+                onChange: setFeedbackRating,
+              },
+              {
+                label: "Usefulness",
+                value: feedbackUsefulness,
+                onChange: setFeedbackUsefulness,
+              },
+              {
+                label: "Clarity",
+                value: feedbackClarity,
+                onChange: setFeedbackClarity,
+              },
+            ].map((item) => (
+              <div key={item.label} className={cn(SOFT_CARD, "p-4")}>
+                <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                  {item.label}
+                </p>
+                <div className="mt-3 grid grid-cols-5 gap-2">
+                  {[1, 2, 3, 4, 5].map((score) => (
+                    <button
+                      key={score}
+                      type="button"
+                      className={cn(
+                        "h-10 rounded-[12px] border text-sm font-semibold transition",
+                        item.value === score
+                          ? "border-[color:var(--brand-blue)] bg-[color:var(--brand-blue)] text-white"
+                          : "border-[color:var(--border)] bg-white text-[color:var(--foreground)] hover:border-[color:var(--brand-blue)]",
+                      )}
+                      onClick={() => item.onChange(score)}
+                    >
+                      {score}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="grid gap-2">
+            <label className="text-base font-semibold text-[color:var(--foreground)]">
+              What should be improved?
+            </label>
+            <Textarea
+              className="min-h-[112px] rounded-[18px] border-[color:var(--input)] bg-[color:var(--surface-3)] p-4 text-base leading-6 text-[color:var(--foreground)] shadow-[inset_0_1px_0_rgba(255,255,255,0.62)] placeholder:text-[color:var(--muted-foreground)] focus-visible:border-[color:var(--border-strong)] focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+              value={feedbackComment}
+              onChange={(event) => setFeedbackComment(event.target.value)}
+              placeholder="Add anything confusing, missing, or especially useful."
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <div>
+              {feedbackMessage ? (
+                <p className="text-base text-[color:var(--brand-blue)]">{feedbackMessage}</p>
+              ) : null}
+              {feedbackError ? (
+                <p className="text-base text-[color:var(--destructive)]">{feedbackError}</p>
+              ) : null}
+            </div>
+            <Button
+              type="button"
+              className={PRIMARY_BUTTON}
+              onClick={() => void handleSubmitFeedback()}
+              disabled={isSubmittingFeedback}
+            >
+              {isSubmittingFeedback ? "Saving feedback..." : "Submit feedback"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -2030,6 +2438,12 @@ export function BioPilotFitAssessmentApp() {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [assessmentStorageMode, setAssessmentStorageMode] = useState<"database" | "local_only" | null>(null);
   const [assessmentStorageMessage, setAssessmentStorageMessage] = useState<string | null>(null);
+  const [assessmentRecordId, setAssessmentRecordId] = useState<string | null>(null);
+  const [completedInputSectionIds, setCompletedInputSectionIds] = useState<InputSectionId[]>([]);
+  const [inputSources, setInputSources] = useState<
+    Partial<Record<AdjustableFieldKey, AssessmentInputSource>>
+  >(() => buildInputSources("default"));
+  const [usedSampleData, setUsedSampleData] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -2051,15 +2465,33 @@ export function BioPilotFitAssessmentApp() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(inputs));
   }, [inputs]);
 
-  const patchInputs = (patch: Partial<BioPilotAssessmentInputs>) => {
+  const patchInputs = (
+    patch: Partial<BioPilotAssessmentInputs>,
+    source: AssessmentInputSource = "user",
+  ) => {
     setInputs((current) => normalizeAssessmentInputs({ ...current, ...patch }));
+    setInputSources((current) => {
+      const next = { ...current };
+
+      for (const key of BIOPILOT_ADJUSTABLE_INPUT_KEYS) {
+        if (key in patch) {
+          next[key] = source;
+        }
+      }
+
+      return next;
+    });
   };
 
   const handleLoadSample = (sampleId: string) => {
     setInputs(buildRandomizedSampleInputs(sampleId));
+    setInputSources(buildInputSources("sample"));
+    setCompletedInputSectionIds([...BIOPILOT_INPUT_SECTION_IDS]);
+    setUsedSampleData(true);
     setReportError(null);
     setAssessmentStorageMode(null);
     setAssessmentStorageMessage(null);
+    setAssessmentRecordId(null);
   };
 
   const handleResetInputs = () => {
@@ -2073,9 +2505,23 @@ export function BioPilotFitAssessmentApp() {
         plannedProgramInvestment: currentStage.annualProgramInvestment,
       });
     });
+    setInputSources(buildInputSources("default"));
+    setCompletedInputSectionIds([]);
+    setUsedSampleData(false);
     setReportError(null);
     setAssessmentStorageMode(null);
     setAssessmentStorageMessage(null);
+    setAssessmentRecordId(null);
+  };
+
+  const handleCompleteInputSection = (sectionId: InputSectionId) => {
+    setCompletedInputSectionIds((current) =>
+      current.includes(sectionId) ? current : [...current, sectionId],
+    );
+  };
+
+  const handleInvalidateInputSection = (sectionId: InputSectionId) => {
+    setCompletedInputSectionIds((current) => current.filter((id) => id !== sectionId));
   };
 
   const handleSubmitLead = (record: LeadCaptureRecord) => {
@@ -2089,13 +2535,25 @@ export function BioPilotFitAssessmentApp() {
       return;
     }
 
+    if (completedInputSectionIds.length < INPUT_SECTIONS.length) {
+      setReportError("Confirm every input section before generating the final report.");
+      return;
+    }
+
     setIsGeneratingReport(true);
     setReportError(null);
     setAssessmentStorageMode(null);
     setAssessmentStorageMessage(null);
+    setAssessmentRecordId(null);
 
     try {
       const normalizedInputs = normalizeAssessmentInputs(inputs);
+      const evidenceMeta: AssessmentEvidenceMeta = {
+        completedSectionIds: completedInputSectionIds as BioPilotInputSectionId[],
+        inputSources,
+        usedSampleData,
+        userConfirmedAt: new Date().toISOString(),
+      };
       const response = await fetch("/api/assessment-submissions", {
         method: "POST",
         headers: {
@@ -2110,16 +2568,18 @@ export function BioPilotFitAssessmentApp() {
           countryRegion: leadCapture.countryRegion,
           consentToContact: leadCapture.consentToContact,
           inputs: normalizedInputs,
+          evidenceMeta,
         }),
       });
       const payload = (await response.json().catch(() => null)) as
         | {
             message?: string;
             storageMode?: "database" | "local_only";
+            assessmentId?: string | null;
             results?: BioPilotAssessmentResults;
           }
         | null;
-      const nextResults = payload?.results ?? assessBioPilotFit(normalizedInputs);
+      const nextResults = payload?.results ?? assessBioPilotFit(normalizedInputs, evidenceMeta);
       const coreMetrics = [
         nextResults.fitScore,
         nextResults.annualValuePotential,
@@ -2137,6 +2597,7 @@ export function BioPilotFitAssessmentApp() {
 
       setInputs(normalizedInputs);
       setReportResults(nextResults);
+      setAssessmentRecordId(payload?.assessmentId ?? null);
       setAssessmentStorageMode(payload?.storageMode ?? "local_only");
       setAssessmentStorageMessage(
         payload?.message ??
@@ -2158,9 +2619,13 @@ export function BioPilotFitAssessmentApp() {
   const handleStartAnotherAssessment = () => {
     setReportResults(null);
     setInputs(DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
+    setInputSources(buildInputSources("default"));
+    setCompletedInputSectionIds([]);
+    setUsedSampleData(false);
     setReportError(null);
     setAssessmentStorageMode(null);
     setAssessmentStorageMessage(null);
+    setAssessmentRecordId(null);
     setCurrentStep("profile");
   };
 
@@ -2170,6 +2635,7 @@ export function BioPilotFitAssessmentApp() {
     setReportError(null);
     setAssessmentStorageMode(null);
     setAssessmentStorageMessage(null);
+    setAssessmentRecordId(null);
     setCurrentStep("intro");
   };
 
@@ -2181,6 +2647,9 @@ export function BioPilotFitAssessmentApp() {
         storageMessage: "Sample session loaded on this device.",
       });
     setInputs(BIOPILOT_SAMPLE_CONFIGS[0]?.inputs ?? DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
+    setInputSources(buildInputSources("sample"));
+    setCompletedInputSectionIds([...BIOPILOT_INPUT_SECTION_IDS]);
+    setUsedSampleData(true);
     setCurrentStep("profile");
   };
 
@@ -2250,6 +2719,9 @@ export function BioPilotFitAssessmentApp() {
                     onPatch={patchInputs}
                     onLoadSample={handleLoadSample}
                     onReset={handleResetInputs}
+                    completedInputSectionIds={completedInputSectionIds}
+                    onCompleteInputSection={handleCompleteInputSection}
+                    onInvalidateInputSection={handleInvalidateInputSection}
                     onBack={() => setCurrentStep("profile")}
                     onGenerate={handleGenerateReport}
                     reportError={reportError}
@@ -2262,6 +2734,7 @@ export function BioPilotFitAssessmentApp() {
                     inputs={inputs}
                     results={reportResults}
                     leadCapture={leadCapture}
+                    assessmentId={assessmentRecordId}
                     storageMode={assessmentStorageMode}
                     storageMessage={assessmentStorageMessage}
                     onEditInputs={() => setCurrentStep("inputs")}

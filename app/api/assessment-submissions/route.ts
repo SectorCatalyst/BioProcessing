@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { type z } from "zod";
 
 import {
   assessBioPilotFit,
+  assessmentEvidenceMetaSchema,
   bioPilotAssessmentInputsSchema,
   normalizeAssessmentInputs,
+  normalizeEvidenceMeta,
 } from "@/lib/biopilot-fit-assessment";
 import { leadCaptureSchema } from "@/lib/model";
 import {
@@ -18,7 +21,56 @@ export const runtime = "nodejs";
 
 const assessmentSubmissionSchema = leadCaptureSchema.extend({
   inputs: bioPilotAssessmentInputsSchema,
+  evidenceMeta: assessmentEvidenceMetaSchema.optional(),
 });
+
+type AssessmentSubmissionPayload = z.infer<typeof assessmentSubmissionSchema>;
+
+const notifySalesWebhook = async (payload: {
+  lead: AssessmentSubmissionPayload;
+  results: ReturnType<typeof assessBioPilotFit>;
+}) => {
+  const webhookUrl = process.env.SALES_NOTIFICATION_WEBHOOK_URL?.trim();
+
+  if (!webhookUrl) {
+    return;
+  }
+
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        event: "biopilot_assessment_submitted",
+        submittedAt: new Date().toISOString(),
+        lead: {
+          firstName: payload.lead.firstName,
+          lastName: payload.lead.lastName,
+          workEmail: payload.lead.workEmail,
+          company: payload.lead.company,
+          jobTitle: payload.lead.jobTitle,
+          countryRegion: payload.lead.countryRegion,
+        },
+        report: {
+          processProfile: payload.results.profile.label,
+          lifecycleStage: payload.results.stage.label,
+          fitBand: payload.results.fitBand,
+          fitScore: payload.results.fitScore,
+          annualValuePotential: payload.results.annualValuePotential,
+          dpmmScore: payload.results.digitalPlantMaturity.score,
+          dpmmLevel: payload.results.digitalPlantMaturity.level,
+          evidenceConfidence: payload.results.evidenceConfidence.band,
+          topPriority: payload.results.salesFollowUp.priority,
+          recommendedAction: payload.results.salesFollowUp.recommendedAction,
+        },
+      }),
+    });
+  } catch (error) {
+    console.error("Sales notification webhook failed", error);
+  }
+};
 
 export async function GET(request: Request) {
   const pool = getPool();
@@ -122,7 +174,8 @@ export async function POST(request: Request) {
   }
 
   const normalizedInputs = normalizeAssessmentInputs(parsed.data.inputs);
-  const computedResults = assessBioPilotFit(normalizedInputs);
+  const evidenceMeta = normalizeEvidenceMeta(parsed.data.evidenceMeta);
+  const computedResults = assessBioPilotFit(normalizedInputs, evidenceMeta);
   const pool = getPool();
 
   if (!pool) {
@@ -144,6 +197,11 @@ export async function POST(request: Request) {
       pool,
       lead: parsed.data,
       inputs: normalizedInputs,
+      evidenceMeta,
+    });
+    await notifySalesWebhook({
+      lead: parsed.data,
+      results: inserted.results,
     });
 
     return NextResponse.json(

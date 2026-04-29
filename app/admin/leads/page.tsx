@@ -46,9 +46,28 @@ interface AssessmentAdminEntry {
   paybackMonths: number;
   digitalCoverage: number;
   manualBurdenIndex: number;
+  digitalPlantMaturityScore: number | null;
+  digitalPlantMaturityLevel: number | null;
+  evidenceConfidenceScore: number | null;
+  evidenceConfidenceBand: string | null;
+  topPriority: string;
+  salesFollowUp: string;
   executiveSummary: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface FeedbackAdminEntry {
+  id: string;
+  assessmentId: string | null;
+  workEmail: string;
+  company: string;
+  rating: number;
+  usefulness: number;
+  clarity: number;
+  comment: string;
+  page: string;
+  createdAt: string;
 }
 
 const PANEL_CARD =
@@ -147,6 +166,12 @@ const exportAssessmentCsv = (entries: AssessmentAdminEntry[]) => {
       "payback_months",
       "digital_coverage",
       "manual_burden_index",
+      "dpmm_score",
+      "dpmm_level",
+      "evidence_confidence_score",
+      "evidence_confidence_band",
+      "top_priority",
+      "sales_follow_up",
       "executive_summary",
       "created_at",
       "updated_at",
@@ -169,9 +194,44 @@ const exportAssessmentCsv = (entries: AssessmentAdminEntry[]) => {
       String(entry.paybackMonths),
       String(entry.digitalCoverage),
       String(entry.manualBurdenIndex),
+      entry.digitalPlantMaturityScore === null ? "" : String(entry.digitalPlantMaturityScore),
+      entry.digitalPlantMaturityLevel === null ? "" : String(entry.digitalPlantMaturityLevel),
+      entry.evidenceConfidenceScore === null ? "" : String(entry.evidenceConfidenceScore),
+      entry.evidenceConfidenceBand ?? "",
+      entry.topPriority,
+      entry.salesFollowUp,
       entry.executiveSummary,
       entry.createdAt,
       entry.updatedAt,
+    ]),
+  ]);
+};
+
+const exportFeedbackCsv = (entries: FeedbackAdminEntry[]) => {
+  exportCsv("assessment-feedback", [
+    [
+      "id",
+      "assessment_id",
+      "work_email",
+      "company",
+      "rating",
+      "usefulness",
+      "clarity",
+      "comment",
+      "page",
+      "created_at",
+    ],
+    ...entries.map((entry) => [
+      entry.id,
+      entry.assessmentId ?? "",
+      entry.workEmail,
+      entry.company,
+      String(entry.rating),
+      String(entry.usefulness),
+      String(entry.clarity),
+      entry.comment,
+      entry.page,
+      entry.createdAt,
     ]),
   ]);
 };
@@ -180,10 +240,12 @@ export default function LeadAdminPage() {
   const [adminKey, setAdminKey] = useState("");
   const [leads, setLeads] = useState<LeadAdminEntry[]>([]);
   const [assessments, setAssessments] = useState<AssessmentAdminEntry[]>([]);
+  const [feedbackEntries, setFeedbackEntries] = useState<FeedbackAdminEntry[]>([]);
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDeletingLeadId, setIsDeletingLeadId] = useState<string | null>(null);
   const [isDeletingAssessmentId, setIsDeletingAssessmentId] = useState<string | null>(null);
+  const [isDeletingFeedbackId, setIsDeletingFeedbackId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -198,11 +260,14 @@ export default function LeadAdminPage() {
     setStatusMessage("");
 
     try {
-      const [leadResponse, assessmentResponse] = await Promise.all([
+      const [leadResponse, assessmentResponse, feedbackResponse] = await Promise.all([
         fetch("/api/lead-capture", {
           headers: { "x-admin-key": key.trim() },
         }),
         fetch("/api/assessment-submissions", {
+          headers: { "x-admin-key": key.trim() },
+        }),
+        fetch("/api/feedback", {
           headers: { "x-admin-key": key.trim() },
         }),
       ]);
@@ -213,10 +278,14 @@ export default function LeadAdminPage() {
       const assessmentPayload = (await assessmentResponse.json().catch(() => null)) as
         | { message?: string; entries?: AssessmentAdminEntry[] }
         | null;
+      const feedbackPayload = (await feedbackResponse.json().catch(() => null)) as
+        | { message?: string; entries?: FeedbackAdminEntry[] }
+        | null;
 
       if (!leadResponse.ok) {
         setLeads([]);
         setAssessments([]);
+        setFeedbackEntries([]);
         setErrorMessage(leadPayload?.message ?? "Lead records could not be loaded.");
         return;
       }
@@ -224,15 +293,25 @@ export default function LeadAdminPage() {
       if (!assessmentResponse.ok) {
         setLeads([]);
         setAssessments([]);
+        setFeedbackEntries([]);
         setErrorMessage(assessmentPayload?.message ?? "Assessment records could not be loaded.");
+        return;
+      }
+
+      if (!feedbackResponse.ok) {
+        setLeads([]);
+        setAssessments([]);
+        setFeedbackEntries([]);
+        setErrorMessage(feedbackPayload?.message ?? "Feedback records could not be loaded.");
         return;
       }
 
       sessionStorage.setItem("lead-capture-admin-key", key.trim());
       setLeads(leadPayload?.entries ?? []);
       setAssessments(assessmentPayload?.entries ?? []);
+      setFeedbackEntries(feedbackPayload?.entries ?? []);
       setStatusMessage(
-        `Loaded ${leadPayload?.entries?.length ?? 0} leads and ${assessmentPayload?.entries?.length ?? 0} assessments.`,
+        `Loaded ${leadPayload?.entries?.length ?? 0} leads, ${assessmentPayload?.entries?.length ?? 0} assessments, and ${feedbackPayload?.entries?.length ?? 0} feedback records.`,
       );
     } catch {
       setErrorMessage("Records could not be loaded.");
@@ -301,6 +380,36 @@ export default function LeadAdminPage() {
     }
   };
 
+  const handleDeleteFeedback = async (id: string) => {
+    if (!window.confirm("Delete this feedback record?")) {
+      return;
+    }
+
+    setIsDeletingFeedbackId(id);
+    setErrorMessage("");
+    setStatusMessage("");
+
+    try {
+      const response = await fetch(`/api/feedback?id=${id}`, {
+        method: "DELETE",
+        headers: { "x-admin-key": adminKey.trim() },
+      });
+      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+
+      if (!response.ok) {
+        setErrorMessage(payload?.message ?? "Feedback record could not be deleted.");
+        return;
+      }
+
+      setFeedbackEntries((current) => current.filter((entry) => entry.id !== id));
+      setStatusMessage("Feedback record deleted.");
+    } catch {
+      setErrorMessage("Feedback record could not be deleted.");
+    } finally {
+      setIsDeletingFeedbackId(null);
+    }
+  };
+
   useEffect(() => {
     const savedKey = sessionStorage.getItem("lead-capture-admin-key");
     if (savedKey) {
@@ -347,6 +456,9 @@ export default function LeadAdminPage() {
         PROCESS_PROFILE_MAP[entry.processProfileId]?.label ?? entry.processProfileId,
         LIFECYCLE_STAGE_MAP[entry.lifecycleStageId]?.label ?? entry.lifecycleStageId,
         entry.fitBand,
+        entry.evidenceConfidenceBand ?? "",
+        entry.topPriority,
+        entry.salesFollowUp,
         entry.executiveSummary,
       ]
         .join(" ")
@@ -354,6 +466,24 @@ export default function LeadAdminPage() {
         .includes(normalizedQuery),
     );
   }, [assessments, normalizedQuery]);
+
+  const filteredFeedback = useMemo(() => {
+    if (!normalizedQuery) {
+      return feedbackEntries;
+    }
+
+    return feedbackEntries.filter((entry) =>
+      [
+        entry.workEmail,
+        entry.company,
+        entry.comment,
+        entry.page,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
+  }, [feedbackEntries, normalizedQuery]);
 
   const uniqueCompanies = new Set(leads.map((entry) => entry.company.toLowerCase())).size;
 
@@ -425,10 +555,11 @@ export default function LeadAdminPage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
             {[
               { label: "Lead records", value: String(leads.length) },
               { label: "Assessments", value: String(assessments.length) },
+              { label: "Feedback", value: String(feedbackEntries.length) },
               { label: "Consented", value: String(leads.filter((entry) => entry.consentToContact).length) },
               { label: "Companies", value: String(uniqueCompanies) },
             ].map((item) => (
@@ -454,7 +585,7 @@ export default function LeadAdminPage() {
                   Search records
                 </CardTitle>
                 <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
-                  Search both lead captures and submitted assessments by contact, company, process, or summary.
+                  Search lead captures, submitted assessments, and internal feedback by contact, company, process, or comment.
                 </CardDescription>
               </div>
               <div className="relative min-w-[280px]">
@@ -595,7 +726,7 @@ export default function LeadAdminPage() {
                 <table className="min-w-full border-collapse">
                   <thead className="bg-[color:var(--surface-elevated)]">
                     <tr className="text-left">
-                      {["Contact", "Process", "Stage", "Fit", "Annual Value", "ROI", "Captured", "Actions"].map((label) => (
+                      {["Contact", "Process", "Stage", "Fit", "DPMM", "Evidence", "Annual Value", "ROI", "Priority", "Captured", "Actions"].map((label) => (
                         <th
                           key={label}
                           className="border-b border-[color:var(--border)] px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]"
@@ -633,6 +764,22 @@ export default function LeadAdminPage() {
                             </div>
                           </td>
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.digitalPlantMaturityLevel ? `Level ${entry.digitalPlantMaturityLevel}` : "Not captured"}
+                            <div className="text-[color:var(--muted-foreground)]">
+                              {entry.digitalPlantMaturityScore === null
+                                ? ""
+                                : `${percentFormatter.format(entry.digitalPlantMaturityScore)}%`}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.evidenceConfidenceBand ?? "Not captured"}
+                            <div className="text-[color:var(--muted-foreground)]">
+                              {entry.evidenceConfidenceScore === null
+                                ? ""
+                                : `${percentFormatter.format(entry.evidenceConfidenceScore)}%`}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
                             {currencyFormatter.format(entry.annualValuePotential)}
                           </td>
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
@@ -640,6 +787,9 @@ export default function LeadAdminPage() {
                             <div className="text-[color:var(--muted-foreground)]">
                               {entry.paybackMonths.toFixed(1)} mo payback
                             </div>
+                          </td>
+                          <td className="max-w-[260px] px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.topPriority || "Not captured"}
                           </td>
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--muted-foreground)]">
                             {formatDateTime(entry.createdAt)}
@@ -660,12 +810,109 @@ export default function LeadAdminPage() {
                     ) : (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={11}
                           className="px-4 py-10 text-center text-base text-[color:var(--muted-foreground)]"
                         >
                           {assessments.length
                             ? "No assessment records match the current search."
                             : "No assessment records loaded yet."}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={cn(PANEL_CARD, "p-5")}>
+          <CardHeader className="p-0">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle className="font-heading text-[1.5rem] tracking-[-0.03em]">
+                  Internal feedback
+                </CardTitle>
+                <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
+                  Functionality feedback submitted from final report screens.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                className={SECONDARY_BUTTON}
+                onClick={() => exportFeedbackCsv(filteredFeedback)}
+                disabled={!filteredFeedback.length}
+              >
+                <Download className="size-4" />
+                Export feedback
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="mt-4 p-0">
+            <div className={cn(SOFT_CARD, "overflow-hidden")}>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse">
+                  <thead className="bg-[color:var(--surface-elevated)]">
+                    <tr className="text-left">
+                      {["Contact", "Scores", "Comment", "Page", "Captured", "Actions"].map((label) => (
+                        <th
+                          key={label}
+                          className="border-b border-[color:var(--border)] px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]"
+                        >
+                          {label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredFeedback.length ? (
+                      filteredFeedback.map((entry) => (
+                        <tr key={entry.id} className="border-b border-[color:var(--border)] last:border-b-0">
+                          <td className="px-4 py-4 align-top">
+                            <p className="text-base font-semibold text-[color:var(--foreground)]">
+                              {entry.workEmail || "No email captured"}
+                            </p>
+                            <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+                              {entry.company || "No company captured"}
+                            </p>
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            Overall {entry.rating}/5
+                            <div className="text-[color:var(--muted-foreground)]">
+                              Useful {entry.usefulness}/5, clear {entry.clarity}/5
+                            </div>
+                          </td>
+                          <td className="max-w-[420px] px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.comment || "No comment"}
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.page}
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--muted-foreground)]">
+                            {formatDateTime(entry.createdAt)}
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <Button
+                              variant="outline"
+                              className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
+                              onClick={() => void handleDeleteFeedback(entry.id)}
+                              disabled={isDeletingFeedbackId === entry.id}
+                            >
+                              <Trash2 className="size-4" />
+                              {isDeletingFeedbackId === entry.id ? "Deleting..." : "Delete"}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="px-4 py-10 text-center text-base text-[color:var(--muted-foreground)]"
+                        >
+                          {feedbackEntries.length
+                            ? "No feedback records match the current search."
+                            : "No feedback records loaded yet."}
                         </td>
                       </tr>
                     )}

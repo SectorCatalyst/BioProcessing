@@ -82,6 +82,28 @@ export interface BioPilotAssessmentInputs {
   onboardingDays: number;
 }
 
+export type BioPilotAdjustableInputKey = Exclude<
+  keyof BioPilotAssessmentInputs,
+  "processProfileId" | "lifecycleStageId"
+>;
+
+export const BIOPILOT_INPUT_SECTION_IDS = [
+  "operating-frame",
+  "connected-stack",
+  "manual-burden",
+] as const;
+
+export type BioPilotInputSectionId = (typeof BIOPILOT_INPUT_SECTION_IDS)[number];
+
+export type AssessmentInputSource = "default" | "sample" | "user";
+
+export interface AssessmentEvidenceMeta {
+  completedSectionIds?: BioPilotInputSectionId[];
+  inputSources?: Partial<Record<BioPilotAdjustableInputKey, AssessmentInputSource>>;
+  usedSampleData?: boolean;
+  userConfirmedAt?: string | null;
+}
+
 export interface AssessmentLane {
   id: string;
   label: string;
@@ -123,6 +145,56 @@ export interface AssessmentStateSnapshot {
   onboardingDays: number;
 }
 
+export interface DigitalPlantMaturityDomain {
+  id: string;
+  label: string;
+  score: number;
+  currentState: string;
+  targetState: string;
+  rationale: string;
+}
+
+export interface DigitalPlantMaturityAssessment {
+  score: number;
+  level: number;
+  label: string;
+  summary: string;
+  domains: DigitalPlantMaturityDomain[];
+  nextStep: string;
+}
+
+export interface EvidenceConfidenceAssessment {
+  score: number;
+  band: "Low" | "Directional" | "High";
+  completedSections: number;
+  totalSections: number;
+  userEnteredFields: number;
+  sampleFields: number;
+  defaultFields: number;
+  warnings: string[];
+  summary: string;
+}
+
+export interface AssumptionTransparencyItem {
+  label: string;
+  basis: string;
+  formula: string;
+  sensitivity: string;
+}
+
+export interface AssumptionTransparency {
+  summary: string;
+  items: AssumptionTransparencyItem[];
+  planningCaveat: string;
+}
+
+export interface SalesFollowUpBrief {
+  priority: string;
+  discoveryFocus: string[];
+  recommendedAction: string;
+  proposalUse: string;
+}
+
 export interface BioPilotAssessmentResults {
   profile: ProcessProfile;
   stage: LifecycleStage;
@@ -144,6 +216,10 @@ export interface BioPilotAssessmentResults {
   plays: BioPilotPlay[];
   buyingSignals: BuyingSignal[];
   valueLevers: ValueLever[];
+  digitalPlantMaturity: DigitalPlantMaturityAssessment;
+  evidenceConfidence: EvidenceConfidenceAssessment;
+  assumptionTransparency: AssumptionTransparency;
+  salesFollowUp: SalesFollowUpBrief;
   executiveSummary: string;
   nextStep: string;
 }
@@ -178,6 +254,15 @@ export const bioPilotAssessmentInputsSchema = z.object({
   deviationInvestigationHours: boundedNumber(2, 48),
   techTransferPackageHours: boundedNumber(8, 160),
   onboardingDays: boundedNumber(3, 40),
+});
+
+export const assessmentInputSourceSchema = z.enum(["default", "sample", "user"]);
+
+export const assessmentEvidenceMetaSchema = z.object({
+  completedSectionIds: z.array(z.enum(BIOPILOT_INPUT_SECTION_IDS)).optional(),
+  inputSources: z.record(z.string(), assessmentInputSourceSchema).optional(),
+  usedSampleData: z.boolean().optional(),
+  userConfirmedAt: z.string().datetime().nullable().optional(),
 });
 
 const clamp = (value: number, min: number, max: number) =>
@@ -683,7 +768,7 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
   },
 ];
 
-const NUMERIC_INPUT_KEYS: Array<Exclude<keyof BioPilotAssessmentInputs, "processProfileId" | "lifecycleStageId">> = [
+export const BIOPILOT_ADJUSTABLE_INPUT_KEYS: BioPilotAdjustableInputKey[] = [
   "activePrograms",
   "runsPerYear",
   "sites",
@@ -709,6 +794,8 @@ const NUMERIC_INPUT_KEYS: Array<Exclude<keyof BioPilotAssessmentInputs, "process
   "techTransferPackageHours",
   "onboardingDays",
 ];
+
+const NUMERIC_INPUT_KEYS = BIOPILOT_ADJUSTABLE_INPUT_KEYS;
 
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min);
 
@@ -800,6 +887,257 @@ export function buildRandomizedSampleInputs(sampleId: string): BioPilotAssessmen
 
 const percentageInverse = (value: number) => clamp(100 - value, 0, 100);
 
+const average = (values: number[]) =>
+  values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+
+export function normalizeEvidenceMeta(
+  meta?: AssessmentEvidenceMeta | null,
+): AssessmentEvidenceMeta {
+  const completedSectionIds = new Set<BioPilotInputSectionId>();
+
+  for (const sectionId of meta?.completedSectionIds ?? []) {
+    if ((BIOPILOT_INPUT_SECTION_IDS as readonly string[]).includes(sectionId)) {
+      completedSectionIds.add(sectionId);
+    }
+  }
+
+  const inputSources: AssessmentEvidenceMeta["inputSources"] = {};
+  const rawInputSources = meta?.inputSources ?? {};
+
+  for (const key of BIOPILOT_ADJUSTABLE_INPUT_KEYS) {
+    const source = rawInputSources[key];
+
+    if (source === "sample" || source === "user" || source === "default") {
+      inputSources[key] = source;
+    }
+  }
+
+  return {
+    completedSectionIds: [...completedSectionIds],
+    inputSources,
+    usedSampleData: Boolean(meta?.usedSampleData),
+    userConfirmedAt: meta?.userConfirmedAt ?? null,
+  };
+}
+
+const getMaturityLevel = (score: number) => {
+  if (score >= 85) {
+    return { level: 5, label: "Adaptive digital plant" };
+  }
+  if (score >= 65) {
+    return { level: 4, label: "Guided digital plant" };
+  }
+  if (score >= 45) {
+    return { level: 3, label: "Contextualized operations" };
+  }
+  if (score >= 25) {
+    return { level: 2, label: "Connected islands" };
+  }
+  return { level: 1, label: "Manual and local records" };
+};
+
+const buildDigitalPlantMaturity = (
+  inputs: BioPilotAssessmentInputs,
+): DigitalPlantMaturityAssessment => {
+  const domainInputs = [
+    {
+      id: "data-foundation",
+      label: "Data foundation",
+      score: average([
+        inputs.bioreactorConnectivity,
+        inputs.sensorCoverage,
+        inputs.analyzerConnectivity,
+      ]),
+      currentState: "Instrument and analyzer signals are available, but may still be distributed across local systems.",
+      targetState: "Core process and analyzer signals are consistently available in one operating context.",
+      rationale: "BioPilot value depends on whether reactor, sensor, and analyzer data can be trusted as a unified source.",
+    },
+    {
+      id: "process-visibility",
+      label: "Process visibility",
+      score: average([
+        inputs.patCoverage,
+        inputs.downstreamVisibility,
+        inputs.dataContextualization,
+      ]),
+      currentState: "Process signals and downstream evidence are partly visible but not always decision-ready.",
+      targetState: "Upstream, downstream, and analytical context can be interpreted as one process story.",
+      rationale: "Visibility maturity shows how quickly the team can understand what happened and why.",
+    },
+    {
+      id: "guided-execution",
+      label: "Guided execution",
+      score: average([
+        inputs.sopAutomation,
+        percentageInverse(inputs.manualTranscriptionShare),
+        percentageInverse(inputs.onboardingDays * 2.5),
+      ]),
+      currentState: "Operator execution still depends on manual transcription, local practices, or tribal knowledge.",
+      targetState: "Execution steps, evidence capture, and operator guidance are embedded into the workflow.",
+      rationale: "Guided execution maturity is the clearest indicator of recoverable manual effort.",
+    },
+    {
+      id: "review-readiness",
+      label: "Review readiness",
+      score: average([
+        inputs.reviewByException,
+        percentageInverse(inputs.batchReviewHours * 2.1),
+        percentageInverse(inputs.deviationInvestigationHours * 2.4),
+      ]),
+      currentState: "Evidence is still being assembled after the run instead of being review-ready during execution.",
+      targetState: "Review packages are assembled continuously, with exceptions surfaced while the run is active.",
+      rationale: "Review readiness connects digital maturity to quality, investigation, and release-time value.",
+    },
+    {
+      id: "network-scale",
+      label: "Network scale readiness",
+      score: average([
+        inputs.crossSiteCollaboration,
+        percentageInverse(inputs.techTransferPackageHours * 0.65),
+        percentageInverse(inputs.vendorPlatforms * 9),
+        percentageInverse(inputs.sites * 12),
+      ]),
+      currentState: "The process story becomes harder to reuse as vendor platforms, sites, or partners increase.",
+      targetState: "Process context can move across programs, sites, and partners with less reconstruction.",
+      rationale: "Network maturity shows whether the operating model can scale beyond one lab or one reactor train.",
+    },
+  ];
+
+  const domains = domainInputs.map((domain) => ({
+    ...domain,
+    score: clamp(domain.score, 0, 100),
+  }));
+  const score = clamp(
+    domains.find((domain) => domain.id === "data-foundation")!.score * 0.22 +
+      domains.find((domain) => domain.id === "process-visibility")!.score * 0.22 +
+      domains.find((domain) => domain.id === "guided-execution")!.score * 0.22 +
+      domains.find((domain) => domain.id === "review-readiness")!.score * 0.18 +
+      domains.find((domain) => domain.id === "network-scale")!.score * 0.16,
+    0,
+    100,
+  );
+  const maturityLevel = getMaturityLevel(score);
+  const lowestDomain = [...domains].sort((left, right) => left.score - right.score)[0];
+
+  return {
+    score,
+    level: maturityLevel.level,
+    label: maturityLevel.label,
+    domains,
+    summary: `The submitted operating model maps to DPMM level ${maturityLevel.level}: ${maturityLevel.label.toLowerCase()}.`,
+    nextStep: lowestDomain
+      ? `Start by improving ${lowestDomain.label.toLowerCase()} because it is the lowest maturity domain in this assessment.`
+      : "Confirm the maturity baseline with a short operating review.",
+  };
+};
+
+const buildEvidenceConfidence = (
+  meta?: AssessmentEvidenceMeta | null,
+): EvidenceConfidenceAssessment => {
+  const normalizedMeta = normalizeEvidenceMeta(meta);
+  const inputSources = normalizedMeta.inputSources ?? {};
+  const completedSections = normalizedMeta.completedSectionIds?.length ?? 0;
+  const userEnteredFields = BIOPILOT_ADJUSTABLE_INPUT_KEYS.filter(
+    (key) => inputSources[key] === "user",
+  ).length;
+  const sampleFields = BIOPILOT_ADJUSTABLE_INPUT_KEYS.filter(
+    (key) => inputSources[key] === "sample",
+  ).length;
+  const defaultFields = Math.max(
+    0,
+    BIOPILOT_ADJUSTABLE_INPUT_KEYS.length - userEnteredFields - sampleFields,
+  );
+  const sectionCompletionScore =
+    (completedSections / BIOPILOT_INPUT_SECTION_IDS.length) * 42;
+  const userEvidenceScore =
+    (userEnteredFields / BIOPILOT_ADJUSTABLE_INPUT_KEYS.length) * 46;
+  const sampleSupportScore =
+    (sampleFields / BIOPILOT_ADJUSTABLE_INPUT_KEYS.length) * 12;
+  const samplePenalty = normalizedMeta.usedSampleData && userEnteredFields < 8 ? 12 : 0;
+  const defaultPenalty = defaultFields > 8 ? 10 : defaultFields > 3 ? 5 : 0;
+  const score = clamp(
+    sectionCompletionScore + userEvidenceScore + sampleSupportScore - samplePenalty - defaultPenalty,
+    0,
+    100,
+  );
+  const band =
+    score >= 72 ? "High" : score >= 44 ? "Directional" : "Low";
+  const warnings: string[] = [];
+
+  if (completedSections < BIOPILOT_INPUT_SECTION_IDS.length) {
+    warnings.push("Not every input section was confirmed before report generation.");
+  }
+
+  if (defaultFields > 0) {
+    warnings.push(`${defaultFields} numeric assumptions were not explicitly updated from defaults.`);
+  }
+
+  if (normalizedMeta.usedSampleData) {
+    warnings.push("Sample data was used; replace sample assumptions before formal planning.");
+  }
+
+  return {
+    score,
+    band,
+    completedSections,
+    totalSections: BIOPILOT_INPUT_SECTION_IDS.length,
+    userEnteredFields,
+    sampleFields,
+    defaultFields,
+    warnings,
+    summary:
+      band === "High"
+        ? "Most assumptions were explicitly reviewed, so the estimate is suitable for a focused opportunity discussion."
+        : band === "Directional"
+          ? "The estimate is useful for opportunity sizing, but priority assumptions should be confirmed before a proposal discussion."
+          : "The estimate is an early planning view and should be treated as low confidence until the inputs are validated.",
+  };
+};
+
+const buildAssumptionTransparency = (
+  inputs: BioPilotAssessmentInputs,
+  annualRecoveredHours: number,
+  annualValuePotential: number,
+  threeYearRoi: number,
+  paybackMonths: number,
+): AssumptionTransparency => ({
+  summary:
+    "This report estimates current inefficiency and potential improvement from submitted time, maturity, and value assumptions.",
+  items: [
+    {
+      label: "Annual recovered hours",
+      basis: `${Math.round(inputs.runsPerYear)} annual runs plus transfer, deviation, and onboarding effort.`,
+      formula:
+        "Recovered hours = run coordination savings + review savings + investigation savings + transfer savings + onboarding savings.",
+      sensitivity: `Current estimate: ${Math.round(annualRecoveredHours).toLocaleString("en-US")} hours per year. Review hours and runs per year are usually the most sensitive time drivers.`,
+    },
+    {
+      label: "Annual value",
+      basis: "Submitted hourly rate, failed-run cost, and value per accelerated decision day.",
+      formula:
+        "Annual value = recovered hours x blended hourly rate + avoided failed runs x failed-run cost + accelerated decision value.",
+      sensitivity: `Current estimate: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(annualValuePotential)}. Failed-run cost can dominate the result if the process is high value or scarce-capacity.`,
+    },
+    {
+      label: "ROI and payback",
+      basis: `${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(inputs.plannedProgramInvestment)} submitted first-wave investment assumption.`,
+      formula:
+        "3-year ROI = phased 3-year value minus investment, divided by investment. Payback = investment divided by realized annual value.",
+      sensitivity: `Current estimate: ${Math.round(threeYearRoi)}% 3-year ROI and ${paybackMonths.toFixed(1)} months payback. Replace the investment assumption with proposal pricing before treating ROI as final.`,
+    },
+    {
+      label: "DPMM score",
+      basis: "Weighted maturity across data foundation, process visibility, guided execution, review readiness, and network scale readiness.",
+      formula:
+        "DPMM = weighted score from 0-100, then mapped to a five-level digital plant maturity scale.",
+      sensitivity:
+        "The DPMM score is most sensitive to connectivity, data contextualization, SOP automation, and review-by-exception inputs.",
+    },
+  ],
+  planningCaveat:
+    "Use this as a planning and opportunity-development estimate. Final ROI should be revisited with confirmed operating evidence and the actual BioPilot proposal scope.",
+});
+
 const rankSeverity = (value: number): BuyingSignal["severity"] => {
   if (value >= 76) {
     return "Critical";
@@ -812,6 +1150,7 @@ const rankSeverity = (value: number): BuyingSignal["severity"] => {
 
 export function assessBioPilotFit(
   inputs: BioPilotAssessmentInputs,
+  evidenceMeta?: AssessmentEvidenceMeta | null,
 ): BioPilotAssessmentResults {
   const profile = PROCESS_PROFILE_MAP[inputs.processProfileId];
   const stage = LIFECYCLE_STAGE_MAP[inputs.lifecycleStageId];
@@ -1345,6 +1684,29 @@ export function assessBioPilotFit(
   const topLever = valueLevers[0];
   const topPlay = plays[0];
   const topSignal = buyingSignals[0];
+  const digitalPlantMaturity = buildDigitalPlantMaturity(inputs);
+  const evidenceConfidence = buildEvidenceConfidence(evidenceMeta);
+  const assumptionTransparency = buildAssumptionTransparency(
+    inputs,
+    annualRecoveredHours,
+    annualValuePotential,
+    threeYearRoi,
+    paybackMonths,
+  );
+  const salesFollowUp: SalesFollowUpBrief = {
+    priority: topSignal?.title ?? topPlay?.title ?? "Confirm the top operating friction",
+    discoveryFocus: [
+      "Validate the submitted review, investigation, and transfer effort with one recent run.",
+      "Confirm which BioPilot scope maps to the lowest DPMM maturity domain.",
+      "Replace planning-level investment with proposal pricing before calling the model a final ROI.",
+    ],
+    recommendedAction:
+      evidenceConfidence.band === "High"
+        ? "Use this report to structure a proposal review and confirm implementation scope."
+        : "Use this report to guide discovery, then refresh the estimate after the priority assumptions are confirmed.",
+    proposalUse:
+      "This calculator sizes the opportunity and operating shortfall. Proposal pricing should be added later to turn the opportunity case into final ROI.",
+  };
 
   const executiveSummary = `${profile.label} in ${stage.label.toLowerCase()} shows ${fitBand.charAt(0).toLowerCase()}${fitBand.slice(1)} because the operation still carries ${Math.round(manualBurdenIndex)} / 100 manual burden and only ${Math.round(digitalCoverage)} / 100 digital coverage. The strongest BioPilot priority is ${topPlay?.title.toLowerCase() ?? "data and workflow unification"}, which points to an estimated ${annualRecoveredHours.toFixed(0)} annual hours recovered and ${topLever ? `about ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(topLever.annualValue)} in the largest value driver` : "a meaningful value opportunity"}.`;
 
@@ -1387,6 +1749,10 @@ export function assessBioPilotFit(
     plays,
     buyingSignals,
     valueLevers,
+    digitalPlantMaturity,
+    evidenceConfidence,
+    assumptionTransparency,
+    salesFollowUp,
     executiveSummary,
     nextStep,
   };
