@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
-  ensurePersistenceTables,
+  ensureFeedbackTable,
   getPool,
   insertFeedbackEntry,
   isAuthorizedAdmin,
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    await ensurePersistenceTables(pool);
+    await ensureFeedbackTable(pool);
 
     const result = await pool.query<{
       id: string;
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await ensurePersistenceTables(pool);
+    await ensureFeedbackTable(pool);
     const inserted = await insertFeedbackEntry({
       pool,
       ...parsed.data,
@@ -176,7 +176,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    await ensurePersistenceTables(pool);
+    await ensureFeedbackTable(pool);
 
     const result = await pool.query(
       `

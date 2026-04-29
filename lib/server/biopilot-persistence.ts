@@ -157,7 +157,7 @@ export const ensureFeedbackTable = async (pool: Pool) => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS roi_feedback_entries (
       id BIGSERIAL PRIMARY KEY,
-      assessment_id BIGINT REFERENCES roi_assessment_submissions(id) ON DELETE SET NULL,
+      assessment_id BIGINT,
       work_email TEXT NOT NULL DEFAULT '',
       company TEXT NOT NULL DEFAULT '',
       rating INTEGER NOT NULL,
