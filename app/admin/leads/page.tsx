@@ -6,6 +6,7 @@ import { Download, RefreshCw, Search, Shield, Trash2 } from "lucide-react";
 import {
   LIFECYCLE_STAGE_MAP,
   PROCESS_PROFILE_MAP,
+  type BioPilotAssessmentResults,
   type ProcessProfileId,
   type LifecycleStageId,
 } from "@/lib/biopilot-fit-assessment";
@@ -79,6 +80,7 @@ interface AssessmentProgressAdminEntry {
   evidenceConfidenceScore: number | null;
   evidenceConfidenceBand: string | null;
   topPriority: string;
+  generatedReport: BioPilotAssessmentResults;
   updatedAt: string;
   createdAt: string;
 }
@@ -257,6 +259,7 @@ const exportProgressCsv = (entries: AssessmentProgressAdminEntry[]) => {
       "evidence_confidence_score",
       "evidence_confidence_band",
       "top_priority",
+      "generated_report_json",
       "created_at",
       "updated_at",
     ],
@@ -282,6 +285,7 @@ const exportProgressCsv = (entries: AssessmentProgressAdminEntry[]) => {
       entry.evidenceConfidenceScore === null ? "" : String(entry.evidenceConfidenceScore),
       entry.evidenceConfidenceBand ?? "",
       entry.topPriority,
+      JSON.stringify(entry.generatedReport),
       entry.createdAt,
       entry.updatedAt,
     ]),

@@ -76,6 +76,7 @@ export interface AssessmentProgressRecord {
   evidenceConfidenceScore: number | null;
   evidenceConfidenceBand: string | null;
   topPriority: string;
+  generatedReport: BioPilotAssessmentResults;
   updatedAt: string;
   createdAt: string;
 }
@@ -594,6 +595,7 @@ export const mapAssessmentProgressAdminRow = (row: {
   evidenceConfidenceScore: row.generated_report?.evidenceConfidence?.score ?? null,
   evidenceConfidenceBand: row.generated_report?.evidenceConfidence?.band ?? null,
   topPriority: row.generated_report?.salesFollowUp?.priority ?? row.generated_report?.plays?.[0]?.title ?? "",
+  generatedReport: row.generated_report,
   updatedAt: row.updated_at,
   createdAt: row.created_at,
 });
