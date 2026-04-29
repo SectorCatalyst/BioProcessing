@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
@@ -102,6 +102,28 @@ const schedulePageTopScroll = () => {
   return () => window.cancelAnimationFrame(animationFrame);
 };
 
+const scheduleElementScroll = (elementId: string) => {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  const animationFrame = window.requestAnimationFrame(() => {
+    const target = window.document.getElementById(elementId);
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  });
+
+  return () => window.cancelAnimationFrame(animationFrame);
+};
+
 const SAMPLE_LEAD: LeadCaptureFormInput = {
   firstName: "Sample",
   lastName: "Reviewer",
@@ -120,6 +142,17 @@ const STEP_ORDER = [
 ] as const;
 
 type AssessmentStep = (typeof STEP_ORDER)[number]["id"];
+
+type AssessmentSessionMode = "example" | "actual";
+
+type AssessmentProgressStatus =
+  | "contact_captured"
+  | "process_selected"
+  | "inputs_started"
+  | "input_section_confirmed"
+  | "report_ready"
+  | "report_generation_failed"
+  | "report_generated";
 
 type AdjustableFieldKey = BioPilotAdjustableInputKey;
 
@@ -413,6 +446,50 @@ const INPUT_SECTIONS = [
 ] as const;
 
 type InputSectionId = (typeof INPUT_SECTIONS)[number]["id"];
+
+const createAssessmentSessionId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
+const getAssessmentProgressStatus = ({
+  currentStep,
+  completedInputSectionIds,
+  hasReport,
+}: {
+  currentStep: AssessmentStep;
+  completedInputSectionIds: InputSectionId[];
+  hasReport: boolean;
+}): AssessmentProgressStatus => {
+  const allInputSectionsComplete = BIOPILOT_INPUT_SECTION_IDS.every((sectionId) =>
+    completedInputSectionIds.includes(sectionId),
+  );
+
+  if (currentStep === "report" || hasReport) {
+    return "report_generated";
+  }
+
+  if (allInputSectionsComplete) {
+    return "report_ready";
+  }
+
+  if (completedInputSectionIds.length > 0) {
+    return "input_section_confirmed";
+  }
+
+  if (currentStep === "inputs") {
+    return "inputs_started";
+  }
+
+  if (currentStep === "profile") {
+    return "process_selected";
+  }
+
+  return "contact_captured";
+};
 
 const INPUT_SECTION_GUIDANCE: Record<InputSectionId, string> = {
   "operating-frame":
@@ -1111,13 +1188,39 @@ function IntroStep({
       <Card className={cn(PANEL_CARD, "p-0")}>
         <CardHeader className="border-b border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(247,250,252,0.94))] px-5 py-3.5">
           <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em] text-[color:var(--foreground)]">
-            Start the assessment
+            Choose your assessment path
           </CardTitle>
           <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
-            Enter your details to begin.
+            Use an example session for a fast walkthrough, or enter your details to assess a real process.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2.5 px-5 py-3.5">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className={cn(SOFT_CARD, "grid gap-3 p-4")}>
+              <div className="flex items-start gap-3">
+                <FlaskConical className="mt-1 size-5 text-[color:var(--brand-yellow)]" />
+                <div>
+                  <p className="text-base font-semibold text-[color:var(--foreground)]">
+                    Example session
+                  </p>
+                  <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
+                    Walk through BioPilot fit using realistic sample data. Best for a quick demo or internal review.
+                  </p>
+                </div>
+              </div>
+              <Button type="button" className={ACCENT_BUTTON} onClick={onUseSample}>
+                Launch example session
+              </Button>
+            </div>
+            <div className={cn(SOFT_CARD, "p-4")}>
+              <p className="text-base font-semibold text-[color:var(--foreground)]">
+                Actual session
+              </p>
+              <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
+                Use your own operating data to create a directional value estimate and BioPilot fit report.
+              </p>
+            </div>
+          </div>
           <form className="space-y-2.5" onSubmit={handleSubmit}>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
@@ -1208,25 +1311,8 @@ function IntroStep({
             </div>
 
             <Button type="submit" className={cn(PRIMARY_BUTTON, "w-full")} disabled={isSubmitting}>
-              {isSubmitting ? "Saving details..." : "Continue to process selection"}
+              {isSubmitting ? "Saving details..." : "Start actual assessment"}
             </Button>
-
-            <div className="grid gap-3 border-t border-[color:var(--border)] pt-2 sm:grid-cols-[minmax(0,1fr)_220px] sm:items-center">
-              <div className="flex items-start gap-3">
-                <FlaskConical className="mt-1 size-5 text-[color:var(--brand-yellow)]" />
-                <div>
-                  <p className="text-base font-semibold text-[color:var(--foreground)]">
-                    Need a fast walkthrough?
-                  </p>
-                  <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
-                    Load a sample session instead of typing every field manually.
-                  </p>
-                </div>
-              </div>
-              <Button type="button" className={ACCENT_BUTTON} onClick={onUseSample}>
-                Launch example session
-              </Button>
-            </div>
           </form>
         </CardContent>
       </Card>
@@ -1376,7 +1462,7 @@ function InputsStep({
     completedSectionSet.has(section.id),
   );
 
-  useEffect(() => schedulePageTopScroll(), [activeInputSectionId]);
+  useEffect(() => scheduleElementScroll("input-question-set"), [activeInputSectionId]);
 
   const handleResetInputs = () => {
     setSelectedSampleId("");
@@ -1626,14 +1712,16 @@ function InputsStep({
                 </TabsList>
                 {INPUT_SECTIONS.map((section) => (
                   <TabsContent key={section.id} value={section.id} className="mt-0">
-                    <InputSectionCard
-                      section={section}
-                      inputs={inputs}
-                      onPatch={(patch) => {
-                        onPatch(patch);
-                        onInvalidateInputSection(section.id);
-                      }}
-                    />
+                    <div id={section.id === activeInputSectionId ? "input-question-set" : undefined}>
+                      <InputSectionCard
+                        section={section}
+                        inputs={inputs}
+                        onPatch={(patch) => {
+                          onPatch(patch);
+                          onInvalidateInputSection(section.id);
+                        }}
+                      />
+                    </div>
                     <div className="mt-4 grid gap-3 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
                       <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
                         {completedSectionSet.has(section.id)
@@ -2475,6 +2563,8 @@ export function BioPilotFitAssessmentApp() {
   );
 
   const [currentStep, setCurrentStep] = useState<AssessmentStep>("intro");
+  const [sessionId, setSessionId] = useState(createAssessmentSessionId);
+  const [sessionMode, setSessionMode] = useState<AssessmentSessionMode>("actual");
   const [inputs, setInputs] = useState<BioPilotAssessmentInputs>(loadInitialInputs);
   const [reportResults, setReportResults] = useState<BioPilotAssessmentResults | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
@@ -2497,6 +2587,79 @@ export function BioPilotFitAssessmentApp() {
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(inputs));
   }, [inputs]);
+
+  const saveAssessmentProgress = useCallback(
+    async (statusOverride?: AssessmentProgressStatus) => {
+      if (!leadCapture) {
+        return;
+      }
+
+      const normalizedInputs = normalizeAssessmentInputs(inputs);
+      const status =
+        statusOverride ??
+        getAssessmentProgressStatus({
+          currentStep,
+          completedInputSectionIds,
+          hasReport: Boolean(reportResults),
+        });
+      const evidenceMeta: AssessmentEvidenceMeta = {
+        completedSectionIds: completedInputSectionIds as BioPilotInputSectionId[],
+        inputSources,
+        usedSampleData,
+        userConfirmedAt: status === "report_generated" ? new Date().toISOString() : null,
+      };
+
+      try {
+        await fetch("/api/assessment-progress", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firstName: leadCapture.firstName,
+            lastName: leadCapture.lastName,
+            workEmail: leadCapture.workEmail,
+            company: leadCapture.company,
+            jobTitle: leadCapture.jobTitle,
+            countryRegion: leadCapture.countryRegion,
+            consentToContact: leadCapture.consentToContact,
+            sessionId,
+            sessionMode,
+            currentStep,
+            status,
+            completedSectionIds: completedInputSectionIds,
+            inputs: normalizedInputs,
+            evidenceMeta,
+          }),
+        });
+      } catch (error) {
+        console.error("Assessment progress save failed", error);
+      }
+    },
+    [
+      completedInputSectionIds,
+      currentStep,
+      inputSources,
+      inputs,
+      leadCapture,
+      reportResults,
+      sessionId,
+      sessionMode,
+      usedSampleData,
+    ],
+  );
+
+  useEffect(() => {
+    if (!hasHydrated || !leadCapture || currentStep === "intro") {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void saveAssessmentProgress();
+    }, 900);
+
+    return () => window.clearTimeout(timeout);
+  }, [currentStep, hasHydrated, leadCapture, saveAssessmentProgress]);
 
   const patchInputs = (
     patch: Partial<BioPilotAssessmentInputs>,
@@ -2558,6 +2721,7 @@ export function BioPilotFitAssessmentApp() {
   };
 
   const handleSubmitLead = (record: LeadCaptureRecord) => {
+    setSessionMode("actual");
     completeLeadCapture(record);
     setCurrentStep("profile");
   };
@@ -2584,6 +2748,8 @@ export function BioPilotFitAssessmentApp() {
     setAssessmentRecordId(null);
 
     try {
+      await saveAssessmentProgress("report_ready");
+
       const normalizedInputs = normalizeAssessmentInputs(inputs);
       const evidenceMeta: AssessmentEvidenceMeta = {
         completedSectionIds: completedInputSectionIds as BioPilotInputSectionId[],
@@ -2643,6 +2809,7 @@ export function BioPilotFitAssessmentApp() {
       setCurrentStep("report");
     } catch (error) {
       console.error("Final report generation failed", error);
+      await saveAssessmentProgress("report_generation_failed");
       setReportError(
         error instanceof Error
           ? error.message
@@ -2654,6 +2821,8 @@ export function BioPilotFitAssessmentApp() {
   };
 
   const handleStartAnotherAssessment = () => {
+    setSessionId(createAssessmentSessionId());
+    setSessionMode("actual");
     setReportResults(null);
     setInputs(DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
     setInputSources(buildInputSources("default"));
@@ -2667,6 +2836,8 @@ export function BioPilotFitAssessmentApp() {
   };
 
   const handleChangeContact = () => {
+    setSessionId(createAssessmentSessionId());
+    setSessionMode("actual");
     clearLeadCapture();
     setReportResults(null);
     setReportError(null);
@@ -2677,16 +2848,23 @@ export function BioPilotFitAssessmentApp() {
   };
 
   const handleUseSampleContact = () => {
-      completeLeadCapture({
-        ...SAMPLE_LEAD,
-        submittedAt: new Date().toISOString(),
-        storageMode: "local_only",
-        storageMessage: "Sample session loaded on this device.",
-      });
+    setSessionId(createAssessmentSessionId());
+    setSessionMode("example");
+    completeLeadCapture({
+      ...SAMPLE_LEAD,
+      submittedAt: new Date().toISOString(),
+      storageMode: "local_only",
+      storageMessage: "Example session loaded on this device.",
+    });
     setInputs(BIOPILOT_SAMPLE_CONFIGS[0]?.inputs ?? DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
     setInputSources(buildInputSources("sample"));
     setCompletedInputSectionIds([]);
     setUsedSampleData(true);
+    setReportResults(null);
+    setReportError(null);
+    setAssessmentStorageMode(null);
+    setAssessmentStorageMessage(null);
+    setAssessmentRecordId(null);
     setCurrentStep("profile");
   };
 

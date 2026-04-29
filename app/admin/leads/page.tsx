@@ -57,6 +57,32 @@ interface AssessmentAdminEntry {
   updatedAt: string;
 }
 
+interface AssessmentProgressAdminEntry {
+  id: string;
+  sessionId: string;
+  sessionMode: string;
+  leadCaptureId: string | null;
+  firstName: string;
+  lastName: string;
+  workEmail: string;
+  company: string;
+  jobTitle: string;
+  countryRegion: string;
+  currentStep: string;
+  status: string;
+  completedSections: string[];
+  processProfileId: ProcessProfileId;
+  lifecycleStageId: LifecycleStageId;
+  fitBand: string;
+  fitScore: number;
+  annualValuePotential: number;
+  evidenceConfidenceScore: number | null;
+  evidenceConfidenceBand: string | null;
+  topPriority: string;
+  updatedAt: string;
+  createdAt: string;
+}
+
 interface FeedbackAdminEntry {
   id: string;
   assessmentId: string | null;
@@ -207,6 +233,61 @@ const exportAssessmentCsv = (entries: AssessmentAdminEntry[]) => {
   ]);
 };
 
+const exportProgressCsv = (entries: AssessmentProgressAdminEntry[]) => {
+  exportCsv("assessment-progress", [
+    [
+      "id",
+      "session_id",
+      "session_mode",
+      "lead_capture_id",
+      "first_name",
+      "last_name",
+      "work_email",
+      "company",
+      "job_title",
+      "country_region",
+      "current_step",
+      "status",
+      "completed_sections",
+      "process_profile",
+      "lifecycle_stage",
+      "fit_band",
+      "fit_score",
+      "annual_value",
+      "evidence_confidence_score",
+      "evidence_confidence_band",
+      "top_priority",
+      "created_at",
+      "updated_at",
+    ],
+    ...entries.map((entry) => [
+      entry.id,
+      entry.sessionId,
+      entry.sessionMode,
+      entry.leadCaptureId ?? "",
+      entry.firstName,
+      entry.lastName,
+      entry.workEmail,
+      entry.company,
+      entry.jobTitle,
+      entry.countryRegion,
+      entry.currentStep,
+      entry.status,
+      entry.completedSections.join("; "),
+      PROCESS_PROFILE_MAP[entry.processProfileId]?.label ?? entry.processProfileId,
+      LIFECYCLE_STAGE_MAP[entry.lifecycleStageId]?.label ?? entry.lifecycleStageId,
+      entry.fitBand,
+      String(entry.fitScore),
+      String(entry.annualValuePotential),
+      entry.evidenceConfidenceScore === null ? "" : String(entry.evidenceConfidenceScore),
+      entry.evidenceConfidenceBand ?? "",
+      entry.topPriority,
+      entry.createdAt,
+      entry.updatedAt,
+    ]),
+  ]);
+};
+
 const exportFeedbackCsv = (entries: FeedbackAdminEntry[]) => {
   exportCsv("assessment-feedback", [
     [
@@ -240,6 +321,7 @@ export default function LeadAdminPage() {
   const [adminKey, setAdminKey] = useState("");
   const [leads, setLeads] = useState<LeadAdminEntry[]>([]);
   const [assessments, setAssessments] = useState<AssessmentAdminEntry[]>([]);
+  const [progressEntries, setProgressEntries] = useState<AssessmentProgressAdminEntry[]>([]);
   const [feedbackEntries, setFeedbackEntries] = useState<FeedbackAdminEntry[]>([]);
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -260,11 +342,14 @@ export default function LeadAdminPage() {
     setStatusMessage("");
 
     try {
-      const [leadResponse, assessmentResponse, feedbackResponse] = await Promise.all([
+      const [leadResponse, assessmentResponse, progressResponse, feedbackResponse] = await Promise.all([
         fetch("/api/lead-capture", {
           headers: { "x-admin-key": key.trim() },
         }),
         fetch("/api/assessment-submissions", {
+          headers: { "x-admin-key": key.trim() },
+        }),
+        fetch("/api/assessment-progress", {
           headers: { "x-admin-key": key.trim() },
         }),
         fetch("/api/feedback", {
@@ -278,6 +363,9 @@ export default function LeadAdminPage() {
       const assessmentPayload = (await assessmentResponse.json().catch(() => null)) as
         | { message?: string; entries?: AssessmentAdminEntry[] }
         | null;
+      const progressPayload = (await progressResponse.json().catch(() => null)) as
+        | { message?: string; entries?: AssessmentProgressAdminEntry[] }
+        | null;
       const feedbackPayload = (await feedbackResponse.json().catch(() => null)) as
         | { message?: string; entries?: FeedbackAdminEntry[] }
         | null;
@@ -285,6 +373,7 @@ export default function LeadAdminPage() {
       if (!leadResponse.ok) {
         setLeads([]);
         setAssessments([]);
+        setProgressEntries([]);
         setFeedbackEntries([]);
         setErrorMessage(leadPayload?.message ?? "Lead records could not be loaded.");
         return;
@@ -293,14 +382,25 @@ export default function LeadAdminPage() {
       if (!assessmentResponse.ok) {
         setLeads([]);
         setAssessments([]);
+        setProgressEntries([]);
         setFeedbackEntries([]);
         setErrorMessage(assessmentPayload?.message ?? "Assessment records could not be loaded.");
+        return;
+      }
+
+      if (!progressResponse.ok) {
+        setLeads([]);
+        setAssessments([]);
+        setProgressEntries([]);
+        setFeedbackEntries([]);
+        setErrorMessage(progressPayload?.message ?? "Assessment progress records could not be loaded.");
         return;
       }
 
       if (!feedbackResponse.ok) {
         setLeads([]);
         setAssessments([]);
+        setProgressEntries([]);
         setFeedbackEntries([]);
         setErrorMessage(feedbackPayload?.message ?? "Feedback records could not be loaded.");
         return;
@@ -309,9 +409,10 @@ export default function LeadAdminPage() {
       sessionStorage.setItem("lead-capture-admin-key", key.trim());
       setLeads(leadPayload?.entries ?? []);
       setAssessments(assessmentPayload?.entries ?? []);
+      setProgressEntries(progressPayload?.entries ?? []);
       setFeedbackEntries(feedbackPayload?.entries ?? []);
       setStatusMessage(
-        `Loaded ${leadPayload?.entries?.length ?? 0} leads, ${assessmentPayload?.entries?.length ?? 0} assessments, and ${feedbackPayload?.entries?.length ?? 0} feedback records.`,
+        `Loaded ${leadPayload?.entries?.length ?? 0} leads, ${assessmentPayload?.entries?.length ?? 0} assessments, ${progressPayload?.entries?.length ?? 0} progress records, and ${feedbackPayload?.entries?.length ?? 0} feedback records.`,
       );
     } catch {
       setErrorMessage("Records could not be loaded.");
@@ -467,6 +568,34 @@ export default function LeadAdminPage() {
     );
   }, [assessments, normalizedQuery]);
 
+  const filteredProgress = useMemo(() => {
+    if (!normalizedQuery) {
+      return progressEntries;
+    }
+
+    return progressEntries.filter((entry) =>
+      [
+        entry.firstName,
+        entry.lastName,
+        entry.workEmail,
+        entry.company,
+        entry.jobTitle,
+        entry.countryRegion,
+        entry.sessionMode,
+        entry.currentStep,
+        entry.status,
+        PROCESS_PROFILE_MAP[entry.processProfileId]?.label ?? entry.processProfileId,
+        LIFECYCLE_STAGE_MAP[entry.lifecycleStageId]?.label ?? entry.lifecycleStageId,
+        entry.fitBand,
+        entry.evidenceConfidenceBand ?? "",
+        entry.topPriority,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
+  }, [normalizedQuery, progressEntries]);
+
   const filteredFeedback = useMemo(() => {
     if (!normalizedQuery) {
       return feedbackEntries;
@@ -501,7 +630,7 @@ export default function LeadAdminPage() {
                   Review BioPilot leads and submitted assessments
                 </CardTitle>
                 <CardDescription className="mt-2 max-w-4xl text-lg leading-7 text-[color:var(--muted-foreground)]">
-                  Load, search, export, and remove contact records and full assessment submissions stored in Render Postgres.
+                  Load, search, export, and remove contact records, saved reports, in-progress sessions, and feedback stored in Render Postgres.
                 </CardDescription>
               </div>
               <div className={cn(SOFT_CARD, "flex items-center gap-3 px-4 py-3")}>
@@ -555,10 +684,11 @@ export default function LeadAdminPage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-3 2xl:grid-cols-6">
             {[
               { label: "Lead records", value: String(leads.length) },
               { label: "Assessments", value: String(assessments.length) },
+              { label: "In progress", value: String(progressEntries.length) },
               { label: "Feedback", value: String(feedbackEntries.length) },
               { label: "Consented", value: String(leads.filter((entry) => entry.consentToContact).length) },
               { label: "Companies", value: String(uniqueCompanies) },
@@ -585,7 +715,7 @@ export default function LeadAdminPage() {
                   Search records
                 </CardTitle>
                 <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
-                  Search lead captures, submitted assessments, and internal feedback by contact, company, process, or comment.
+                  Search lead captures, submitted assessments, in-progress sessions, and internal feedback by contact, company, process, or comment.
                 </CardDescription>
               </div>
               <div className="relative min-w-[280px]">
@@ -688,6 +818,110 @@ export default function LeadAdminPage() {
                           {leads.length
                             ? "No lead records match the current search."
                             : "No lead records loaded yet."}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={cn(PANEL_CARD, "p-5")}>
+          <CardHeader className="p-0">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle className="font-heading text-[1.5rem] tracking-[-0.03em]">
+                  In-progress and abandoned sessions
+                </CardTitle>
+                <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
+                  Latest saved checkpoints, including where a user stopped before generating the final report.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                className={SECONDARY_BUTTON}
+                onClick={() => exportProgressCsv(filteredProgress)}
+                disabled={!filteredProgress.length}
+              >
+                <Download className="size-4" />
+                Export progress
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="mt-4 p-0">
+            <div className={cn(SOFT_CARD, "overflow-hidden")}>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse">
+                  <thead className="bg-[color:var(--surface-elevated)]">
+                    <tr className="text-left">
+                      {["Contact", "Path", "Stopped At", "Status", "Confirmed", "Process", "Fit", "Annual Value", "Last Activity"].map((label) => (
+                        <th
+                          key={label}
+                          className="border-b border-[color:var(--border)] px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]"
+                        >
+                          {label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProgress.length ? (
+                      filteredProgress.map((entry) => (
+                        <tr key={entry.id} className="border-b border-[color:var(--border)] last:border-b-0">
+                          <td className="px-4 py-4 align-top">
+                            <p className="text-base font-semibold text-[color:var(--foreground)]">
+                              {entry.firstName} {entry.lastName}
+                            </p>
+                            <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+                              {entry.workEmail}
+                            </p>
+                            <p className="mt-1 text-sm text-[color:var(--muted-foreground)]">
+                              {entry.company}
+                            </p>
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.sessionMode === "example" ? "Example session" : "Actual session"}
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.currentStep}
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.status.replace(/_/g, " ")}
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.completedSections.length}/3
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {PROCESS_PROFILE_MAP[entry.processProfileId]?.label ?? entry.processProfileId}
+                            <div className="text-[color:var(--muted-foreground)]">
+                              {LIFECYCLE_STAGE_MAP[entry.lifecycleStageId]?.label ?? entry.lifecycleStageId}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.fitBand}
+                            <div className="text-[color:var(--muted-foreground)]">
+                              {percentFormatter.format(entry.fitScore)}%
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {currencyFormatter.format(entry.annualValuePotential)}
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--muted-foreground)]">
+                            {formatDateTime(entry.updatedAt)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={9}
+                          className="px-4 py-10 text-center text-base text-[color:var(--muted-foreground)]"
+                        >
+                          {progressEntries.length
+                            ? "No progress records match the current search."
+                            : "No progress records loaded yet."}
                         </td>
                       </tr>
                     )}
