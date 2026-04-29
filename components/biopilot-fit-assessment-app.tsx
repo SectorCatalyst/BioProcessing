@@ -1342,17 +1342,22 @@ function InputsStep({
   const stage = LIFECYCLE_STAGE_MAP[inputs.lifecycleStageId];
   const selectedSample = BIOPILOT_SAMPLE_CONFIGS.find((item) => item.id === selectedSampleId) ?? null;
   const completedSectionSet = new Set(completedInputSectionIds);
+  const confirmedInputSectionCount = INPUT_SECTIONS.filter((section) =>
+    completedSectionSet.has(section.id),
+  ).length;
   const activeInputSectionIndex = Math.max(
     INPUT_SECTIONS.findIndex((section) => section.id === activeInputSectionId),
     0,
   );
   const activeInputSection = INPUT_SECTIONS[activeInputSectionIndex];
   const inputSectionProgress =
-    (completedInputSectionIds.length / INPUT_SECTIONS.length) * 100;
+    (confirmedInputSectionCount / INPUT_SECTIONS.length) * 100;
   const incompleteSections = INPUT_SECTIONS.filter(
     (section) => !completedSectionSet.has(section.id),
   );
-  const allInputSectionsComplete = incompleteSections.length === 0;
+  const allInputSectionsComplete = INPUT_SECTIONS.every((section) =>
+    completedSectionSet.has(section.id),
+  );
 
   const handleResetInputs = () => {
     setSelectedSampleId("");
@@ -1367,6 +1372,7 @@ function InputsStep({
 
     setCompletionError(null);
     onLoadSample(selectedSampleId);
+    setActiveInputSectionId(INPUT_SECTIONS[0].id);
   };
 
   const handleCompleteSection = (sectionId: InputSectionId) => {
@@ -1524,7 +1530,7 @@ function InputsStep({
                   <div className={cn(SOFT_CARD, "p-4")}>
                     <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
                       {selectedSample
-                        ? `${selectedSample.description} Click Apply sample data to replace the fields below.`
+                        ? `${selectedSample.description} Apply it to populate the fields, then confirm each section before generating the report.`
                         : "Choose a sample to preview it. The fields below will not change until you click Apply sample data."}
                     </p>
                   </div>
@@ -1562,7 +1568,7 @@ function InputsStep({
                 </div>
                 <div>
                   <div className="mb-2 flex items-center justify-between text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    <span>{completedInputSectionIds.length} of {INPUT_SECTIONS.length} sections confirmed</span>
+                    <span>{confirmedInputSectionCount} of {INPUT_SECTIONS.length} sections confirmed</span>
                     <span>{Math.round(inputSectionProgress)}%</span>
                   </div>
                   <Progress
@@ -2504,7 +2510,7 @@ export function BioPilotFitAssessmentApp() {
   const handleLoadSample = (sampleId: string) => {
     setInputs(buildRandomizedSampleInputs(sampleId));
     setInputSources(buildInputSources("sample"));
-    setCompletedInputSectionIds([...BIOPILOT_INPUT_SECTION_IDS]);
+    setCompletedInputSectionIds([]);
     setUsedSampleData(true);
     setReportError(null);
     setAssessmentStorageMode(null);
@@ -2553,7 +2559,11 @@ export function BioPilotFitAssessmentApp() {
       return;
     }
 
-    if (completedInputSectionIds.length < INPUT_SECTIONS.length) {
+    const allRequiredSectionsConfirmed = BIOPILOT_INPUT_SECTION_IDS.every((sectionId) =>
+      completedInputSectionIds.includes(sectionId),
+    );
+
+    if (!allRequiredSectionsConfirmed) {
       setReportError("Confirm every input section before generating the final report.");
       return;
     }
@@ -2666,7 +2676,7 @@ export function BioPilotFitAssessmentApp() {
       });
     setInputs(BIOPILOT_SAMPLE_CONFIGS[0]?.inputs ?? DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
     setInputSources(buildInputSources("sample"));
-    setCompletedInputSectionIds([...BIOPILOT_INPUT_SECTION_IDS]);
+    setCompletedInputSectionIds([]);
     setUsedSampleData(true);
     setCurrentStep("profile");
   };
