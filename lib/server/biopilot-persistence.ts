@@ -63,6 +63,9 @@ export const getPool = () => {
 
   if (!global.__biopilotPersistencePool) {
     const requiresSsl =
+      (!databaseUrl.includes("localhost") &&
+        !databaseUrl.includes("127.0.0.1") &&
+        !databaseUrl.includes("sslmode=disable")) ||
       process.env.PGSSLMODE === "require" ||
       databaseUrl.includes("sslmode=require") ||
       databaseUrl.includes("neon.tech") ||
