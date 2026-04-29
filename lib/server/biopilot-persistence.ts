@@ -55,13 +55,25 @@ export interface FeedbackEntryRecord {
 }
 
 export const getPool = () => {
-  if (!process.env.DATABASE_URL) {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
     return null;
   }
 
   if (!global.__biopilotPersistencePool) {
+    const requiresSsl =
+      process.env.PGSSLMODE === "require" ||
+      databaseUrl.includes("sslmode=require") ||
+      databaseUrl.includes("neon.tech") ||
+      databaseUrl.includes("supabase") ||
+      databaseUrl.includes("render.com");
+
     global.__biopilotPersistencePool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: databaseUrl,
+      connectionTimeoutMillis: 10000,
+      max: 5,
+      ssl: requiresSsl ? { rejectUnauthorized: false } : undefined,
     });
   }
 
