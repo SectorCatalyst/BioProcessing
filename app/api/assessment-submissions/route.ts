@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { type z } from "zod";
+import { z } from "zod";
 
 import {
   assessBioPilotFit,
@@ -16,10 +16,12 @@ import {
   isAuthorizedAdmin,
   mapAssessmentAdminRow,
 } from "@/lib/server/biopilot-persistence";
+import { enforcePublicPostGuard, rejectHoneypotPayload } from "@/lib/server/request-guards";
 
 export const runtime = "nodejs";
 
 const assessmentSubmissionSchema = leadCaptureSchema.extend({
+  sessionMode: z.enum(["example", "actual"]).default("actual"),
   inputs: bioPilotAssessmentInputsSchema,
   evidenceMeta: assessmentEvidenceMetaSchema.optional(),
 });
@@ -115,6 +117,7 @@ export async function GET(request: Request) {
       digital_coverage: number;
       manual_burden_index: number;
       generated_report: ReturnType<typeof assessBioPilotFit>;
+      session_mode: string;
       created_at: string;
       updated_at: string;
     }>(`
@@ -137,6 +140,7 @@ export async function GET(request: Request) {
         digital_coverage,
         manual_burden_index,
         generated_report,
+        session_mode,
         created_at,
         updated_at
       FROM roi_assessment_submissions
@@ -160,7 +164,23 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const guardResponse = enforcePublicPostGuard(request, {
+    key: "assessment-submissions",
+    limit: 20,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (guardResponse) {
+    return guardResponse;
+  }
+
   const payload = await request.json().catch(() => null);
+  const honeypotResponse = rejectHoneypotPayload(payload);
+
+  if (honeypotResponse) {
+    return honeypotResponse;
+  }
+
   const parsed = assessmentSubmissionSchema.safeParse(payload);
 
   if (!parsed.success) {
@@ -198,11 +218,14 @@ export async function POST(request: Request) {
       lead: parsed.data,
       inputs: normalizedInputs,
       evidenceMeta,
+      sessionMode: parsed.data.sessionMode,
     });
-    await notifySalesWebhook({
-      lead: parsed.data,
-      results: inserted.results,
-    });
+    if (parsed.data.sessionMode === "actual") {
+      await notifySalesWebhook({
+        lead: parsed.data,
+        results: inserted.results,
+      });
+    }
 
     return NextResponse.json(
       {

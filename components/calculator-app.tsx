@@ -53,7 +53,7 @@ import {
   type ShortfallFinding,
   type ValueChainStageView,
 } from "@/lib/bioprocess-value-chain";
-import { exportExcel, exportJson, exportPdf } from "@/lib/exporters";
+import { exportCsvBundle, exportJson, exportPdf } from "@/lib/exporters";
 import {
   defaultLeadCaptureInput,
   editableModelSchema,
@@ -1478,7 +1478,7 @@ function CalculatorWorkspace({
     startTransition(() => setSelectedScenarioId(bundle.visibleScenarioIds[nextIndex] ?? "expected"));
   };
 
-  const handleExport = (format: "json" | "excel" | "pdf") => {
+  const handleExport = (format: "json" | "csv" | "pdf") => {
     const latestModel = form.getValues();
     const latestBundle = calculateAllScenarios({
       model: latestModel,
@@ -1500,13 +1500,13 @@ function CalculatorWorkspace({
       return;
     }
 
-    if (format === "excel") {
-      exportExcel({
+    if (format === "csv") {
+      exportCsvBundle({
         model: latestModel,
         bundle: latestBundle,
         selectedScenarioId,
       });
-      markExported("Excel");
+      markExported("CSV");
       return;
     }
 
@@ -2474,7 +2474,7 @@ function CalculatorWorkspace({
                 <SectionShell
                   id="export"
                   title="Export"
-                  description="Download JSON, Excel, or PDF versions of the current calculator view."
+                  description="Download JSON, CSV, or PDF versions of the current calculator view."
                 >
                   <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                     <div className="space-y-4">
@@ -2483,9 +2483,9 @@ function CalculatorWorkspace({
                           <Download className="size-4" />
                           Export JSON
                         </Button>
-                        <Button variant="outline" className={OUTLINE_BUTTON} onClick={() => handleExport("excel")}>
+                        <Button variant="outline" className={OUTLINE_BUTTON} onClick={() => handleExport("csv")}>
                           <Download className="size-4" />
-                          Export Excel
+                          Export CSV
                         </Button>
                         <Button variant="outline" className={OUTLINE_BUTTON} onClick={() => handleExport("pdf")}>
                           <Download className="size-4" />
@@ -2498,7 +2498,7 @@ function CalculatorWorkspace({
                         <AlertDescription>
                           PDF exports include the summary, KPI overview, value breakdown, scenario
                           comparison, confidence view, assumptions highlights, and methodology notes.
-                          Excel and JSON keep the same structured output for easier sharing.
+                          CSV and JSON keep the same structured output for easier sharing.
                         </AlertDescription>
                       </Alert>
                     </div>

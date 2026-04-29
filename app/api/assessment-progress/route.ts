@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
+  BIOPILOT_INPUT_SECTION_IDS,
   assessmentEvidenceMetaSchema,
   bioPilotAssessmentInputsSchema,
   normalizeAssessmentInputs,
@@ -16,6 +17,7 @@ import {
   mapAssessmentProgressAdminRow,
   upsertAssessmentProgress,
 } from "@/lib/server/biopilot-persistence";
+import { enforcePublicPostGuard, rejectHoneypotPayload } from "@/lib/server/request-guards";
 
 export const runtime = "nodejs";
 
@@ -34,7 +36,7 @@ const assessmentProgressSchema = leadCaptureSchema.extend({
       "report_generated",
     ])
     .default("inputs_started"),
-  completedSectionIds: z.array(z.string().trim().min(1)).default([]),
+  completedSectionIds: z.array(z.enum(BIOPILOT_INPUT_SECTION_IDS)).default([]),
   inputs: bioPilotAssessmentInputsSchema,
   evidenceMeta: assessmentEvidenceMetaSchema.optional(),
 });
@@ -129,7 +131,23 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const guardResponse = enforcePublicPostGuard(request, {
+    key: "assessment-progress",
+    limit: 240,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (guardResponse) {
+    return guardResponse;
+  }
+
   const payload = await request.json().catch(() => null);
+  const honeypotResponse = rejectHoneypotPayload(payload);
+
+  if (honeypotResponse) {
+    return honeypotResponse;
+  }
+
   const parsed = assessmentProgressSchema.safeParse(payload);
 
   if (!parsed.success) {
@@ -190,6 +208,74 @@ export async function POST(request: Request) {
           "Progress was captured on this device, but online saving is not available right now.",
       },
       { status: 202 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const pool = getPool();
+
+  if (!pool) {
+    return NextResponse.json(
+      {
+        message: "Assessment progress storage is not connected. Set DATABASE_URL on the web service.",
+      },
+      { status: 503 },
+    );
+  }
+
+  if (!isAuthorizedAdmin(request)) {
+    return NextResponse.json(
+      {
+        message: "Admin authorization is required.",
+      },
+      { status: 401 },
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = Number(searchParams.get("id"));
+
+  if (!Number.isInteger(id) || id < 1) {
+    return NextResponse.json(
+      {
+        message: "A valid progress id is required.",
+      },
+      { status: 400 },
+    );
+  }
+
+  try {
+    await ensurePersistenceTables(pool);
+
+    const result = await pool.query(
+      `
+        DELETE FROM roi_assessment_progress
+        WHERE id = $1
+      `,
+      [id],
+    );
+
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        {
+          message: "Progress record not found.",
+        },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
+      message: "Progress record deleted.",
+    });
+  } catch (error) {
+    console.error("Assessment progress delete failed", error);
+
+    return NextResponse.json(
+      {
+        message: "Progress record could not be deleted right now.",
+      },
+      { status: 500 },
     );
   }
 }

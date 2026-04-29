@@ -2588,10 +2588,10 @@ export function BioPilotFitAssessmentApp() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(inputs));
   }, [inputs]);
 
-  const saveAssessmentProgress = useCallback(
-    async (statusOverride?: AssessmentProgressStatus) => {
+  const buildAssessmentProgressPayload = useCallback(
+    (statusOverride?: AssessmentProgressStatus) => {
       if (!leadCapture) {
-        return;
+        return null;
       }
 
       const normalizedInputs = normalizeAssessmentInputs(inputs);
@@ -2609,32 +2609,22 @@ export function BioPilotFitAssessmentApp() {
         userConfirmedAt: status === "report_generated" ? new Date().toISOString() : null,
       };
 
-      try {
-        await fetch("/api/assessment-progress", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            firstName: leadCapture.firstName,
-            lastName: leadCapture.lastName,
-            workEmail: leadCapture.workEmail,
-            company: leadCapture.company,
-            jobTitle: leadCapture.jobTitle,
-            countryRegion: leadCapture.countryRegion,
-            consentToContact: leadCapture.consentToContact,
-            sessionId,
-            sessionMode,
-            currentStep,
-            status,
-            completedSectionIds: completedInputSectionIds,
-            inputs: normalizedInputs,
-            evidenceMeta,
-          }),
-        });
-      } catch (error) {
-        console.error("Assessment progress save failed", error);
-      }
+      return {
+        firstName: leadCapture.firstName,
+        lastName: leadCapture.lastName,
+        workEmail: leadCapture.workEmail,
+        company: leadCapture.company,
+        jobTitle: leadCapture.jobTitle,
+        countryRegion: leadCapture.countryRegion,
+        consentToContact: leadCapture.consentToContact,
+        sessionId,
+        sessionMode,
+        currentStep,
+        status,
+        completedSectionIds: completedInputSectionIds,
+        inputs: normalizedInputs,
+        evidenceMeta,
+      };
     },
     [
       completedInputSectionIds,
@@ -2649,6 +2639,29 @@ export function BioPilotFitAssessmentApp() {
     ],
   );
 
+  const saveAssessmentProgress = useCallback(
+    async (statusOverride?: AssessmentProgressStatus) => {
+      const payload = buildAssessmentProgressPayload(statusOverride);
+
+      if (!payload) {
+        return;
+      }
+
+      try {
+        await fetch("/api/assessment-progress", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch (error) {
+        console.error("Assessment progress save failed", error);
+      }
+    },
+    [buildAssessmentProgressPayload],
+  );
+
   useEffect(() => {
     if (!hasHydrated || !leadCapture || currentStep === "intro") {
       return;
@@ -2660,6 +2673,51 @@ export function BioPilotFitAssessmentApp() {
 
     return () => window.clearTimeout(timeout);
   }, [currentStep, hasHydrated, leadCapture, saveAssessmentProgress]);
+
+  useEffect(() => {
+    if (!hasHydrated || !leadCapture || currentStep === "intro") {
+      return;
+    }
+
+    const saveFinalCheckpoint = () => {
+      const payload = buildAssessmentProgressPayload();
+
+      if (!payload) {
+        return;
+      }
+
+      const body = JSON.stringify(payload);
+
+      if (navigator.sendBeacon) {
+        const blob = new Blob([body], { type: "application/json" });
+        navigator.sendBeacon("/api/assessment-progress", blob);
+        return;
+      }
+
+      void fetch("/api/assessment-progress", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body,
+        keepalive: true,
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        saveFinalCheckpoint();
+      }
+    };
+
+    window.addEventListener("pagehide", saveFinalCheckpoint);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pagehide", saveFinalCheckpoint);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [buildAssessmentProgressPayload, currentStep, hasHydrated, leadCapture]);
 
   const patchInputs = (
     patch: Partial<BioPilotAssessmentInputs>,
@@ -2770,6 +2828,7 @@ export function BioPilotFitAssessmentApp() {
           jobTitle: leadCapture.jobTitle,
           countryRegion: leadCapture.countryRegion,
           consentToContact: leadCapture.consentToContact,
+          sessionMode,
           inputs: normalizedInputs,
           evidenceMeta,
         }),

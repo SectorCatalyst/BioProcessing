@@ -2,7 +2,6 @@
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
 
 import {
   type CalculationBundle,
@@ -135,14 +134,48 @@ const scenarioInputRows = (model: EditableModel, scenarioId: ScenarioId) => {
   ];
 };
 
-export const exportExcel = (params: {
+const normalizeCsvRecords = (sheetName: string, rows: unknown[]) =>
+  rows.map((row) => {
+    if (row && typeof row === "object" && !Array.isArray(row)) {
+      return {
+        Worksheet: sheetName,
+        ...(row as Record<string, unknown>),
+      };
+    }
+
+    return {
+      Worksheet: sheetName,
+      Value: row,
+    };
+  });
+
+const csvCell = (value: unknown) => {
+  const serialized =
+    value === null || value === undefined
+      ? ""
+      : typeof value === "object"
+        ? JSON.stringify(value)
+        : String(value);
+
+  return `"${serialized.replace(/"/g, '""')}"`;
+};
+
+const downloadCsvRecords = (records: Array<Record<string, unknown>>, filename: string) => {
+  const headers = Array.from(new Set(records.flatMap((record) => Object.keys(record))));
+  const csv = [
+    headers.map(csvCell).join(","),
+    ...records.map((record) => headers.map((header) => csvCell(record[header])).join(",")),
+  ].join("\n");
+
+  downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), filename);
+};
+
+export const exportCsvBundle = (params: {
   model: EditableModel;
   bundle: CalculationBundle;
   selectedScenarioId: ScenarioId;
 }) => {
   const { model, bundle, selectedScenarioId } = params;
-  const workbook = XLSX.utils.book_new();
-
   const executiveSummary = bundle.visibleScenarioIds.map((scenarioId) => {
     const scenario = bundle.scenarioResults[scenarioId];
     return {
@@ -204,17 +237,9 @@ export const exportExcel = (params: {
     ["Assumptions Register", bundle.assumptionsRegister],
   ];
 
-  for (const [sheetName, rows] of sheets) {
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  }
-
-  const buffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
-  downloadBlob(
-    new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    }),
-    `${buildFileStem(selectedScenarioId)}.xlsx`,
+  downloadCsvRecords(
+    sheets.flatMap(([sheetName, rows]) => normalizeCsvRecords(sheetName, rows)),
+    `${buildFileStem(selectedScenarioId)}.csv`,
   );
 };
 

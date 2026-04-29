@@ -7,6 +7,7 @@ import {
   isAuthorizedAdmin,
   upsertLeadCapture,
 } from "@/lib/server/biopilot-persistence";
+import { enforcePublicPostGuard, rejectHoneypotPayload } from "@/lib/server/request-guards";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,7 @@ export async function GET(request: Request) {
       job_title: string;
       country_region: string;
       consent_to_contact: boolean;
+      session_mode: string;
       source: string;
       created_at: string;
       updated_at: string;
@@ -56,6 +58,7 @@ export async function GET(request: Request) {
         job_title,
         country_region,
         consent_to_contact,
+        session_mode,
         source,
         created_at,
         updated_at
@@ -74,6 +77,7 @@ export async function GET(request: Request) {
         jobTitle: row.job_title,
         countryRegion: row.country_region,
         consentToContact: row.consent_to_contact,
+        sessionMode: row.session_mode,
         source: row.source,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -92,7 +96,23 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const guardResponse = enforcePublicPostGuard(request, {
+    key: "lead-capture",
+    limit: 8,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (guardResponse) {
+    return guardResponse;
+  }
+
   const payload = await request.json().catch(() => null);
+  const honeypotResponse = rejectHoneypotPayload(payload);
+
+  if (honeypotResponse) {
+    return honeypotResponse;
+  }
+
   const parsed = leadCaptureSchema.safeParse(payload);
 
   if (!parsed.success) {

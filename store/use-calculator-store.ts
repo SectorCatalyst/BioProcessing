@@ -67,7 +67,7 @@ interface CalculatorStoreState {
   }) => EditableModel;
   addOverride: (record: Omit<OverrideRecord, "id" | "createdAt">) => OverrideRecord;
   markCalculated: (scenario: ScenarioId) => void;
-  markExported: (format: "JSON" | "Excel" | "PDF") => void;
+  markExported: (format: "JSON" | "CSV" | "PDF") => void;
   completeLeadCapture: (leadCapture: LeadCaptureRecord) => void;
   clearLeadCapture: () => void;
   applyTestDataset: (params: {

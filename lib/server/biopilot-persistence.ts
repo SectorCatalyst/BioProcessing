@@ -12,9 +12,12 @@ declare global {
   var __biopilotPersistencePool: Pool | undefined;
 }
 
+export type AssessmentSessionMode = "example" | "actual";
+
 export interface AssessmentSubmissionRecord {
   id: string;
   leadCaptureId: string | null;
+  sessionMode: string;
   firstName: string;
   lastName: string;
   workEmail: string;
@@ -133,6 +136,7 @@ export const ensureLeadCaptureTable = async (pool: Pool) => {
       job_title TEXT NOT NULL,
       country_region TEXT NOT NULL,
       consent_to_contact BOOLEAN NOT NULL DEFAULT TRUE,
+      session_mode TEXT NOT NULL DEFAULT 'actual',
       source TEXT NOT NULL DEFAULT 'bioprocess-roi-calculator',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -142,6 +146,11 @@ export const ensureLeadCaptureTable = async (pool: Pool) => {
   await pool.query(`
     ALTER TABLE roi_lead_captures
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+  `);
+
+  await pool.query(`
+    ALTER TABLE roi_lead_captures
+    ADD COLUMN IF NOT EXISTS session_mode TEXT NOT NULL DEFAULT 'actual';
   `);
 
   await pool.query(`
@@ -155,6 +164,7 @@ export const ensureAssessmentTable = async (pool: Pool) => {
     CREATE TABLE IF NOT EXISTS roi_assessment_submissions (
       id BIGSERIAL PRIMARY KEY,
       lead_capture_id BIGINT REFERENCES roi_lead_captures(id) ON DELETE SET NULL,
+      session_mode TEXT NOT NULL DEFAULT 'actual',
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
       work_email TEXT NOT NULL,
@@ -182,6 +192,11 @@ export const ensureAssessmentTable = async (pool: Pool) => {
   await pool.query(`
     ALTER TABLE roi_assessment_submissions
     ADD COLUMN IF NOT EXISTS evidence_meta JSONB NOT NULL DEFAULT '{}'::jsonb;
+  `);
+
+  await pool.query(`
+    ALTER TABLE roi_assessment_submissions
+    ADD COLUMN IF NOT EXISTS session_mode TEXT NOT NULL DEFAULT 'actual';
   `);
 
   await pool.query(`
@@ -275,7 +290,11 @@ export const ensurePersistenceTables = async (pool: Pool) => {
   await ensureAssessmentProgressTable(pool);
 };
 
-export const upsertLeadCapture = async (pool: Pool, lead: LeadCaptureFormInput) => {
+export const upsertLeadCapture = async (
+  pool: Pool,
+  lead: LeadCaptureFormInput,
+  sessionMode: AssessmentSessionMode = "actual",
+) => {
   const result = await pool.query<{ id: string }>(
     `
       INSERT INTO roi_lead_captures (
@@ -285,9 +304,10 @@ export const upsertLeadCapture = async (pool: Pool, lead: LeadCaptureFormInput) 
         company,
         job_title,
         country_region,
-        consent_to_contact
+        consent_to_contact,
+        session_mode
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       ON CONFLICT (work_email)
       DO UPDATE SET
         first_name = EXCLUDED.first_name,
@@ -296,6 +316,7 @@ export const upsertLeadCapture = async (pool: Pool, lead: LeadCaptureFormInput) 
         job_title = EXCLUDED.job_title,
         country_region = EXCLUDED.country_region,
         consent_to_contact = EXCLUDED.consent_to_contact,
+        session_mode = EXCLUDED.session_mode,
         updated_at = NOW()
       RETURNING id
     `,
@@ -307,6 +328,7 @@ export const upsertLeadCapture = async (pool: Pool, lead: LeadCaptureFormInput) 
       lead.jobTitle,
       lead.countryRegion,
       lead.consentToContact,
+      sessionMode,
     ],
   );
 
@@ -318,19 +340,23 @@ export const insertAssessmentSubmission = async ({
   lead,
   inputs,
   evidenceMeta,
+  sessionMode = "actual",
 }: {
   pool: Pool;
   lead: LeadCaptureFormInput;
   inputs: BioPilotAssessmentInputs;
   evidenceMeta?: AssessmentEvidenceMeta | null;
+  sessionMode?: AssessmentSessionMode;
 }) => {
-  const leadCaptureId = await upsertLeadCapture(pool, lead);
+  const leadCaptureId =
+    sessionMode === "example" ? null : await upsertLeadCapture(pool, lead, sessionMode);
   const results = assessBioPilotFit(inputs, evidenceMeta);
 
   const insertResult = await pool.query<{ id: string; created_at: string; updated_at: string }>(
     `
       INSERT INTO roi_assessment_submissions (
         lead_capture_id,
+        session_mode,
         first_name,
         last_name,
         work_email,
@@ -351,13 +377,14 @@ export const insertAssessmentSubmission = async ({
         generated_report
       )
       VALUES (
-        $1, $2, $3, $4, $5, $6, $7,
-        $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::jsonb, $18::jsonb, $19::jsonb
+        $1, $2, $3, $4, $5, $6, $7, $8,
+        $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19::jsonb, $20::jsonb
       )
       RETURNING id, created_at, updated_at
     `,
     [
       leadCaptureId,
+      sessionMode,
       lead.firstName,
       lead.lastName,
       lead.workEmail.toLowerCase(),
@@ -392,6 +419,7 @@ export const mapAssessmentAdminRow = (
   row: {
     id: string;
     lead_capture_id: string | null;
+    session_mode: string;
     first_name: string;
     last_name: string;
     work_email: string;
@@ -414,6 +442,7 @@ export const mapAssessmentAdminRow = (
 ): AssessmentSubmissionRecord => ({
   id: row.id,
   leadCaptureId: row.lead_capture_id,
+  sessionMode: row.session_mode,
   firstName: row.first_name,
   lastName: row.last_name,
   workEmail: row.work_email,
@@ -461,7 +490,8 @@ export const upsertAssessmentProgress = async ({
   completedSections: string[];
   evidenceMeta?: AssessmentEvidenceMeta | null;
 }) => {
-  const leadCaptureId = await upsertLeadCapture(pool, lead);
+  const leadCaptureId =
+    sessionMode === "example" ? null : await upsertLeadCapture(pool, lead, sessionMode);
   const results = assessBioPilotFit(inputs, evidenceMeta);
 
   const result = await pool.query<{ id: string; updated_at: string; created_at: string }>(

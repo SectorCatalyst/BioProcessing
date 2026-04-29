@@ -8,6 +8,7 @@ import {
   isAuthorizedAdmin,
   mapFeedbackAdminRow,
 } from "@/lib/server/biopilot-persistence";
+import { enforcePublicPostGuard, rejectHoneypotPayload } from "@/lib/server/request-guards";
 
 export const runtime = "nodejs";
 
@@ -90,7 +91,23 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const guardResponse = enforcePublicPostGuard(request, {
+    key: "feedback",
+    limit: 20,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (guardResponse) {
+    return guardResponse;
+  }
+
   const payload = await request.json().catch(() => null);
+  const honeypotResponse = rejectHoneypotPayload(payload);
+
+  if (honeypotResponse) {
+    return honeypotResponse;
+  }
+
   const parsed = feedbackSchema.safeParse(payload);
 
   if (!parsed.success) {

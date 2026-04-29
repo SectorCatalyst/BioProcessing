@@ -132,7 +132,7 @@ Ask Stitch to generate at least these views:
    - Form + activity feed
 
 6. Export workspace
-   - JSON / Excel / PDF actions
+   - JSON / CSV / PDF actions
    - export metadata panel
 
 ## Existing Product Constraints

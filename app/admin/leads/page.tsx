@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 
 interface LeadAdminEntry {
   id: string;
+  sessionMode?: string;
   firstName: string;
   lastName: string;
   workEmail: string;
@@ -32,6 +33,7 @@ interface LeadAdminEntry {
 interface AssessmentAdminEntry {
   id: string;
   leadCaptureId: string | null;
+  sessionMode: string;
   firstName: string;
   lastName: string;
   workEmail: string;
@@ -147,6 +149,7 @@ const exportLeadCsv = (entries: LeadAdminEntry[]) => {
   exportCsv("lead-captures", [
     [
       "id",
+      "session_mode",
       "first_name",
       "last_name",
       "work_email",
@@ -160,6 +163,7 @@ const exportLeadCsv = (entries: LeadAdminEntry[]) => {
     ],
     ...entries.map((entry) => [
       entry.id,
+      entry.sessionMode ?? "actual",
       entry.firstName,
       entry.lastName,
       entry.workEmail,
@@ -179,6 +183,7 @@ const exportAssessmentCsv = (entries: AssessmentAdminEntry[]) => {
     [
       "id",
       "lead_capture_id",
+      "session_mode",
       "first_name",
       "last_name",
       "work_email",
@@ -207,6 +212,7 @@ const exportAssessmentCsv = (entries: AssessmentAdminEntry[]) => {
     ...entries.map((entry) => [
       entry.id,
       entry.leadCaptureId ?? "",
+      entry.sessionMode,
       entry.firstName,
       entry.lastName,
       entry.workEmail,
@@ -331,7 +337,9 @@ export default function LeadAdminPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDeletingLeadId, setIsDeletingLeadId] = useState<string | null>(null);
   const [isDeletingAssessmentId, setIsDeletingAssessmentId] = useState<string | null>(null);
+  const [isDeletingProgressId, setIsDeletingProgressId] = useState<string | null>(null);
   const [isDeletingFeedbackId, setIsDeletingFeedbackId] = useState<string | null>(null);
+  const [selectedProgressId, setSelectedProgressId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -415,6 +423,7 @@ export default function LeadAdminPage() {
       setAssessments(assessmentPayload?.entries ?? []);
       setProgressEntries(progressPayload?.entries ?? []);
       setFeedbackEntries(feedbackPayload?.entries ?? []);
+      setSelectedProgressId(null);
       setStatusMessage(
         `Loaded ${leadPayload?.entries?.length ?? 0} leads, ${assessmentPayload?.entries?.length ?? 0} assessments, ${progressPayload?.entries?.length ?? 0} progress records, and ${feedbackPayload?.entries?.length ?? 0} feedback records.`,
       );
@@ -482,6 +491,37 @@ export default function LeadAdminPage() {
       setErrorMessage("Assessment record could not be deleted.");
     } finally {
       setIsDeletingAssessmentId(null);
+    }
+  };
+
+  const handleDeleteProgress = async (id: string) => {
+    if (!window.confirm("Delete this saved progress record?")) {
+      return;
+    }
+
+    setIsDeletingProgressId(id);
+    setErrorMessage("");
+    setStatusMessage("");
+
+    try {
+      const response = await fetch(`/api/assessment-progress?id=${id}`, {
+        method: "DELETE",
+        headers: { "x-admin-key": adminKey.trim() },
+      });
+      const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+
+      if (!response.ok) {
+        setErrorMessage(payload?.message ?? "Progress record could not be deleted.");
+        return;
+      }
+
+      setProgressEntries((current) => current.filter((entry) => entry.id !== id));
+      setSelectedProgressId((current) => (current === id ? null : current));
+      setStatusMessage("Progress record deleted.");
+    } catch {
+      setErrorMessage("Progress record could not be deleted.");
+    } finally {
+      setIsDeletingProgressId(null);
     }
   };
 
@@ -558,6 +598,7 @@ export default function LeadAdminPage() {
         entry.company,
         entry.jobTitle,
         entry.countryRegion,
+        entry.sessionMode,
         PROCESS_PROFILE_MAP[entry.processProfileId]?.label ?? entry.processProfileId,
         LIFECYCLE_STAGE_MAP[entry.lifecycleStageId]?.label ?? entry.lifecycleStageId,
         entry.fitBand,
@@ -618,7 +659,15 @@ export default function LeadAdminPage() {
     );
   }, [feedbackEntries, normalizedQuery]);
 
-  const uniqueCompanies = new Set(leads.map((entry) => entry.company.toLowerCase())).size;
+  const actualLeads = leads.filter((entry) => entry.sessionMode !== "example");
+  const actualAssessments = assessments.filter((entry) => entry.sessionMode !== "example");
+  const exampleSessions =
+    progressEntries.filter((entry) => entry.sessionMode === "example").length +
+    assessments.filter((entry) => entry.sessionMode === "example").length;
+  const uniqueCompanies = new Set(actualLeads.map((entry) => entry.company.toLowerCase())).size;
+  const selectedProgress = selectedProgressId
+    ? progressEntries.find((entry) => entry.id === selectedProgressId) ?? null
+    : null;
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 lg:px-8">
@@ -690,11 +739,11 @@ export default function LeadAdminPage() {
 
           <div className="grid gap-4 md:grid-cols-3 2xl:grid-cols-6">
             {[
-              { label: "Lead records", value: String(leads.length) },
-              { label: "Assessments", value: String(assessments.length) },
+              { label: "Actual leads", value: String(actualLeads.length) },
+              { label: "Actual reports", value: String(actualAssessments.length) },
               { label: "In progress", value: String(progressEntries.length) },
               { label: "Feedback", value: String(feedbackEntries.length) },
-              { label: "Consented", value: String(leads.filter((entry) => entry.consentToContact).length) },
+              { label: "Examples", value: String(exampleSessions) },
               { label: "Companies", value: String(uniqueCompanies) },
             ].map((item) => (
               <Card key={item.label} className={cn(PANEL_CARD, "p-5")}>
@@ -855,12 +904,69 @@ export default function LeadAdminPage() {
             </div>
           </CardHeader>
           <CardContent className="mt-4 p-0">
+            {selectedProgress ? (
+              <div className={cn(SOFT_CARD, "mb-4 grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.62fr)]")}>
+                <div>
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                    Session detail
+                  </p>
+                  <h3 className="mt-2 font-heading text-2xl tracking-[-0.03em] text-[color:var(--foreground)]">
+                    {selectedProgress.firstName} {selectedProgress.lastName} at {selectedProgress.company}
+                  </h3>
+                  <p className="mt-2 text-base leading-7 text-[color:var(--muted-foreground)]">
+                    {selectedProgress.sessionMode === "example" ? "Example session" : "Actual session"} stopped at{" "}
+                    {selectedProgress.currentStep.replace(/_/g, " ")} with{" "}
+                    {selectedProgress.completedSections.length}/3 input sections confirmed.
+                  </p>
+                  <p className="mt-3 text-base leading-7 text-[color:var(--foreground)]">
+                    {selectedProgress.generatedReport?.executiveSummary ??
+                      "A draft report was generated from the latest saved checkpoint."}
+                  </p>
+                </div>
+                <div className="grid gap-3">
+                  {[
+                    ["Status", selectedProgress.status.replace(/_/g, " ")],
+                    [
+                      "Process",
+                      PROCESS_PROFILE_MAP[selectedProgress.processProfileId]?.label ??
+                        selectedProgress.processProfileId,
+                    ],
+                    ["Fit", `${selectedProgress.fitBand} (${percentFormatter.format(selectedProgress.fitScore)}%)`],
+                    ["Annual value", currencyFormatter.format(selectedProgress.annualValuePotential)],
+                    ["Top priority", selectedProgress.topPriority || "Not available"],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-[16px] border border-[color:var(--border)] bg-[color:var(--surface-3)] px-4 py-3"
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                        {label}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--foreground)]">
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className={cn(SOFT_CARD, "overflow-hidden")}>
               <div className="overflow-x-auto">
                 <table className="min-w-full border-collapse">
                   <thead className="bg-[color:var(--surface-elevated)]">
                     <tr className="text-left">
-                      {["Contact", "Path", "Stopped At", "Status", "Confirmed", "Process", "Fit", "Annual Value", "Last Activity"].map((label) => (
+                      {[
+                        "Contact",
+                        "Path",
+                        "Stopped At",
+                        "Status",
+                        "Confirmed",
+                        "Process",
+                        "Fit",
+                        "Annual Value",
+                        "Last Activity",
+                        "Actions",
+                      ].map((label) => (
                         <th
                           key={label}
                           className="border-b border-[color:var(--border)] px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]"
@@ -915,12 +1021,32 @@ export default function LeadAdminPage() {
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--muted-foreground)]">
                             {formatDateTime(entry.updatedAt)}
                           </td>
+                          <td className="px-4 py-4 align-top">
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                className={cn(SECONDARY_BUTTON, "h-9 px-3 text-xs")}
+                                onClick={() => setSelectedProgressId(entry.id)}
+                              >
+                                View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className={cn(SECONDARY_BUTTON, "h-9 px-3 text-xs")}
+                                onClick={() => void handleDeleteProgress(entry.id)}
+                                disabled={isDeletingProgressId === entry.id}
+                              >
+                                <Trash2 className="size-3.5" />
+                                {isDeletingProgressId === entry.id ? "Deleting..." : "Delete"}
+                              </Button>
+                            </div>
+                          </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
                         <td
-                          colSpan={9}
+                          colSpan={10}
                           className="px-4 py-10 text-center text-base text-[color:var(--muted-foreground)]"
                         >
                           {progressEntries.length

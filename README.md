@@ -12,7 +12,6 @@ Governed Next.js application for estimating the economic impact of digital orche
 - Zustand with localStorage persistence
 - Recharts
 - jsPDF + jsPDF AutoTable
-- xlsx
 - pg
 
 ## Run
@@ -46,7 +45,7 @@ Both commands pass in the current workspace.
 - Built-in lead-capture API route with local fallback behavior and Postgres persistence when `DATABASE_URL` is configured.
 - Built-in assessment-submission API route with server-side calculation, persisted report storage, and Postgres-backed admin retrieval when `DATABASE_URL` is configured.
 - Demo/test-data controls that can load illustrative governed datasets and restore the previous working model.
-- JSON, Excel, and PDF export flows with the required top-level ordering rules applied in code.
+- JSON, CSV, and PDF export flows with the required top-level ordering rules applied in code.
 
 ## Project Structure
 
@@ -56,7 +55,7 @@ Both commands pass in the current workspace.
 - [`components/calculator-app.tsx`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/components/calculator-app.tsx): primary governed UI
 - [`lib/model.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/model.ts): types, field definitions, defaults, validation, provenance metadata
 - [`lib/calculations.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/calculations.ts): pure value engines, financial metrics, readiness, risk, trace, narrative
-- [`lib/exporters.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/exporters.ts): JSON, Excel, and PDF exports
+- [`lib/exporters.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/exporters.ts): JSON, CSV, and PDF exports
 - [`lib/test-data.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/lib/test-data.ts): governed demo datasets used by the test-data controls
 - [`store/use-calculator-store.ts`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/store/use-calculator-store.ts): persisted local model state, lineage, overrides, and change log
 
