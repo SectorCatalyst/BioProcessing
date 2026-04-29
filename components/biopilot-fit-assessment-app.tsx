@@ -44,6 +44,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -51,6 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const STORAGE_KEY = "biopilot-fit-assessment-state-v1";
 
@@ -343,6 +345,7 @@ const FIELD_COPY: Record<
 
 const INPUT_SECTIONS = [
   {
+    id: "operating-frame",
     title: "Operating frame",
     description: "Enter count, rate, and USD assumptions for the current 12-month operating model.",
     fields: [
@@ -358,6 +361,7 @@ const INPUT_SECTIONS = [
     ] as AdjustableFieldKey[],
   },
   {
+    id: "connected-stack",
     title: "Connected bioprocess stack",
     description: "Use 0-100 scores to estimate current digital coverage across instruments, data, and review evidence.",
     fields: [
@@ -373,6 +377,7 @@ const INPUT_SECTIONS = [
     ] as AdjustableFieldKey[],
   },
   {
+    id: "manual-burden",
     title: "Manual burden and review drag",
     description: "Enter current delay, review, investigation, transfer, and ramp effort as measurable time assumptions.",
     fields: [
@@ -385,6 +390,8 @@ const INPUT_SECTIONS = [
     ] as AdjustableFieldKey[],
   },
 ] as const;
+
+type InputSectionId = (typeof INPUT_SECTIONS)[number]["id"];
 
 const HERO_SUPPORT_BULLETS = [
   "Map bioreactors, PAT, analyzers, and review friction in one flow.",
@@ -498,7 +505,7 @@ function InputSectionCard({
           {section.description}
         </p>
       </div>
-      <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
+      <div className="grid auto-rows-fr gap-4 px-5 py-5 md:grid-cols-2">
         {section.fields.map((field) =>
           FIELD_COPY[field].kind === "range" ? (
             <RangeField
@@ -851,19 +858,19 @@ function RangeField({
   const copy = FIELD_COPY[field];
 
   return (
-    <div className={cn(SOFT_CARD, "p-4")}>
+    <div className={cn(SOFT_CARD, "flex h-full min-h-[260px] flex-col p-4")}>
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-lg font-semibold text-[color:var(--foreground)]">{copy.label}</p>
           <p className="mt-1 text-lg leading-7 text-[color:var(--muted-foreground)]">
             {copy.description}
           </p>
         </div>
-        <div className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-elevated)] px-3 py-1.5 text-base font-semibold text-[color:var(--foreground)]">
+        <div className="shrink-0 rounded-full border border-[color:var(--border)] bg-[color:var(--surface-elevated)] px-3 py-1.5 text-base font-semibold text-[color:var(--foreground)]">
           {copy.suffix === "%" ? formatPercent(value) : `${formatNumber(value)} ${copy.suffix ?? ""}`}
         </div>
       </div>
-      <div className="mt-4">
+      <div className="mt-auto pt-5">
         <input
           aria-label={copy.label}
           className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-[rgba(0,79,155,0.12)] accent-[color:var(--brand-blue)]"
@@ -914,14 +921,14 @@ function NumberField({
   };
 
   return (
-    <div className={cn(SOFT_CARD, "p-4")}>
+    <div className={cn(SOFT_CARD, "flex h-full min-h-[260px] flex-col p-4")}>
       <div>
         <p className="text-lg font-semibold text-[color:var(--foreground)]">{copy.label}</p>
         <p className="mt-1 text-lg leading-7 text-[color:var(--muted-foreground)]">
           {copy.description}
         </p>
       </div>
-      <div className="mt-4 flex items-center gap-3">
+      <div className="mt-auto flex items-center gap-3 pt-5">
         <Input
           className={INPUT_CLASS}
           type="text"
@@ -1297,16 +1304,30 @@ function InputsStep({
   isGeneratingReport: boolean;
 }) {
   const [selectedSampleId, setSelectedSampleId] = useState("");
+  const [activeInputSectionId, setActiveInputSectionId] = useState<InputSectionId>(
+    INPUT_SECTIONS[0].id,
+  );
   const profile = PROCESS_PROFILE_MAP[inputs.processProfileId];
   const stage = LIFECYCLE_STAGE_MAP[inputs.lifecycleStageId];
   const selectedSample = BIOPILOT_SAMPLE_CONFIGS.find((item) => item.id === selectedSampleId) ?? null;
-  const operatingFootprintSection = INPUT_SECTIONS[0];
-  const connectedStackSection = INPUT_SECTIONS[1];
-  const manualBurdenSection = INPUT_SECTIONS[2];
+  const activeInputSectionIndex = Math.max(
+    INPUT_SECTIONS.findIndex((section) => section.id === activeInputSectionId),
+    0,
+  );
+  const activeInputSection = INPUT_SECTIONS[activeInputSectionIndex];
+  const inputSectionProgress = ((activeInputSectionIndex + 1) / INPUT_SECTIONS.length) * 100;
 
   const handleResetInputs = () => {
     setSelectedSampleId("");
     onReset();
+  };
+
+  const handleInputSectionChange = (value: string | null) => {
+    if (!value || !INPUT_SECTIONS.some((section) => section.id === value)) {
+      return;
+    }
+
+    setActiveInputSectionId(value as InputSectionId);
   };
 
   return (
@@ -1457,12 +1478,60 @@ function InputsStep({
             </Card>
           </div>
 
-          <InputSectionCard section={operatingFootprintSection} inputs={inputs} onPatch={onPatch} />
-
-          <div className="grid gap-4 xl:grid-cols-2">
-            <InputSectionCard section={connectedStackSection} inputs={inputs} onPatch={onPatch} />
-            <InputSectionCard section={manualBurdenSection} inputs={inputs} onPatch={onPatch} />
-          </div>
+          <Card className={cn(PANEL_CARD, "overflow-hidden p-0")}>
+            <CardHeader className="border-b border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,250,252,0.96))] px-5 py-4">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.42fr)] lg:items-end">
+                <div>
+                  <p className="text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">
+                    Input progress
+                  </p>
+                  <CardTitle className="mt-2 font-heading text-[1.65rem] tracking-[-0.03em] text-[color:var(--foreground)]">
+                    {activeInputSection.title}
+                  </CardTitle>
+                  <CardDescription className="mt-1 text-lg leading-7 text-[color:var(--muted-foreground)]">
+                    {activeInputSection.description}
+                  </CardDescription>
+                </div>
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+                    <span>Section {activeInputSectionIndex + 1} of {INPUT_SECTIONS.length}</span>
+                    <span>{Math.round(inputSectionProgress)}%</span>
+                  </div>
+                  <Progress
+                    value={inputSectionProgress}
+                    className="[&_[data-slot=progress-indicator]]:bg-[linear-gradient(90deg,#004f9b,#18b8c7)] [&_[data-slot=progress-track]]:h-2 [&_[data-slot=progress-track]]:bg-[rgba(0,79,155,0.12)]"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-5 p-5">
+              <Tabs
+                value={activeInputSectionId}
+                onValueChange={handleInputSectionChange}
+                className="gap-5"
+              >
+                <TabsList className="grid h-auto w-full grid-cols-1 gap-2 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-2 md:grid-cols-3">
+                  {INPUT_SECTIONS.map((section, index) => (
+                    <TabsTrigger
+                      key={section.id}
+                      value={section.id}
+                      className="h-auto justify-start rounded-[18px] border border-transparent px-4 py-3 text-left text-base font-semibold text-[color:var(--muted-foreground)] data-active:border-[rgba(0,79,155,0.18)] data-active:bg-white data-active:text-[color:var(--brand-blue)] data-active:shadow-[0_10px_24px_rgba(11,28,59,0.08)]"
+                    >
+                      <span className="mr-2 rounded-full bg-[rgba(0,79,155,0.08)] px-2 py-0.5 text-sm text-[color:var(--brand-blue)]">
+                        {index + 1}
+                      </span>
+                      {section.title}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {INPUT_SECTIONS.map((section) => (
+                  <TabsContent key={section.id} value={section.id} className="mt-0">
+                    <InputSectionCard section={section} inputs={inputs} onPatch={onPatch} />
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </CardContent>
+          </Card>
 
           <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
             <CircleAlert className="size-4 text-[color:var(--brand-blue)]" />
@@ -1837,39 +1906,41 @@ function ReportStep({
             </CardContent>
           </Card>
 
-          <Card className={cn(PANEL_CARD, "p-5")}>
-            <CardHeader className="p-0">
-              <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                Submitted process profile
-              </CardTitle>
-              <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                Reference details captured with this assessment.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="mt-5 grid gap-4 p-0">
-              <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(243,248,252,0.96))] p-3">
-                <ProcessFamilyIllustration profileId={results.profile.id} variant="report" />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ContextMetric label="Lifecycle stage" value={results.stage.label} />
-                <ContextMetric label="Active programs" value={formatNumber(inputs.activePrograms)} />
-                <ContextMetric label="Runs per year" value={formatNumber(inputs.runsPerYear)} />
-                <ContextMetric label="Sites or partners" value={formatNumber(inputs.sites)} />
-                <ContextMetric label="Transfer events" value={formatNumber(inputs.transferEventsPerYear)} />
-                <ContextMetric label="Vendor platforms" value={formatNumber(inputs.vendorPlatforms)} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
-            <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
-            <AlertTitle>Use this estimate as a planning tool</AlertTitle>
-            <AlertDescription>
-              Confirm the most important operating numbers before relying on this report for formal planning.
-            </AlertDescription>
-          </Alert>
         </div>
       </div>
+
+      <Card className={cn(PANEL_CARD, "p-5")}>
+        <CardHeader className="p-0">
+          <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+            Submitted process profile
+          </CardTitle>
+          <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+            Reference details captured with this assessment.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="mt-5 grid gap-5 p-0 xl:grid-cols-[minmax(320px,0.82fr)_minmax(0,1.18fr)] xl:items-start">
+          <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(243,248,252,0.96))] p-3">
+            <ProcessFamilyIllustration profileId={results.profile.id} variant="report" />
+          </div>
+          <div className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <ContextMetric label="Lifecycle stage" value={results.stage.label} />
+              <ContextMetric label="Active programs" value={formatNumber(inputs.activePrograms)} />
+              <ContextMetric label="Runs per year" value={formatNumber(inputs.runsPerYear)} />
+              <ContextMetric label="Sites or partners" value={formatNumber(inputs.sites)} />
+              <ContextMetric label="Transfer events" value={formatNumber(inputs.transferEventsPerYear)} />
+              <ContextMetric label="Vendor platforms" value={formatNumber(inputs.vendorPlatforms)} />
+            </div>
+            <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
+              <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
+              <AlertTitle>Use this estimate as a planning tool</AlertTitle>
+              <AlertDescription>
+                Confirm the most important operating numbers before relying on this report for formal planning.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className={cn(PANEL_CARD, "p-6")}>
         <CardHeader className="p-0">
