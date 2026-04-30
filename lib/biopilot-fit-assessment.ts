@@ -848,15 +848,20 @@ export function buildRandomizedSampleInputs(sampleId: string): BioPilotAssessmen
 
   const normalized = normalizeAssessmentInputs(baseline);
   const stage = LIFECYCLE_STAGE_MAP[normalized.lifecycleStageId];
-  const maturityShift = randomBetween(-9, 9);
+  const opportunityShift = randomBetween(18, 26);
 
   return {
     ...normalized,
-    activePrograms: wholeNumberJitter(normalized.activePrograms, 1.5, 1, 12),
-    runsPerYear: wholeNumberJitter(normalized.runsPerYear, Math.max(4, normalized.runsPerYear * 0.14), 1, 220),
-    sites: wholeNumberJitter(normalized.sites, 0.75, 1, 6),
-    transferEventsPerYear: wholeNumberJitter(normalized.transferEventsPerYear, 1.5, 0, 12),
-    vendorPlatforms: wholeNumberJitter(normalized.vendorPlatforms, 1, 1, 8),
+    activePrograms: wholeNumberJitter(normalized.activePrograms + 1.2, 1.5, 1, 14),
+    runsPerYear: wholeNumberJitter(
+      normalized.runsPerYear + normalized.runsPerYear * 0.1,
+      Math.max(4, normalized.runsPerYear * 0.14),
+      1,
+      220,
+    ),
+    sites: wholeNumberJitter(normalized.sites + 0.75, 0.75, 1, 7),
+    transferEventsPerYear: wholeNumberJitter(normalized.transferEventsPerYear + 1.3, 1.5, 0, 12),
+    vendorPlatforms: wholeNumberJitter(normalized.vendorPlatforms + 1.2, 1, 1, 8),
     blendedHourlyRate: roundedRateJitter(normalized.blendedHourlyRate, 14, 90, 260),
     costPerFailedRun: roundedCurrencyJitter(
       normalized.costPerFailedRun,
@@ -876,31 +881,31 @@ export function buildRandomizedSampleInputs(sampleId: string): BioPilotAssessmen
       100000,
       900000,
     ),
-    bioreactorConnectivity: jitter(normalized.bioreactorConnectivity + maturityShift * 0.7, 7, 8, 96),
-    sensorCoverage: jitter(normalized.sensorCoverage + maturityShift * 0.55, 6, 10, 98),
-    patCoverage: jitter(normalized.patCoverage + maturityShift * 0.7, 7, 4, 92),
-    analyzerConnectivity: jitter(normalized.analyzerConnectivity + maturityShift * 0.7, 7, 6, 96),
-    downstreamVisibility: jitter(normalized.downstreamVisibility + maturityShift * 0.55, 6, 8, 96),
-    dataContextualization: jitter(normalized.dataContextualization + maturityShift * 0.8, 8, 6, 96),
-    sopAutomation: jitter(normalized.sopAutomation + maturityShift * 0.75, 8, 4, 95),
-    reviewByException: jitter(normalized.reviewByException + maturityShift * 0.7, 8, 4, 94),
-    crossSiteCollaboration: jitter(normalized.crossSiteCollaboration + maturityShift * 0.55, 7, 6, 96),
-    manualTranscriptionShare: jitter(normalized.manualTranscriptionShare - maturityShift * 0.85, 7, 6, 92),
-    offlineDataDelayHours: jitter(normalized.offlineDataDelayHours - maturityShift * 0.12, 2.5, 1, 36),
-    batchReviewHours: jitter(normalized.batchReviewHours - maturityShift * 0.18, 3.5, 2, 48),
+    bioreactorConnectivity: jitter(normalized.bioreactorConnectivity - opportunityShift, 6, 8, 78),
+    sensorCoverage: jitter(normalized.sensorCoverage - opportunityShift * 0.75, 5, 10, 82),
+    patCoverage: jitter(normalized.patCoverage - opportunityShift, 6, 4, 72),
+    analyzerConnectivity: jitter(normalized.analyzerConnectivity - opportunityShift, 6, 6, 76),
+    downstreamVisibility: jitter(normalized.downstreamVisibility - opportunityShift * 0.85, 5, 8, 78),
+    dataContextualization: jitter(normalized.dataContextualization - opportunityShift * 1.1, 6, 6, 74),
+    sopAutomation: jitter(normalized.sopAutomation - opportunityShift * 1.05, 6, 4, 72),
+    reviewByException: jitter(normalized.reviewByException - opportunityShift * 1.05, 6, 4, 72),
+    crossSiteCollaboration: jitter(normalized.crossSiteCollaboration - opportunityShift * 0.85, 6, 6, 76),
+    manualTranscriptionShare: jitter(normalized.manualTranscriptionShare + opportunityShift * 1.2, 5, 52, 96),
+    offlineDataDelayHours: jitter(normalized.offlineDataDelayHours + opportunityShift * 0.25, 2.5, 1, 36),
+    batchReviewHours: jitter(normalized.batchReviewHours + opportunityShift * 0.45, 3.5, 2, 48),
     deviationInvestigationHours: jitter(
-      normalized.deviationInvestigationHours - maturityShift * 0.18,
+      normalized.deviationInvestigationHours + opportunityShift * 0.38,
       3.5,
       2,
       48,
     ),
     techTransferPackageHours: jitter(
-      normalized.techTransferPackageHours - maturityShift * 0.35,
+      normalized.techTransferPackageHours + opportunityShift * 0.85,
       9,
       8,
       160,
     ),
-    onboardingDays: jitter(normalized.onboardingDays - maturityShift * 0.15, 3, 3, 40),
+    onboardingDays: jitter(normalized.onboardingDays + opportunityShift * 0.35, 3, 3, 40),
   };
 }
 

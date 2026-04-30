@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
@@ -1174,16 +1174,6 @@ function IntroStep({
                 </li>
               ))}
             </ul>
-            <div className="mt-6">
-              <a
-                href="https://www.yokogawa.com/us/solutions/products-and-services/solutions/production-management/biopilot/"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-11 items-center justify-center rounded-[14px] border border-white/14 bg-white/8 px-4 text-[0.95rem] font-semibold text-white shadow-[0_10px_24px_rgba(5,20,39,0.14)] backdrop-blur-sm transition-colors duration-150 hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(8,34,67,0.9)]"
-              >
-                Explore BioPilot
-              </a>
-            </div>
           </div>
         </div>
       </section>
@@ -1468,6 +1458,7 @@ function InputsStep({
     INPUT_SECTIONS[0].id,
   );
   const [completionError, setCompletionError] = useState<string | null>(null);
+  const hasMountedInputStep = useRef(false);
   const profile = PROCESS_PROFILE_MAP[inputs.processProfileId];
   const stage = LIFECYCLE_STAGE_MAP[inputs.lifecycleStageId];
   const selectedSample = BIOPILOT_SAMPLE_CONFIGS.find((item) => item.id === selectedSampleId) ?? null;
@@ -1489,7 +1480,14 @@ function InputsStep({
     completedSectionSet.has(section.id),
   );
 
-  useEffect(() => scheduleElementScroll("input-progress-panel"), [activeInputSectionId]);
+  useEffect(() => {
+    if (!hasMountedInputStep.current) {
+      hasMountedInputStep.current = true;
+      return undefined;
+    }
+
+    return scheduleElementScroll("input-progress-panel");
+  }, [activeInputSectionId]);
 
   const handleResetInputs = () => {
     setSelectedSampleId("");
@@ -1551,7 +1549,7 @@ function InputsStep({
           </CardDescription>
         </CardHeader>
         <CardContent className="mt-6 grid gap-5 p-0">
-          <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
+          <div className="grid gap-4">
             <Card className={cn(PANEL_CARD, "p-5")}>
               <CardHeader className="p-0">
                 <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
@@ -2954,7 +2952,7 @@ export function BioPilotFitAssessmentApp() {
       storageMode: "local_only",
       storageMessage: "Example session loaded on this device.",
     });
-    setInputs(BIOPILOT_SAMPLE_CONFIGS[0]?.inputs ?? DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
+    setInputs(buildRandomizedSampleInputs(BIOPILOT_SAMPLE_CONFIGS[0]?.id ?? ""));
     setInputSources(buildInputSources("sample"));
     setCompletedInputSectionIds([]);
     setUsedSampleData(true);
