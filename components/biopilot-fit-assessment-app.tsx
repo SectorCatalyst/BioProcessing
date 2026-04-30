@@ -185,7 +185,7 @@ const FIELD_COPY: Record<
   }
 > = {
   activePrograms: {
-    label: "Active programs in scope",
+    label: "Active Programs In Scope",
     description: "Number of products, campaigns, or programs using this operating model in the next 12 months.",
     min: 1,
     max: 18,
@@ -193,7 +193,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   runsPerYear: {
-    label: "Process runs per year",
+    label: "Process Runs Per Year",
     description: "Number of upstream or end-to-end runs expected in this scope over the next 12 months.",
     min: 1,
     max: 220,
@@ -201,7 +201,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   sites: {
-    label: "Sites or partners in scope",
+    label: "Sites Or Partners In Scope",
     description: "Number of facilities, CDMOs, or major partners that must reproduce or review this process.",
     min: 1,
     max: 8,
@@ -209,7 +209,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   transferEventsPerYear: {
-    label: "Annual transfer events",
+    label: "Annual Transfer Events",
     description: "Number of scale-up, site-transfer, validation, or partner handoff packages expected in the next 12 months.",
     min: 0,
     max: 12,
@@ -217,7 +217,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   vendorPlatforms: {
-    label: "Data platforms in scope",
+    label: "Data Platforms In Scope",
     description: "Number of separate bioreactor, analyzer, historian, LIMS/MES, modeling, or spreadsheet systems used for one process record.",
     min: 1,
     max: 8,
@@ -225,7 +225,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   blendedHourlyRate: {
-    label: "Loaded labor rate",
+    label: "Loaded Labor Rate",
     description: "Average fully loaded USD/hr rate for scientists, engineers, operators, QA, and review contributors.",
     min: 80,
     max: 260,
@@ -234,7 +234,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   costPerFailedRun: {
-    label: "Failed-run impact",
+    label: "Failed-Run Impact",
     description: "USD impact of one lost, unusable, or repeated run including materials, labor, analytics, and schedule drag.",
     min: 15000,
     max: 250000,
@@ -243,7 +243,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   valuePerDayAcceleration: {
-    label: "Value of one day faster",
+    label: "Value Of One Day Faster",
     description: "USD value of moving one key process decision, transfer milestone, or campaign release forward by one day.",
     min: 10000,
     max: 150000,
@@ -252,7 +252,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   plannedProgramInvestment: {
-    label: "First-wave BioPilot investment",
+    label: "First-Wave BioPilot Investment",
     description:
       "Estimated first-wave BioPilot investment used to convert the opportunity into directional ROI. Refine this once proposal pricing is known.",
     min: 100000,
@@ -262,7 +262,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   bioreactorConnectivity: {
-    label: "Bioreactor connectivity",
+    label: "Bioreactor Connectivity",
     description: "Score 0-100: share of reactor and control data available in a shared digital operating view.",
     min: 0,
     max: 100,
@@ -271,7 +271,7 @@ const FIELD_COPY: Record<
     kind: "range",
   },
   sensorCoverage: {
-    label: "Core sensor coverage",
+    label: "Core Sensor Coverage",
     description: "Score 0-100: share of critical process parameters captured digitally with timestamped signal history.",
     min: 0,
     max: 100,
@@ -280,7 +280,7 @@ const FIELD_COPY: Record<
     kind: "range",
   },
   patCoverage: {
-    label: "PAT coverage",
+    label: "PAT Coverage",
     description: "Score 0-100: share of process understanding supported by PAT or online measurements instead of offline interpretation.",
     min: 0,
     max: 100,
@@ -289,7 +289,7 @@ const FIELD_COPY: Record<
     kind: "range",
   },
   analyzerConnectivity: {
-    label: "Analyzer connectivity",
+    label: "Analyzer Connectivity",
     description: "Score 0-100: share of at-line and offline analyzer results linked to batch, unit operation, and time context.",
     min: 0,
     max: 100,
@@ -298,7 +298,7 @@ const FIELD_COPY: Record<
     kind: "range",
   },
   downstreamVisibility: {
-    label: "Downstream visibility",
+    label: "Downstream Visibility",
     description: "Score 0-100: share of purification, filtration, and downstream evidence visible with upstream context.",
     min: 0,
     max: 100,
@@ -307,7 +307,7 @@ const FIELD_COPY: Record<
     kind: "range",
   },
   dataContextualization: {
-    label: "Data contextualization",
+    label: "Data Contextualization",
     description: "Score 0-100: share of run data linked to recipe, phase, intervention, sample, and deviation context.",
     min: 0,
     max: 100,
@@ -316,7 +316,7 @@ const FIELD_COPY: Record<
     kind: "range",
   },
   sopAutomation: {
-    label: "SOP automation",
+    label: "SOP Automation",
     description: "Score 0-100: share of execution steps guided, captured, or checked digitally instead of manually coordinated.",
     min: 0,
     max: 100,
@@ -325,7 +325,7 @@ const FIELD_COPY: Record<
     kind: "range",
   },
   reviewByException: {
-    label: "Review-by-exception readiness",
+    label: "Review-By-Exception Readiness",
     description: "Score 0-100: share of review evidence that is already complete, contextualized, and exception-ready after each run.",
     min: 0,
     max: 100,
@@ -334,7 +334,7 @@ const FIELD_COPY: Record<
     kind: "range",
   },
   crossSiteCollaboration: {
-    label: "Cross-site collaboration",
+    label: "Cross-Site Collaboration",
     description: "Score 0-100: share of site or partner work that can rely on one reusable digital operating record.",
     min: 0,
     max: 100,
@@ -343,7 +343,7 @@ const FIELD_COPY: Record<
     kind: "range",
   },
   manualTranscriptionShare: {
-    label: "Manual transcription share",
+    label: "Manual Transcription Share",
     description: "Percent of run execution, analysis, and review work still dependent on manual entry or spreadsheet stitching.",
     min: 0,
     max: 100,
@@ -352,7 +352,7 @@ const FIELD_COPY: Record<
     kind: "range",
   },
   offlineDataDelayHours: {
-    label: "Offline data delay",
+    label: "Offline Data Delay",
     description: "Average hours between sample collection and analyzer evidence becoming usable for process decisions.",
     min: 1,
     max: 36,
@@ -361,7 +361,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   batchReviewHours: {
-    label: "Batch review hours",
+    label: "Batch Review Hours",
     description: "Average specialist hours required to assemble, check, and review the evidence package for one run.",
     min: 2,
     max: 48,
@@ -370,7 +370,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   deviationInvestigationHours: {
-    label: "Deviation investigation hours",
+    label: "Deviation Investigation Hours",
     description: "Average investigation hours required when one deviation, excursion, or unexplained process event opens.",
     min: 2,
     max: 48,
@@ -379,7 +379,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   techTransferPackageHours: {
-    label: "Transfer package hours",
+    label: "Transfer Package Hours",
     description: "Average hours required to assemble one scale-up, site-transfer, or partner handoff package.",
     min: 8,
     max: 160,
@@ -388,7 +388,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   onboardingDays: {
-    label: "Operator ramp days",
+    label: "Operator Ramp Days",
     description: "Typical calendar days before a new operator, scientist, or reviewer can work independently in this process.",
     min: 3,
     max: 40,
@@ -520,32 +520,32 @@ const PROCESS_FAMILY_TAGS: Record<ProcessProfileId, string> = {
 
 const REPORT_CHANGE_ITEMS = [
   {
-    label: "Manual hours per run",
+    label: "Manual Hours Per Run",
     currentKey: "manualHoursPerRun",
     currentSuffix: " hrs",
   },
   {
-    label: "Batch review time",
+    label: "Batch Review Time",
     currentKey: "reviewHours",
     currentSuffix: " hrs",
   },
   {
-    label: "Decision lag",
+    label: "Decision Lag",
     currentKey: "decisionLagHours",
     currentSuffix: " hrs",
   },
   {
-    label: "Run success rate",
+    label: "Run Success Rate",
     currentKey: "runSuccessRate",
     currentSuffix: "%",
   },
   {
-    label: "Transfer package effort",
+    label: "Transfer Package Effort",
     currentKey: "transferPackageHours",
     currentSuffix: " hrs",
   },
   {
-    label: "Operator ramp",
+    label: "Operator Ramp",
     currentKey: "onboardingDays",
     currentSuffix: " days",
   },
@@ -610,7 +610,7 @@ function InputSectionCard({
     <div className={cn(PANEL_CARD, "overflow-hidden p-0")}>
       <div className="border-b border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,250,252,0.96))] px-5 py-4">
         <p className="text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">
-          Input section
+          Input Section
         </p>
         <p className="mt-2 font-heading text-[1.45rem] tracking-[-0.03em] text-[color:var(--foreground)]">
           {section.title}
@@ -620,7 +620,7 @@ function InputSectionCard({
         </p>
         <Alert className="mt-4 border-[color:var(--border)] bg-[color:var(--surface-2)]">
           <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
-          <AlertTitle>Evidence guidance</AlertTitle>
+          <AlertTitle>Evidence Guidance</AlertTitle>
           <AlertDescription>{INPUT_SECTION_GUIDANCE[section.id]}</AlertDescription>
         </Alert>
       </div>
@@ -821,8 +821,9 @@ function StepTracker({
         <div className="pointer-events-none absolute inset-x-8 top-[34px] hidden h-px bg-gradient-to-r from-transparent via-[rgba(0,79,155,0.16)] to-transparent md:block" />
       ) : null}
       {STEP_ORDER.map((step, index) => {
-        const isActive = step.id === currentStep;
-        const isComplete = index < currentIndex;
+        const isFinalReportComplete = step.id === "report" && currentStep === "report";
+        const isComplete = index < currentIndex || isFinalReportComplete;
+        const isActive = step.id === currentStep && !isFinalReportComplete;
         const isAccessible = index <= currentIndex;
 
         return (
@@ -900,7 +901,7 @@ function WorkspaceSidebar({
             type="button"
             onClick={onGoHome}
             className="inline-flex rounded-[22px] bg-white px-4 py-3 shadow-[0_14px_30px_rgba(11,28,59,0.08)] transition-shadow duration-150 hover:shadow-[0_18px_34px_rgba(11,28,59,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--surface)]"
-            aria-label="Return to main page"
+            aria-label="Return To Main Page"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -913,7 +914,7 @@ function WorkspaceSidebar({
           </button>
           <div className="mt-4">
             <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-              Assessment overview
+              Assessment Overview
             </p>
             <p className="mt-2 text-lg leading-7 text-[color:var(--foreground)]">
               Assess BioPilot fit and estimate the value of a more connected operating model.
@@ -936,10 +937,10 @@ function WorkspaceSidebar({
               Contact
             </p>
             <p className="mt-2 text-lg font-semibold text-[color:var(--foreground)]">
-              {leadCapture ? `${leadCapture.firstName} ${leadCapture.lastName}` : "Assessment session"}
+              {leadCapture ? `${leadCapture.firstName} ${leadCapture.lastName}` : "Assessment Session"}
             </p>
             <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
-              {leadCapture?.company ?? "BioPilot assessment"}
+              {leadCapture?.company ?? "BioPilot Assessment"}
             </p>
           </div>
 
@@ -947,13 +948,13 @@ function WorkspaceSidebar({
             <div className={cn(SOFT_CARD, "grid gap-3 p-4")}>
               <div>
                 <p className="text-[12px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                  Process type
+                  Process Type
                 </p>
                 <p className="mt-2 text-lg font-semibold text-[color:var(--foreground)]">{profile.label}</p>
               </div>
               <div>
                 <p className="text-[12px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                  Lifecycle stage
+                  Lifecycle Stage
                 </p>
                 <p className="mt-2 text-lg font-semibold text-[color:var(--foreground)]">{stage.label}</p>
               </div>
@@ -977,15 +978,15 @@ function RangeField({
   const copy = FIELD_COPY[field];
 
   return (
-    <div className={cn(SOFT_CARD, "flex h-full min-h-[200px] flex-col p-4")}>
-      <div className="flex items-start justify-between gap-4">
+    <div className={cn(SOFT_CARD, "flex h-full min-h-[224px] flex-col p-4")}>
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_92px] sm:items-start">
         <div className="min-w-0">
           <p className="text-base font-semibold text-[color:var(--foreground)]">{copy.label}</p>
-          <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
+          <p className="mt-1 min-h-[72px] text-base leading-6 text-[color:var(--muted-foreground)]">
             {copy.description}
           </p>
         </div>
-        <div className="shrink-0 rounded-full border border-[color:var(--border)] bg-[color:var(--surface-elevated)] px-3 py-1.5 text-base font-semibold text-[color:var(--foreground)]">
+        <div className="w-[92px] shrink-0 rounded-full border border-[color:var(--border)] bg-[color:var(--surface-elevated)] px-3 py-1.5 text-center text-base font-semibold tabular-nums text-[color:var(--foreground)]">
           {copy.suffix === "%" ? formatPercent(value) : `${formatNumber(value)} ${copy.suffix ?? ""}`}
         </div>
       </div>
@@ -1134,7 +1135,7 @@ function IntroStep({
               type="button"
               onClick={onGoHome}
               className="inline-flex rounded-[18px] bg-white px-4 py-3 shadow-[0_18px_40px_rgba(5,20,39,0.18)] transition-shadow duration-150 hover:shadow-[0_22px_44px_rgba(5,20,39,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[rgba(8,34,67,0.9)]"
-              aria-label="Return to main page"
+              aria-label="Return To Main Page"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -1147,7 +1148,7 @@ function IntroStep({
             </button>
           </div>
 
-          <div className="mt-6 max-w-[760px]">
+          <div className="mt-12 max-w-[760px] xl:mt-16">
             <p className="text-[0.82rem] font-semibold uppercase tracking-[0.24em] text-white/58">
               BioPilot Fit Assessment
             </p>
@@ -1181,7 +1182,7 @@ function IntroStep({
       <Card className={cn(PANEL_CARD, "p-0")}>
         <CardHeader className="border-b border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(247,250,252,0.94))] px-5 py-3.5">
           <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em] text-[color:var(--foreground)]">
-            Choose your assessment path
+            Choose Your Assessment Path
           </CardTitle>
           <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
             Use an example session for a fast walkthrough, or select an actual session to assess a real process.
@@ -1202,7 +1203,7 @@ function IntroStep({
                 </div>
               </div>
               <Button type="button" className={ACCENT_BUTTON} onClick={onUseSample}>
-                Launch example session
+                Launch Example Session
               </Button>
             </div>
             <div className={cn(SOFT_CARD, "grid gap-3 p-4")}>
@@ -1220,7 +1221,7 @@ function IntroStep({
                   role="status"
                 >
                   <CheckCircle2 className="size-4" aria-hidden="true" />
-                  Actual session selected
+                  Actual Session Selected
                 </div>
               ) : (
                 <Button
@@ -1230,7 +1231,7 @@ function IntroStep({
                   className={PRIMARY_BUTTON}
                   onClick={() => setIsActualSessionOpen(true)}
                 >
-                  Select actual session
+                  Select Actual Session
                 </Button>
               )}
             </div>
@@ -1241,7 +1242,7 @@ function IntroStep({
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-base font-semibold text-[color:var(--foreground)]">
-                    First name
+                    First Name
                   </label>
                   <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("firstName")} />
                   {form.formState.errors.firstName ? (
@@ -1252,7 +1253,7 @@ function IntroStep({
                 </div>
                 <div className="space-y-2">
                   <label className="text-base font-semibold text-[color:var(--foreground)]">
-                    Last name
+                    Last Name
                   </label>
                   <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("lastName")} />
                   {form.formState.errors.lastName ? (
@@ -1266,7 +1267,7 @@ function IntroStep({
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-base font-semibold text-[color:var(--foreground)]">
-                    Work email
+                    Work Email
                   </label>
                   <Input
                     className={cn(INPUT_CLASS, "h-[48px] text-base")}
@@ -1295,13 +1296,13 @@ function IntroStep({
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-base font-semibold text-[color:var(--foreground)]">
-                    Job title
+                    Job Title
                   </label>
                   <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("jobTitle")} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-base font-semibold text-[color:var(--foreground)]">
-                    Country or region
+                    Country Or Region
                   </label>
                   <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("countryRegion")} />
                 </div>
@@ -1318,7 +1319,7 @@ function IntroStep({
                 />
                 <div>
                   <p className="text-base font-semibold text-[color:var(--foreground)]">
-                    Consent to contact
+                    Consent To Contact
                   </p>
                   <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
                     I agree to be contacted about BioPilot and the next steps needed to validate the business case.
@@ -1327,7 +1328,7 @@ function IntroStep({
               </div>
 
               <Button type="submit" className={cn(PRIMARY_BUTTON, "w-full")} disabled={isSubmitting}>
-                {isSubmitting ? "Saving details..." : "Start actual assessment"}
+                {isSubmitting ? "Saving Details..." : "Start Actual Assessment"}
               </Button>
             </form>
           ) : null}
@@ -1352,7 +1353,7 @@ function ProcessTypeStep({
     <Card className={cn(PANEL_CARD, "p-6")}>
       <CardHeader className="p-0">
         <CardTitle className="font-heading text-[2.1rem] tracking-[-0.04em] text-[color:var(--foreground)]">
-          Choose the bioprocess type
+          Choose The Bioprocess Type
         </CardTitle>
         <CardDescription className="max-w-4xl text-xl leading-8 text-[color:var(--muted-foreground)]">
           Choose the family that best matches the process you want to evaluate with BioPilot.
@@ -1419,7 +1420,7 @@ function ProcessTypeStep({
             Back
           </Button>
           <Button className={PRIMARY_BUTTON} onClick={onNext}>
-            Continue to inputs
+            Continue To Inputs
             <ChevronRight className="size-4" />
           </Button>
         </div>
@@ -1542,7 +1543,7 @@ function InputsStep({
       <Card className={cn(PANEL_CARD, "p-6")}>
         <CardHeader className="p-0">
           <CardTitle className="font-heading text-[2.1rem] tracking-[-0.04em] text-[color:var(--foreground)]">
-            Enter current-state inputs
+            Enter Current-State Inputs
           </CardTitle>
           <CardDescription className="text-xl leading-8 text-[color:var(--muted-foreground)]">
             Fill in the operating profile using the current state of your process, systems, and review flow.
@@ -1553,45 +1554,50 @@ function InputsStep({
             <Card className={cn(PANEL_CARD, "p-5")}>
               <CardHeader className="p-0">
                 <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
-                  Process family
+                  Process Family
                 </CardTitle>
                 <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
                   Review the selected process family or go back to choose a different one.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="mt-4 grid gap-4 p-0">
-                <div>
-                  <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                    Process family
-                  </p>
-                  <p className="mt-2 font-heading text-[1.85rem] tracking-[-0.04em] text-[color:var(--foreground)]">
-                    {profile.label}
-                  </p>
-                  <p className="mt-3 text-base leading-7 text-[color:var(--muted-foreground)]">
-                    {profile.summary}
-                  </p>
+              <CardContent className="mt-4 grid gap-5 p-0 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start">
+                <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(243,248,252,0.96))] p-3">
+                  <ProcessFamilyIllustration profileId={profile.id} variant="panel" />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {profile.focusAreas.slice(0, 3).map((focus) => (
-                    <span
-                      key={focus}
-                      className="rounded-full border border-[rgba(11,79,155,0.12)] bg-[rgba(0,79,155,0.05)] px-3 py-1.5 text-sm font-semibold text-[color:var(--brand-blue)]"
-                    >
-                      {focus}
-                    </span>
-                  ))}
+                <div className="grid gap-4">
+                  <div>
+                    <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                      Process Family
+                    </p>
+                    <p className="mt-2 font-heading text-[1.85rem] tracking-[-0.04em] text-[color:var(--foreground)]">
+                      {profile.label}
+                    </p>
+                    <p className="mt-3 text-base leading-7 text-[color:var(--muted-foreground)]">
+                      {profile.summary}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.focusAreas.slice(0, 3).map((focus) => (
+                      <span
+                        key={focus}
+                        className="rounded-full border border-[rgba(11,79,155,0.12)] bg-[rgba(0,79,155,0.05)] px-3 py-1.5 text-sm font-semibold text-[color:var(--brand-blue)]"
+                      >
+                        {focus}
+                      </span>
+                    ))}
+                  </div>
+                  <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={onBack}>
+                    <ChevronLeft className="size-4" />
+                    Change Process Family
+                  </Button>
                 </div>
-                <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={onBack}>
-                  <ChevronLeft className="size-4" />
-                  Change process family
-                </Button>
               </CardContent>
             </Card>
 
             <Card className={cn(PANEL_CARD, "p-5")}>
               <CardHeader className="p-0">
                 <CardTitle className="font-heading text-[1.45rem] tracking-[-0.03em]">
-                  Scenario setup
+                  Scenario Setup
                 </CardTitle>
                 <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
                   Set the lifecycle stage, or apply a sample scenario before editing the numbers.
@@ -1600,7 +1606,7 @@ function InputsStep({
               <CardContent className="mt-4 grid gap-4 p-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
                 <div className="grid gap-2">
                   <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                    Lifecycle stage
+                    Lifecycle Stage
                   </p>
                   <Select
                     value={inputs.lifecycleStageId}
@@ -1618,7 +1624,7 @@ function InputsStep({
                     }}
                   >
                     <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
-                      <SelectValue placeholder="Choose lifecycle stage">
+                      <SelectValue placeholder="Choose Lifecycle Stage">
                         {LIFECYCLE_STAGE_MAP[inputs.lifecycleStageId]?.label}
                       </SelectValue>
                     </SelectTrigger>
@@ -1640,14 +1646,14 @@ function InputsStep({
 
                 <div className="grid gap-2">
                   <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                    Sample scenario
+                    Sample Scenario
                   </p>
                   <Select
                     value={selectedSampleId || undefined}
                     onValueChange={(value) => setSelectedSampleId(value ?? "")}
                   >
                     <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
-                      <SelectValue placeholder="Select a sample scenario" />
+                      <SelectValue placeholder="Select A Sample Scenario" />
                     </SelectTrigger>
                     <SelectContent className={SELECT_CONTENT_CLASS}>
                       {BIOPILOT_SAMPLE_CONFIGS.map((sample) => (
@@ -1661,7 +1667,7 @@ function InputsStep({
                     <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
                       {selectedSample
                         ? `${selectedSample.description} Apply it to populate the fields, then confirm each section before generating the report.`
-                        : "Choose a sample to preview it. The fields below will not change until you click Apply sample data."}
+                        : "Choose a sample to preview it. The fields below will not change until you click Apply Sample Data."}
                     </p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -1671,10 +1677,10 @@ function InputsStep({
                       onClick={handleLoadSelectedSample}
                       disabled={!selectedSampleId}
                     >
-                      Apply sample data
+                      Apply Sample Data
                     </Button>
                     <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={handleResetInputs}>
-                      Reset inputs
+                      Reset Inputs
                     </Button>
                   </div>
                 </div>
@@ -1687,7 +1693,7 @@ function InputsStep({
               <div className="grid gap-4">
                 <div>
                   <p className="text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-[color:var(--muted-foreground)]">
-                    Input progress
+                    Input Progress
                   </p>
                   <CardTitle className="mt-2 font-heading text-[1.65rem] tracking-[-0.03em] text-[color:var(--foreground)]">
                     {activeInputSection.title}
@@ -1698,7 +1704,7 @@ function InputsStep({
                 </div>
                 <div>
                   <div className="mb-2 flex items-center justify-between text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    <span>{confirmedInputSectionCount} of {INPUT_SECTIONS.length} sections confirmed</span>
+                    <span>{confirmedInputSectionCount} Of {INPUT_SECTIONS.length} Sections Confirmed</span>
                     <span>{Math.round(inputSectionProgress)}%</span>
                   </div>
                   <Progress
@@ -1723,7 +1729,7 @@ function InputsStep({
                       <TabsTrigger
                         key={section.id}
                         value={section.id}
-                        aria-label={`${section.title}${isComplete ? " completed" : ""}`}
+                        aria-label={`${section.title}${isComplete ? " Completed" : ""}`}
                         className="h-auto justify-start rounded-[18px] border border-transparent px-4 py-3 text-left text-base font-semibold text-[color:var(--muted-foreground)] after:hidden data-active:border-[rgba(0,79,155,0.24)] data-active:bg-[color:var(--brand-indigo)] data-active:text-white data-active:shadow-[0_10px_24px_rgba(11,28,59,0.1)]"
                       >
                         <span
@@ -1788,8 +1794,8 @@ function InputsStep({
                         onClick={() => handleCompleteSection(section.id)}
                       >
                         {activeInputSectionIndex === INPUT_SECTIONS.length - 1
-                          ? "Confirm section"
-                          : "Confirm and continue"}
+                          ? "Confirm Section"
+                          : "Confirm And Continue"}
                       </Button>
                     </div>
                   </TabsContent>
@@ -1800,7 +1806,7 @@ function InputsStep({
 
           <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
             <CircleAlert className="size-4 text-[color:var(--brand-blue)]" />
-            <AlertTitle>Planning estimate</AlertTitle>
+            <AlertTitle>Planning Estimate</AlertTitle>
             <AlertDescription>
               The report estimates value from recoverable time, avoided failed runs, faster decisions,
               and cleaner transfer work. Confirm proposal pricing before treating ROI as final.
@@ -1810,7 +1816,7 @@ function InputsStep({
           {reportError ? (
             <Alert className="border-[color:var(--destructive)]/20 bg-[color:var(--surface-2)]">
               <CircleAlert className="size-4 text-[color:var(--destructive)]" />
-              <AlertTitle>Report could not be generated</AlertTitle>
+              <AlertTitle>Report Could Not Be Generated</AlertTitle>
               <AlertDescription>{reportError}</AlertDescription>
             </Alert>
           ) : null}
@@ -1818,7 +1824,7 @@ function InputsStep({
           {completionError ? (
             <Alert className="border-[color:var(--destructive)]/20 bg-[color:var(--surface-2)]">
               <CircleAlert className="size-4 text-[color:var(--destructive)]" />
-              <AlertTitle>Complete the input sections</AlertTitle>
+              <AlertTitle>Complete The Input Sections</AlertTitle>
               <AlertDescription>{completionError}</AlertDescription>
             </Alert>
           ) : null}
@@ -1835,20 +1841,10 @@ function InputsStep({
                 onClick={handleGenerateClick}
                 disabled={isGeneratingReport}
               >
-                {isGeneratingReport ? "Generating report..." : "Generate final report"}
+                {isGeneratingReport ? "Generating Report..." : "Generate Final Report"}
                 <ChevronRight className="size-4" />
               </Button>
-            ) : (
-              <div
-                className={cn(
-                  SOFT_CARD,
-                  "flex min-h-11 items-center justify-center px-4 py-2 text-center text-sm font-semibold text-[color:var(--muted-foreground)]",
-                )}
-                role="status"
-              >
-                Confirm all input sections to unlock the final report.
-              </div>
-            )}
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -1962,6 +1958,75 @@ function ReportStep({
     }
   };
 
+  const estimateCalculationCard = (
+    <Card className={cn(PANEL_CARD, "h-fit p-5")}>
+      <CardHeader className="p-0">
+        <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+          How The Estimate Was Calculated
+        </CardTitle>
+        <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+          {results.assumptionTransparency.summary}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="mt-5 grid gap-3 p-0">
+        {results.assumptionTransparency.items.map((item) => (
+          <details key={item.label} className={cn(SOFT_CARD, "group p-4")}>
+            <summary className="cursor-pointer text-base font-semibold text-[color:var(--foreground)]">
+              {item.label}
+            </summary>
+            <div className="mt-3 grid gap-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
+              <p>{item.basis}</p>
+              <p>{item.formula}</p>
+              <p>{item.sensitivity}</p>
+            </div>
+          </details>
+        ))}
+        <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
+          <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
+          <AlertTitle>Planning Basis</AlertTitle>
+          <AlertDescription>
+            {results.assumptionTransparency.planningCaveat}
+          </AlertDescription>
+        </Alert>
+      </CardContent>
+    </Card>
+  );
+
+  const submittedProcessProfileCard = (
+    <Card className={cn(PANEL_CARD, "p-5")}>
+      <CardHeader className="p-0">
+        <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+          Submitted Process Profile
+        </CardTitle>
+        <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+          Reference details captured with this assessment.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="mt-5 grid gap-5 p-0 xl:grid-cols-[minmax(320px,0.82fr)_minmax(0,1.18fr)] xl:items-start">
+        <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(243,248,252,0.96))] p-3">
+          <ProcessFamilyIllustration profileId={results.profile.id} variant="report" />
+        </div>
+        <div className="grid gap-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <ContextMetric label="Lifecycle Stage" value={results.stage.label} />
+            <ContextMetric label="Active Programs" value={formatNumber(inputs.activePrograms)} />
+            <ContextMetric label="Runs Per Year" value={formatNumber(inputs.runsPerYear)} />
+            <ContextMetric label="Sites Or Partners" value={formatNumber(inputs.sites)} />
+            <ContextMetric label="Transfer Events" value={formatNumber(inputs.transferEventsPerYear)} />
+            <ContextMetric label="Vendor Platforms" value={formatNumber(inputs.vendorPlatforms)} />
+          </div>
+          <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
+            <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
+            <AlertTitle>Use This Estimate As A Planning Tool</AlertTitle>
+            <AlertDescription>
+              Confirm the most important operating numbers before relying on this report for formal planning.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="grid gap-4">
       <section className={cn(DARK_PANEL, "overflow-hidden p-0")}>
@@ -1969,7 +2034,7 @@ function ReportStep({
           <div className="p-6">
             <CardHeader className="relative z-10 p-0">
               <div className="flex flex-wrap items-center gap-3">
-                <Badge className="rounded-full bg-white/10 px-3 py-1 text-white">Final report</Badge>
+                <Badge className="rounded-full bg-white/10 px-3 py-1 text-white">Final Report</Badge>
                 <Badge className="rounded-full border border-white/12 bg-white/6 px-3 py-1 text-white/86">
                   {results.fitBand}
                 </Badge>
@@ -1978,7 +2043,7 @@ function ReportStep({
                 </Badge>
               </div>
               <CardTitle className="mt-4 font-heading text-[2.55rem] tracking-[-0.05em] text-white">
-                {results.profile.label} assessment report
+                {results.profile.label} Assessment Report
               </CardTitle>
               <CardDescription className="mt-2 max-w-[920px] text-[1.08rem] leading-8 text-white/74">
                 {results.executiveSummary}
@@ -1987,7 +2052,7 @@ function ReportStep({
             <CardContent className="relative z-10 mt-6 grid gap-4 p-0 lg:grid-cols-[minmax(0,1fr)_280px]">
               <div className={cn(REPORT_FRAME_CARD, "p-4")}>
                 <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--brand-blue)]/80">
-                  Process frame
+                  Process Frame
                 </p>
                 <div className="mt-4 rounded-[24px] border border-[#c7daec] bg-white/80 p-3">
                   <ProcessFamilyIllustration profileId={results.profile.id} variant="report" />
@@ -2006,7 +2071,7 @@ function ReportStep({
               <div className="grid gap-3">
                 <div className={cn(REPORT_FRAME_CARD, "p-4")}>
                   <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--brand-blue)]/80">
-                    Digital coverage
+                    Digital Coverage
                   </p>
                   <p className="mt-3 text-display text-[2.2rem] leading-none tracking-[-0.05em] text-[color:var(--brand-indigo)]">
                     {formatPercent(results.digitalCoverage)}
@@ -2017,7 +2082,7 @@ function ReportStep({
                 </div>
                 <div className={cn(REPORT_FRAME_CARD, "p-4")}>
                   <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--brand-blue)]/80">
-                    Manual burden
+                    Manual Burden
                   </p>
                   <p className="mt-3 text-display text-[2.2rem] leading-none tracking-[-0.05em] text-[color:var(--brand-indigo)]">
                     {formatPercent(results.manualBurdenIndex)}
@@ -2033,17 +2098,17 @@ function ReportStep({
           <div className="flex h-full flex-col border-t border-white/8 bg-white/[0.03] p-6 xl:border-t-0 xl:border-l">
             <div className="grid gap-3 sm:grid-cols-2">
               <ReportMetricCard
-                label="Fit score"
+                label="Fit Score"
                 value={formatPercent(results.fitScore)}
                 detail="How strongly the current operating state suggests BioPilot can help."
               />
               <ReportMetricCard
-                label="Annual value"
+                label="Annual Value"
                 value={formatCurrency(results.annualValuePotential)}
                 detail="Estimated annual value from the submitted assumptions."
               />
               <ReportMetricCard
-                label="3-year ROI"
+                label="3-Year ROI"
                 value={formatPercent(results.threeYearRoi)}
                 detail="Estimated 3-year return against the submitted investment."
               />
@@ -2055,31 +2120,31 @@ function ReportStep({
             </div>
             <div className={cn(DARK_SOFT, "mt-3 flex-1 p-4")}>
               <p className="text-[12px] uppercase tracking-[0.18em] text-white/52">
-                Modeled basis
+                Modeled Basis
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div>
                   <p className="font-heading text-[1.55rem] leading-none tracking-[-0.05em] text-[#9bdaf7]">
                     {formatNumber(results.annualRecoveredHours)}
                   </p>
-                  <p className="mt-1 text-sm leading-5 text-white/66">hours recovered per year</p>
+                  <p className="mt-1 text-sm leading-5 text-white/66">Hours Recovered Per Year</p>
                 </div>
                 <div>
                   <p className="font-heading text-[1.55rem] leading-none tracking-[-0.05em] text-[#9bdaf7]">
                     {formatDecimal(results.avoidedFailedRuns)}
                   </p>
-                  <p className="mt-1 text-sm leading-5 text-white/66">failed or degraded runs avoided</p>
+                  <p className="mt-1 text-sm leading-5 text-white/66">Failed Or Degraded Runs Avoided</p>
                 </div>
                 <div>
                   <p className="font-heading text-[1.55rem] leading-none tracking-[-0.05em] text-[#9bdaf7]">
                     {topValueLever ? formatCurrency(topValueLever.annualValue) : "$0"}
                   </p>
-                  <p className="mt-1 text-sm leading-5 text-white/66">largest annual value driver</p>
+                  <p className="mt-1 text-sm leading-5 text-white/66">Largest Annual Value Driver</p>
                 </div>
               </div>
               {topPriority ? (
                 <p className="mt-4 border-t border-white/8 pt-3 text-[0.96rem] leading-6 text-white/72">
-                  Strongest priority: {topPriority.title.toLowerCase()}.
+                  Strongest Priority: {topPriority.title.toLowerCase()}.
                 </p>
               ) : null}
             </div>
@@ -2093,7 +2158,7 @@ function ReportStep({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                  Digital plant maturity
+                  Digital Plant Maturity
                 </CardTitle>
                 <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
                   {results.digitalPlantMaturity.summary}
@@ -2150,7 +2215,7 @@ function ReportStep({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                    Evidence confidence
+                    Evidence Confidence
                   </CardTitle>
                   <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
                     {results.evidenceConfidence.summary}
@@ -2165,59 +2230,27 @@ function ReportStep({
               <div className={cn(SOFT_CARD, "p-4")}>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-base font-semibold text-[color:var(--foreground)]">
-                    Confidence score
+                    Confidence Score
                   </p>
                   <p className="font-heading text-[1.75rem] leading-none tracking-[-0.05em] text-[color:var(--brand-blue)]">
                     {formatPercent(results.evidenceConfidence.score)}
                   </p>
                 </div>
                 <div className="mt-3 grid gap-2 text-sm leading-5 text-[color:var(--muted-foreground)] sm:grid-cols-3">
-                  <span>{results.evidenceConfidence.userEnteredFields} user-entered fields</span>
-                  <span>{results.evidenceConfidence.sampleFields} sample fields</span>
-                  <span>{results.evidenceConfidence.defaultFields} default fields</span>
+                  <span>{results.evidenceConfidence.userEnteredFields} User-Entered Fields</span>
+                  <span>{results.evidenceConfidence.sampleFields} Sample Fields</span>
+                  <span>{results.evidenceConfidence.defaultFields} Default Fields</span>
                 </div>
               </div>
               {results.evidenceConfidence.warnings.length ? (
                 <Alert className="border-[color:var(--brand-yellow)]/40 bg-[rgba(255,238,0,0.08)]">
                   <CircleAlert className="size-4 text-[color:var(--brand-indigo)]" />
-                  <AlertTitle>Before formal planning</AlertTitle>
+                  <AlertTitle>Before Formal Planning</AlertTitle>
                   <AlertDescription>
                     {results.evidenceConfidence.warnings.join(" ")}
                   </AlertDescription>
                 </Alert>
               ) : null}
-            </CardContent>
-          </Card>
-
-          <Card className={cn(PANEL_CARD, "h-fit p-5")}>
-            <CardHeader className="p-0">
-              <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                How the estimate was calculated
-              </CardTitle>
-              <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                {results.assumptionTransparency.summary}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="mt-5 grid gap-3 p-0">
-              {results.assumptionTransparency.items.map((item) => (
-                <details key={item.label} className={cn(SOFT_CARD, "group p-4")}>
-                  <summary className="cursor-pointer text-base font-semibold text-[color:var(--foreground)]">
-                    {item.label}
-                  </summary>
-                  <div className="mt-3 grid gap-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
-                    <p>{item.basis}</p>
-                    <p>{item.formula}</p>
-                    <p>{item.sensitivity}</p>
-                  </div>
-                </details>
-              ))}
-              <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
-                <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
-                <AlertTitle>Planning basis</AlertTitle>
-                <AlertDescription>
-                  {results.assumptionTransparency.planningCaveat}
-                </AlertDescription>
-              </Alert>
             </CardContent>
           </Card>
         </div>
@@ -2228,7 +2261,7 @@ function ReportStep({
           <Card className={cn(PANEL_CARD, "h-fit p-5")}>
             <CardHeader className="p-0">
               <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                Recommended BioPilot priorities
+                Recommended BioPilot Priorities
               </CardTitle>
               <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
                 These areas are most likely to improve the submitted operating profile.
@@ -2259,7 +2292,7 @@ function ReportStep({
           <Card className={cn(PANEL_CARD, "h-fit p-5")}>
             <CardHeader className="p-0">
               <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                Main improvement opportunities
+                Main Improvement Opportunities
               </CardTitle>
               <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
                 The operating gaps with the biggest effect on process performance and value.
@@ -2295,7 +2328,7 @@ function ReportStep({
           <Card className={cn(PANEL_CARD, "h-fit p-5")}>
             <CardHeader className="p-0">
               <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                Operating change summary
+                Operating Change Summary
               </CardTitle>
               <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
                 Submitted state compared with the estimated state after BioPilot adoption.
@@ -2338,7 +2371,7 @@ function ReportStep({
           <Card className={cn(PANEL_CARD, "h-fit p-5")}>
             <CardHeader className="p-0">
               <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                Estimated operating improvement
+                Estimated Operating Improvement
               </CardTitle>
               <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
                 Current state compared with the estimated state after BioPilot adoption.
@@ -2361,7 +2394,7 @@ function ReportStep({
           <Card className={cn(PANEL_CARD, "h-fit p-5")}>
             <CardHeader className="p-0">
               <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                Value drivers
+                Value Drivers
               </CardTitle>
               <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
                 The main sources of estimated value in this report.
@@ -2383,42 +2416,9 @@ function ReportStep({
         </div>
       </div>
 
-      <Card className={cn(PANEL_CARD, "p-5")}>
-        <CardHeader className="p-0">
-          <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-            Submitted process profile
-          </CardTitle>
-          <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-            Reference details captured with this assessment.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="mt-5 grid gap-5 p-0 xl:grid-cols-[minmax(320px,0.82fr)_minmax(0,1.18fr)] xl:items-start">
-          <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(243,248,252,0.96))] p-3">
-            <ProcessFamilyIllustration profileId={results.profile.id} variant="report" />
-          </div>
-          <div className="grid gap-4">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <ContextMetric label="Lifecycle stage" value={results.stage.label} />
-              <ContextMetric label="Active programs" value={formatNumber(inputs.activePrograms)} />
-              <ContextMetric label="Runs per year" value={formatNumber(inputs.runsPerYear)} />
-              <ContextMetric label="Sites or partners" value={formatNumber(inputs.sites)} />
-              <ContextMetric label="Transfer events" value={formatNumber(inputs.transferEventsPerYear)} />
-              <ContextMetric label="Vendor platforms" value={formatNumber(inputs.vendorPlatforms)} />
-            </div>
-            <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
-              <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
-              <AlertTitle>Use this estimate as a planning tool</AlertTitle>
-              <AlertDescription>
-                Confirm the most important operating numbers before relying on this report for formal planning.
-              </AlertDescription>
-            </Alert>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card className={cn(PANEL_CARD, "p-6")}>
         <CardHeader className="p-0">
-          <CardTitle className="font-heading text-[1.8rem] tracking-[-0.03em]">Next move</CardTitle>
+          <CardTitle className="font-heading text-[1.8rem] tracking-[-0.03em]">Next Move</CardTitle>
           <CardDescription className="text-xl leading-8 text-[color:var(--muted-foreground)]">
             Recommended next step based on the submitted operating profile.
           </CardDescription>
@@ -2426,7 +2426,7 @@ function ReportStep({
         <CardContent className="mt-5 grid gap-4 p-0">
           <div className={cn(SOFT_CARD, "min-w-0 p-4")}>
             <p className="text-[13px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-              Recommended next step
+              Recommended Next Step
             </p>
             <p className="mt-2 max-w-[56ch] text-lg leading-7 text-[color:var(--foreground)]">
               {results.nextStep}
@@ -2435,7 +2435,7 @@ function ReportStep({
           <div className={cn(SOFT_CARD, "grid gap-3 p-4 lg:grid-cols-[0.72fr_1.28fr]")}>
             <div>
               <p className="text-[13px] uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                Follow-up focus
+                Follow-Up Focus
               </p>
               <p className="mt-2 text-lg font-semibold leading-7 text-[color:var(--foreground)]">
                 {results.salesFollowUp.priority}
@@ -2452,13 +2452,13 @@ function ReportStep({
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Button variant="outline" className={SECONDARY_BUTTON} onClick={onEditInputs}>
-              Edit inputs
+              Edit Inputs
             </Button>
             <Button variant="outline" className={SECONDARY_BUTTON} onClick={onChangeContact}>
-              Change contact
+              Change Contact
             </Button>
             <Button className={PRIMARY_BUTTON} onClick={onNewAssessment}>
-              Start another assessment
+              Start Another Assessment
             </Button>
             <Button className={PRIMARY_BUTTON} onClick={handleExportPdf} disabled={isExportingPdf}>
               <FileDown className="size-4" />
@@ -2470,7 +2470,7 @@ function ReportStep({
           <CardContent className="mt-4 p-0">
             <Alert className="border-[color:var(--destructive)]/20 bg-[color:var(--surface-2)]">
               <CircleAlert className="size-4 text-[color:var(--destructive)]" />
-              <AlertTitle>PDF export did not complete</AlertTitle>
+              <AlertTitle>PDF Export Did Not Complete</AlertTitle>
               <AlertDescription>{exportError}</AlertDescription>
             </Alert>
           </CardContent>
@@ -2494,7 +2494,7 @@ function ReportStep({
                 )}
               />
               <AlertTitle>
-                {storageMode === "database" ? "Assessment saved" : "Saved on this device"}
+                {storageMode === "database" ? "Assessment Saved" : "Saved On This Device"}
               </AlertTitle>
               <AlertDescription>{storageMessage}</AlertDescription>
             </Alert>
@@ -2502,10 +2502,14 @@ function ReportStep({
         ) : null}
       </Card>
 
+      {submittedProcessProfileCard}
+
+      {estimateCalculationCard}
+
       <Card className={cn(PANEL_CARD, "p-6")}>
         <CardHeader className="p-0">
           <CardTitle className="font-heading text-[1.8rem] tracking-[-0.03em]">
-            Improve this assessment
+            Improve This Assessment
           </CardTitle>
           <CardDescription className="text-xl leading-8 text-[color:var(--muted-foreground)]">
             Share quick feedback to help refine this assessment experience.
@@ -2556,7 +2560,7 @@ function ReportStep({
           </div>
           <div className="grid gap-2">
             <label className="text-base font-semibold text-[color:var(--foreground)]">
-              What should be improved?
+              What Should Be Improved?
             </label>
             <Textarea
               className="min-h-[112px] rounded-[18px] border-[color:var(--input)] bg-[color:var(--surface-3)] p-4 text-base leading-6 text-[color:var(--foreground)] shadow-[inset_0_1px_0_rgba(255,255,255,0.62)] placeholder:text-[color:var(--muted-foreground)] focus-visible:border-[color:var(--border-strong)] focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
@@ -2580,7 +2584,7 @@ function ReportStep({
               onClick={() => void handleSubmitFeedback()}
               disabled={isSubmittingFeedback}
             >
-              {isSubmittingFeedback ? "Saving feedback..." : "Submit feedback"}
+              {isSubmittingFeedback ? "Saving Feedback..." : "Submit Feedback"}
             </Button>
           </div>
         </CardContent>
@@ -2982,7 +2986,7 @@ export function BioPilotFitAssessmentApp() {
   if (!hasHydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-xl text-muted-foreground">
-        Loading BioPilot assessment...
+        Loading BioPilot Assessment...
       </div>
     );
   }

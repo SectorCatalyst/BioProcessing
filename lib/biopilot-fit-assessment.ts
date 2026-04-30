@@ -286,10 +286,10 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
       deviationRate: 0.08,
     },
     focusAreas: [
-      "Seed and production bioreactor orchestration",
-      "At-line and off-line analytical context",
-      "Batch review readiness",
-      "Comparability and tech transfer packages",
+      "Seed And Production Bioreactor Orchestration",
+      "At-Line And Off-Line Analytical Context",
+      "Batch Review Readiness",
+      "Comparability And Tech Transfer Packages",
     ],
     instrumentStack: [
       {
@@ -311,7 +311,7 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
   },
   {
     id: "biosimilar-antibody",
-    label: "Biosimilars and Antibody Variants",
+    label: "Biosimilars And Antibody Variants",
     modality: "Biosimilars, biobetters, bispecifics, and related antibody programs with high comparability and review discipline requirements.",
     summary:
       "Best for teams that need cleaner comparability packages, stronger analytical context, and more repeatable operating evidence across sites or lots.",
@@ -326,10 +326,10 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
       deviationRate: 0.09,
     },
     focusAreas: [
-      "Comparability package assembly",
-      "Analytical consistency across lots",
-      "Cross-site method and process alignment",
-      "Change impact review discipline",
+      "Comparability Package Assembly",
+      "Analytical Consistency Across Lots",
+      "Cross-Site Method And Process Alignment",
+      "Change Impact Review Discipline",
     ],
     instrumentStack: [
       {
@@ -351,7 +351,7 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
   },
   {
     id: "recombinant-protein",
-    label: "Recombinant Proteins and Enzymes",
+    label: "Recombinant Proteins And Enzymes",
     modality: "CHO, HEK, insect, or microbial expression workflows for recombinant proteins, enzymes, and fusion proteins.",
     summary:
       "Best for teams that need faster run interpretation, stronger downstream visibility, and more reliable transfer packages across development and manufacturing.",
@@ -366,10 +366,10 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
       deviationRate: 0.08,
     },
     focusAreas: [
-      "Upstream to downstream visibility",
-      "Faster interpretation of analytical evidence",
-      "Process consistency across campaigns",
-      "Scale-up and site handoff readiness",
+      "Upstream To Downstream Visibility",
+      "Faster Interpretation Of Analytical Evidence",
+      "Process Consistency Across Campaigns",
+      "Scale-Up And Site Handoff Readiness",
     ],
     instrumentStack: [
       {
@@ -406,10 +406,10 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
       deviationRate: 0.09,
     },
     focusAreas: [
-      "High-frequency run monitoring",
-      "Feed strategy and intervention timing",
-      "Rapid review of analyzer evidence",
-      "Operator consistency across shifts",
+      "High-Frequency Run Monitoring",
+      "Feed Strategy And Intervention Timing",
+      "Rapid Review Of Analyzer Evidence",
+      "Operator Consistency Across Shifts",
     ],
     instrumentStack: [
       {
@@ -446,10 +446,10 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
       deviationRate: 0.1,
     },
     focusAreas: [
-      "Campaign and release coordination",
-      "Batch review and deviation readiness",
-      "Cross-functional evidence visibility",
-      "Scale and site consistency",
+      "Campaign And Release Coordination",
+      "Batch Review And Deviation Readiness",
+      "Cross-Functional Evidence Visibility",
+      "Scale And Site Consistency",
     ],
     instrumentStack: [
       {
@@ -486,10 +486,10 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
       deviationRate: 0.12,
     },
     focusAreas: [
-      "Sensitive upstream control windows",
-      "Analytics-heavy decision chains",
-      "Deviation and investigation effort",
-      "Comparability and transfer readiness",
+      "Sensitive Upstream Control Windows",
+      "Analytics-Heavy Decision Chains",
+      "Deviation And Investigation Effort",
+      "Comparability And Transfer Readiness",
     ],
     instrumentStack: [
       {
@@ -526,10 +526,10 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
       deviationRate: 0.09,
     },
     focusAreas: [
-      "Fermentation and feed visibility",
-      "Purification and release evidence alignment",
-      "Template and lot traceability",
-      "Transfer-ready operating history",
+      "Fermentation And Feed Visibility",
+      "Purification And Release Evidence Alignment",
+      "Template And Lot Traceability",
+      "Transfer-Ready Operating History",
     ],
     instrumentStack: [
       {
@@ -551,7 +551,7 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
   },
   {
     id: "mrna-rna",
-    label: "mRNA and RNA Therapeutics",
+    label: "mRNA And RNA Therapeutics",
     modality: "mRNA, saRNA, and related RNA workflows with template handling, IVT, purification, formulation, and release coordination.",
     summary:
       "Best for teams that need a cleaner line of sight from upstream templates and IVT through purification, formulation, and final evidence review.",
@@ -566,10 +566,10 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
       deviationRate: 0.1,
     },
     focusAreas: [
-      "Template-to-batch context continuity",
-      "Purification and formulation visibility",
-      "Release readiness and evidence assembly",
-      "Faster process learning cycles",
+      "Template-To-Batch Context Continuity",
+      "Purification And Formulation Visibility",
+      "Release Readiness And Evidence Assembly",
+      "Faster Process Learning Cycles",
     ],
     instrumentStack: [
       {
@@ -946,18 +946,18 @@ export function normalizeEvidenceMeta(
 
 const getMaturityLevel = (score: number) => {
   if (score >= 85) {
-    return { level: 5, label: "Adaptive digital plant" };
+    return { level: 5, label: "Adaptive Digital Plant" };
   }
   if (score >= 65) {
-    return { level: 4, label: "Guided digital plant" };
+    return { level: 4, label: "Guided Digital Plant" };
   }
   if (score >= 45) {
-    return { level: 3, label: "Contextualized operations" };
+    return { level: 3, label: "Contextualized Operations" };
   }
   if (score >= 25) {
-    return { level: 2, label: "Connected islands" };
+    return { level: 2, label: "Connected Islands" };
   }
-  return { level: 1, label: "Manual and local records" };
+  return { level: 1, label: "Manual And Local Records" };
 };
 
 const buildDigitalPlantMaturity = (
@@ -966,7 +966,7 @@ const buildDigitalPlantMaturity = (
   const domainInputs = [
     {
       id: "data-foundation",
-      label: "Data foundation",
+      label: "Data Foundation",
       score: average([
         inputs.bioreactorConnectivity,
         inputs.sensorCoverage,
@@ -978,7 +978,7 @@ const buildDigitalPlantMaturity = (
     },
     {
       id: "process-visibility",
-      label: "Process visibility",
+      label: "Process Visibility",
       score: average([
         inputs.patCoverage,
         inputs.downstreamVisibility,
@@ -990,7 +990,7 @@ const buildDigitalPlantMaturity = (
     },
     {
       id: "guided-execution",
-      label: "Guided execution",
+      label: "Guided Execution",
       score: average([
         inputs.sopAutomation,
         percentageInverse(inputs.manualTranscriptionShare),
@@ -1002,7 +1002,7 @@ const buildDigitalPlantMaturity = (
     },
     {
       id: "review-readiness",
-      label: "Review readiness",
+      label: "Review Readiness",
       score: average([
         inputs.reviewByException,
         percentageInverse(inputs.batchReviewHours * 2.1),
@@ -1014,7 +1014,7 @@ const buildDigitalPlantMaturity = (
     },
     {
       id: "network-scale",
-      label: "Network scale readiness",
+      label: "Network Scale Readiness",
       score: average([
         inputs.crossSiteCollaboration,
         percentageInverse(inputs.techTransferPackageHours * 0.65),
@@ -1129,28 +1129,28 @@ const buildAssumptionTransparency = (
     "This report estimates current inefficiency and potential improvement from submitted time, maturity, and value assumptions.",
   items: [
     {
-      label: "Annual recovered hours",
+      label: "Annual Recovered Hours",
       basis: `${Math.round(inputs.runsPerYear)} annual runs plus transfer, deviation, and onboarding effort.`,
       formula:
         "Recovered hours = run coordination savings + review savings + investigation savings + transfer savings + onboarding savings.",
       sensitivity: `Current estimate: ${Math.round(annualRecoveredHours).toLocaleString("en-US")} hours per year. Review hours and runs per year are usually the most sensitive time drivers.`,
     },
     {
-      label: "Annual value",
+      label: "Annual Value",
       basis: "Submitted hourly rate, failed-run cost, and value per accelerated decision day.",
       formula:
         "Annual value = recovered hours x blended hourly rate + avoided failed runs x failed-run cost + accelerated decision value.",
       sensitivity: `Current estimate: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(annualValuePotential)}. Failed-run cost can dominate the result if the process is high value or scarce-capacity.`,
     },
     {
-      label: "ROI and payback",
+      label: "ROI And Payback",
       basis: `${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(inputs.plannedProgramInvestment)} submitted first-wave investment assumption.`,
       formula:
         "3-year ROI = phased 3-year value minus investment, divided by investment. Payback = investment divided by realized annual value.",
       sensitivity: `Current estimate: ${Math.round(threeYearRoi)}% 3-year ROI and ${paybackMonths.toFixed(1)} months payback. Replace the investment assumption with proposal pricing before treating ROI as final.`,
     },
     {
-      label: "DPMM score",
+      label: "DPMM Score",
       basis: "Weighted maturity across data foundation, process visibility, guided execution, review readiness, and network scale readiness.",
       formula:
         "DPMM = weighted score from 0-100, then mapped to a five-level digital plant maturity scale.",
@@ -1226,12 +1226,12 @@ export function assessBioPilotFit(
 
   const fitBand =
     fitScore >= 80
-      ? "Very strong BioPilot fit"
+      ? "Very Strong BioPilot Fit"
       : fitScore >= 64
-        ? "Strong BioPilot fit"
+        ? "Strong BioPilot Fit"
         : fitScore >= 48
-          ? "Moderate BioPilot fit"
-          : "Emerging BioPilot fit";
+          ? "Moderate BioPilot Fit"
+          : "Emerging BioPilot Fit";
 
   const currentManualHoursPerRun = clamp(
     profile.base.manualHoursPerRun *
@@ -1376,7 +1376,7 @@ export function assessBioPilotFit(
   const valueLevers: ValueLever[] = [
     {
       id: "run-coordination",
-      label: "Run coordination, reporting, and operator time",
+      label: "Run Coordination, Reporting, And Operator Time",
       annualValue:
         (runCoordinationRecoveredHours + onboardingRecoveredHours) *
         inputs.blendedHourlyRate,
@@ -1385,7 +1385,7 @@ export function assessBioPilotFit(
     },
     {
       id: "review",
-      label: "Batch review and investigation effort",
+      label: "Batch Review And Investigation Effort",
       annualValue:
         (reviewRecoveredHours + deviationRecoveredHours) * inputs.blendedHourlyRate,
       summary:
@@ -1393,21 +1393,21 @@ export function assessBioPilotFit(
     },
     {
       id: "transfer",
-      label: "Tech transfer and package assembly effort",
+      label: "Tech Transfer And Package Assembly Effort",
       annualValue: transferRecoveredHours * inputs.blendedHourlyRate,
       summary:
         "Values reusable run context and shorter handoff package assembly across sites or partners.",
     },
     {
       id: "failure",
-      label: "Avoided failed or materially degraded runs",
+      label: "Avoided Failed Or Materially Degraded Runs",
       annualValue: avoidedFailedRuns * inputs.costPerFailedRun,
       summary:
         "Estimated from the modeled improvement in run success and fewer lost batches.",
     },
     {
       id: "acceleration",
-      label: "Faster process and portfolio decisions",
+      label: "Faster Process And Portfolio Decisions",
       annualValue:
         annualDecisionDaysRecovered *
         inputs.valuePerDayAcceleration *
@@ -1435,7 +1435,7 @@ export function assessBioPilotFit(
   const laneScores: AssessmentLane[] = [
     {
       id: "bioreactor-layer",
-      label: "Bioreactor and control layer",
+      label: "Bioreactor And Control Layer",
       currentScore: clamp(
         inputs.bioreactorConnectivity * 0.46 +
           inputs.sensorCoverage * 0.34 +
@@ -1458,7 +1458,7 @@ export function assessBioPilotFit(
     },
     {
       id: "analytics",
-      label: "Analytical and process visibility",
+      label: "Analytical And Process Visibility",
       currentScore: clamp(
         inputs.patCoverage * 0.32 +
           inputs.analyzerConnectivity * 0.3 +
@@ -1481,7 +1481,7 @@ export function assessBioPilotFit(
     },
     {
       id: "guided-operations",
-      label: "Guided execution",
+      label: "Guided Execution",
       currentScore: clamp(
         inputs.sopAutomation * 0.44 +
           percentageInverse(inputs.manualTranscriptionShare) * 0.28 +
@@ -1504,7 +1504,7 @@ export function assessBioPilotFit(
     },
     {
       id: "review",
-      label: "Review and release readiness",
+      label: "Review And Release Readiness",
       currentScore: clamp(
         inputs.reviewByException * 0.44 +
           percentageInverse(inputs.batchReviewHours * 3.6) * 0.32 +
@@ -1527,7 +1527,7 @@ export function assessBioPilotFit(
     },
     {
       id: "transfer",
-      label: "Tech transfer and network scale-up",
+      label: "Tech Transfer And Network Scale-Up",
       currentScore: clamp(
         inputs.crossSiteCollaboration * 0.42 +
           percentageInverse(inputs.techTransferPackageHours) * 0.28 +
@@ -1555,7 +1555,7 @@ export function assessBioPilotFit(
   const plays: BioPilotPlay[] = [
     {
       id: "multivendor",
-      title: "Unify multi-vendor bioreactors and process evidence",
+      title: "Unify Multi-Vendor Bioreactors And Process Evidence",
       summary:
         "Bring reactor, sensor, analyzer, and downstream context into one operating view instead of leaving it distributed across local systems.",
       whyBioPilot:
@@ -1570,7 +1570,7 @@ export function assessBioPilotFit(
     },
     {
       id: "guided-sop",
-      title: "Digitize SOP execution and reduce manual transcription",
+      title: "Digitize SOP Execution And Reduce Manual Transcription",
       summary:
         "Turn operator steps, run context, and evidence capture into a guided digital workflow instead of separate manual activities.",
       whyBioPilot:
@@ -1585,7 +1585,7 @@ export function assessBioPilotFit(
     },
     {
       id: "contextualization",
-      title: "Connect online and off-line data into one decision flow",
+      title: "Connect Online And Off-Line Data Into One Decision Flow",
       summary:
         "Contextualize analyzer results, PAT signals, and process data so the team can act faster and review with less assembly work.",
       whyBioPilot:
@@ -1600,7 +1600,7 @@ export function assessBioPilotFit(
     },
     {
       id: "review-ready",
-      title: "Move toward review-ready, exception-based evidence",
+      title: "Move Toward Review-Ready, Exception-Based Evidence",
       summary:
         "Reduce post-run review effort by keeping evidence, context, and SOP execution linked as the run progresses.",
       whyBioPilot:
@@ -1615,7 +1615,7 @@ export function assessBioPilotFit(
     },
     {
       id: "transfer",
-      title: "Standardize scale-up and tech transfer packages",
+      title: "Standardize Scale-Up And Tech Transfer Packages",
       summary:
         "Use a reusable digital context instead of rebuilding the process story for each handoff or site expansion.",
       whyBioPilot:
@@ -1635,7 +1635,7 @@ export function assessBioPilotFit(
   const rawSignals: BuyingSignal[] = [
     {
       id: "spreadsheets",
-      title: "Spreadsheet-heavy run coordination",
+      title: "Spreadsheet-Heavy Run Coordination",
       severity: rankSeverity(
         inputs.manualTranscriptionShare * 0.65 +
           percentageInverse(inputs.sopAutomation) * 0.35,
@@ -1647,7 +1647,7 @@ export function assessBioPilotFit(
     },
     {
       id: "review-drag",
-      title: "Review and investigation drag",
+      title: "Review And Investigation Drag",
       severity: rankSeverity(
         clamp(inputs.batchReviewHours * 3.2, 0, 100) * 0.58 +
           percentageInverse(inputs.reviewByException) * 0.42,
@@ -1659,7 +1659,7 @@ export function assessBioPilotFit(
     },
     {
       id: "late-context",
-      title: "Late analyzer and process context",
+      title: "Late Analyzer And Process Context",
       severity: rankSeverity(
         clamp(inputs.offlineDataDelayHours * 4.2, 0, 100) * 0.48 +
           percentageInverse(inputs.dataContextualization) * 0.3 +
@@ -1672,7 +1672,7 @@ export function assessBioPilotFit(
     },
     {
       id: "multisite",
-      title: "Scale-up and transfer friction",
+      title: "Scale-Up And Transfer Friction",
       severity: rankSeverity(
         clamp(inputs.techTransferPackageHours, 0, 100) * 0.46 +
           Math.min(inputs.transferEventsPerYear * 11, 100) * 0.24 +
@@ -1685,7 +1685,7 @@ export function assessBioPilotFit(
     },
     {
       id: "multivendor",
-      title: "Fragmented equipment and data stack",
+      title: "Fragmented Equipment And Data Stack",
       severity: rankSeverity(
         percentageInverse(inputs.bioreactorConnectivity) * 0.38 +
           percentageInverse(inputs.dataContextualization) * 0.26 +

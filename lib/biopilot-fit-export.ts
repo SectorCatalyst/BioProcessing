@@ -128,10 +128,10 @@ export async function exportBioPilotAssessmentPdf(params: {
     },
     body: [
       ["Generated", generatedAt],
-      ["Contact", leadCapture ? `${leadCapture.firstName} ${leadCapture.lastName}` : "Not captured"],
-      ["Company", leadCapture?.company ?? "Not captured"],
-      ["Work email", leadCapture?.workEmail ?? "Not captured"],
-      ["Lifecycle stage", results.stage.label],
+      ["Contact", leadCapture ? `${leadCapture.firstName} ${leadCapture.lastName}` : "Not Captured"],
+      ["Company", leadCapture?.company ?? "Not Captured"],
+      ["Work Email", leadCapture?.workEmail ?? "Not Captured"],
+      ["Lifecycle Stage", results.stage.label],
     ],
     columnStyles: {
       0: { cellWidth: 36, fontStyle: "bold" },
@@ -141,7 +141,7 @@ export async function exportBioPilotAssessmentPdf(params: {
   });
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
-  y = drawSectionHeading(doc, "Executive summary", y);
+  y = drawSectionHeading(doc, "Executive Summary", y);
   y = drawParagraph(doc, results.executiveSummary, y);
 
   y = ensurePage(doc, y + 4);
@@ -155,30 +155,30 @@ export async function exportBioPilotAssessmentPdf(params: {
       lineColor: [224, 231, 239],
       lineWidth: 0.2,
     },
-    head: [["Metric", "Reported value"]],
+    head: [["Metric", "Reported Value"]],
     headStyles: {
       fillColor: [236, 244, 252],
       textColor: [0, 49, 108],
       fontStyle: "bold",
     },
     body: [
-      ["Fit score", formatPercent(results.fitScore)],
-      ["Annual value", formatCurrency(results.annualValuePotential)],
-      ["3-year ROI", formatPercent(results.threeYearRoi)],
-      ["3-year net benefit", formatCurrency(results.threeYearNetBenefit)],
+      ["Fit Score", formatPercent(results.fitScore)],
+      ["Annual Value", formatCurrency(results.annualValuePotential)],
+      ["3-Year ROI", formatPercent(results.threeYearRoi)],
+      ["3-Year Net Benefit", formatCurrency(results.threeYearNetBenefit)],
       ["Payback", `${formatDecimal(results.paybackMonths)} months`],
-      ["Recovered hours", `${formatNumber(results.annualRecoveredHours)} hours / year`],
-      ["Decision days recovered", `${formatDecimal(results.annualDecisionDaysRecovered)} days / year`],
-      ["DPMM level", `Level ${results.digitalPlantMaturity.level}: ${results.digitalPlantMaturity.label}`],
-      ["DPMM score", formatPercent(results.digitalPlantMaturity.score)],
-      ["Evidence confidence", `${results.evidenceConfidence.band} (${formatPercent(results.evidenceConfidence.score)})`],
+      ["Recovered Hours", `${formatNumber(results.annualRecoveredHours)} hours / year`],
+      ["Decision Days Recovered", `${formatDecimal(results.annualDecisionDaysRecovered)} days / year`],
+      ["DPMM Level", `Level ${results.digitalPlantMaturity.level}: ${results.digitalPlantMaturity.label}`],
+      ["DPMM Score", formatPercent(results.digitalPlantMaturity.score)],
+      ["Evidence Confidence", `${results.evidenceConfidence.band} (${formatPercent(results.evidenceConfidence.score)})`],
     ],
     margin: { left: 14, right: 14 },
   });
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
   y = ensurePage(doc, y);
-  y = drawSectionHeading(doc, "Digital plant maturity", y);
+  y = drawSectionHeading(doc, "Digital Plant Maturity", y);
 
   autoTable(doc, {
     startY: y,
@@ -191,7 +191,7 @@ export async function exportBioPilotAssessmentPdf(params: {
       lineWidth: 0.2,
       overflow: "linebreak",
     },
-    head: [["Domain", "Score", "Why it matters"]],
+    head: [["Domain", "Score", "Why It Matters"]],
     headStyles: {
       fillColor: [236, 244, 252],
       textColor: [0, 49, 108],
@@ -212,7 +212,7 @@ export async function exportBioPilotAssessmentPdf(params: {
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
   y = ensurePage(doc, y);
-  y = drawSectionHeading(doc, "Evidence confidence and calculation basis", y);
+  y = drawSectionHeading(doc, "Evidence Confidence And Calculation Basis", y);
   y = drawParagraph(doc, results.evidenceConfidence.summary, y);
 
   autoTable(doc, {
@@ -247,7 +247,7 @@ export async function exportBioPilotAssessmentPdf(params: {
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
   y = ensurePage(doc, y);
-  y = drawSectionHeading(doc, "Submitted process context", y);
+  y = drawSectionHeading(doc, "Submitted Process Context", y);
 
   autoTable(doc, {
     startY: y,
@@ -259,27 +259,27 @@ export async function exportBioPilotAssessmentPdf(params: {
       lineColor: [224, 231, 239],
       lineWidth: 0.2,
     },
-    head: [["Input", "Submitted value"]],
+    head: [["Input", "Submitted Value"]],
     headStyles: {
       fillColor: [236, 244, 252],
       textColor: [0, 49, 108],
       fontStyle: "bold",
     },
     body: [
-      ["Process family", results.profile.label],
-      ["Active programs", formatNumber(inputs.activePrograms)],
-      ["Runs per year", formatNumber(inputs.runsPerYear)],
-      ["Sites or partners", formatNumber(inputs.sites)],
-      ["Transfer events", formatNumber(inputs.transferEventsPerYear)],
-      ["Vendor platforms", formatNumber(inputs.vendorPlatforms)],
-      ["Planned BioPilot investment", formatCurrency(inputs.plannedProgramInvestment)],
+      ["Process Family", results.profile.label],
+      ["Active Programs", formatNumber(inputs.activePrograms)],
+      ["Runs Per Year", formatNumber(inputs.runsPerYear)],
+      ["Sites Or Partners", formatNumber(inputs.sites)],
+      ["Transfer Events", formatNumber(inputs.transferEventsPerYear)],
+      ["Vendor Platforms", formatNumber(inputs.vendorPlatforms)],
+      ["Planned BioPilot Investment", formatCurrency(inputs.plannedProgramInvestment)],
     ],
     margin: { left: 14, right: 14 },
   });
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
   y = ensurePage(doc, y);
-  y = drawSectionHeading(doc, "Operating change summary", y);
+  y = drawSectionHeading(doc, "Operating Change Summary", y);
 
   autoTable(doc, {
     startY: y,
@@ -299,32 +299,32 @@ export async function exportBioPilotAssessmentPdf(params: {
     },
     body: [
       [
-        "Manual hours per run",
+        "Manual Hours Per Run",
         `${formatDecimal(results.currentState.manualHoursPerRun)} hrs`,
         `${formatDecimal(results.bioPilotState.manualHoursPerRun)} hrs`,
       ],
       [
-        "Batch review time",
+        "Batch Review Time",
         `${formatDecimal(results.currentState.reviewHours)} hrs`,
         `${formatDecimal(results.bioPilotState.reviewHours)} hrs`,
       ],
       [
-        "Decision lag",
+        "Decision Lag",
         `${formatDecimal(results.currentState.decisionLagHours)} hrs`,
         `${formatDecimal(results.bioPilotState.decisionLagHours)} hrs`,
       ],
       [
-        "Run success rate",
+        "Run Success Rate",
         formatPercent(results.currentState.runSuccessRate),
         formatPercent(results.bioPilotState.runSuccessRate),
       ],
       [
-        "Transfer package effort",
+        "Transfer Package Effort",
         `${formatDecimal(results.currentState.transferPackageHours)} hrs`,
         `${formatDecimal(results.bioPilotState.transferPackageHours)} hrs`,
       ],
       [
-        "Operator ramp",
+        "Operator Ramp",
         `${formatDecimal(results.currentState.onboardingDays)} days`,
         `${formatDecimal(results.bioPilotState.onboardingDays)} days`,
       ],
@@ -334,7 +334,7 @@ export async function exportBioPilotAssessmentPdf(params: {
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
   y = ensurePage(doc, y);
-  y = drawSectionHeading(doc, "Operational signals", y);
+  y = drawSectionHeading(doc, "Operational Signals", y);
 
   autoTable(doc, {
     startY: y,
@@ -347,7 +347,7 @@ export async function exportBioPilotAssessmentPdf(params: {
       lineWidth: 0.2,
       overflow: "linebreak",
     },
-    head: [["Signal", "Severity", "Why it matters", "Suggested action"]],
+    head: [["Signal", "Severity", "Why It Matters", "Suggested Action"]],
     headStyles: {
       fillColor: [236, 244, 252],
       textColor: [0, 49, 108],
@@ -370,7 +370,7 @@ export async function exportBioPilotAssessmentPdf(params: {
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
   y = ensurePage(doc, y);
-  y = drawSectionHeading(doc, "Value drivers", y);
+  y = drawSectionHeading(doc, "Value Drivers", y);
 
   autoTable(doc, {
     startY: y,
@@ -383,7 +383,7 @@ export async function exportBioPilotAssessmentPdf(params: {
       lineWidth: 0.2,
       overflow: "linebreak",
     },
-    head: [["Lever", "Annual value", "Summary"]],
+    head: [["Lever", "Annual Value", "Summary"]],
     headStyles: {
       fillColor: [236, 244, 252],
       textColor: [0, 49, 108],
@@ -404,7 +404,7 @@ export async function exportBioPilotAssessmentPdf(params: {
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
   y = ensurePage(doc, y);
-  y = drawSectionHeading(doc, "Recommended next step", y);
+  y = drawSectionHeading(doc, "Recommended Next Step", y);
   y = drawParagraph(doc, results.nextStep, y);
   y = ensurePage(doc, y + 2);
   drawParagraph(
