@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "postbuild": "node scripts/ensure-next-app-manifests.mjs",
     "start": "next start --hostname 0.0.0.0 --port ${PORT:-3000}",
     "lint": "eslint app components lib store --max-warnings=0",
     "ui:add": "npx shadcn@latest add"

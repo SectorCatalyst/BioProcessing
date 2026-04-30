@@ -171,9 +171,74 @@ export async function exportBioPilotAssessmentPdf(params: {
       ["Decision Days Recovered", `${formatDecimal(results.annualDecisionDaysRecovered)} days / year`],
       ["DPMM Level", `Level ${results.digitalPlantMaturity.level}: ${results.digitalPlantMaturity.label}`],
       ["DPMM Score", formatPercent(results.digitalPlantMaturity.score)],
-      ["Evidence Confidence", `${results.evidenceConfidence.band} (${formatPercent(results.evidenceConfidence.score)})`],
     ],
     margin: { left: 14, right: 14 },
+  });
+
+  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
+  y = ensurePage(doc, y);
+  y = drawSectionHeading(doc, "Submitted Process Context", y);
+
+  autoTable(doc, {
+    startY: y,
+    theme: "grid",
+    styles: {
+      fontSize: 9.5,
+      cellPadding: 3,
+      textColor: [34, 45, 58],
+      lineColor: [224, 231, 239],
+      lineWidth: 0.2,
+    },
+    head: [["Input", "Submitted Value"]],
+    headStyles: {
+      fillColor: [236, 244, 252],
+      textColor: [0, 49, 108],
+      fontStyle: "bold",
+    },
+    body: [
+      ["Process Family", results.profile.label],
+      ["Active Programs", formatNumber(inputs.activePrograms)],
+      ["Runs Per Year", formatNumber(inputs.runsPerYear)],
+      ["Sites Or Partners", formatNumber(inputs.sites)],
+      ["Transfer Events", formatNumber(inputs.transferEventsPerYear)],
+      ["Vendor Platforms", formatNumber(inputs.vendorPlatforms)],
+      ["Planned BioPilot Investment", formatCurrency(inputs.plannedProgramInvestment)],
+    ],
+    margin: { left: 14, right: 14 },
+  });
+
+  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
+  y = ensurePage(doc, y);
+  y = drawSectionHeading(doc, "How The Estimate Was Calculated", y);
+
+  autoTable(doc, {
+    startY: y,
+    theme: "grid",
+    styles: {
+      fontSize: 9.5,
+      cellPadding: 3,
+      textColor: [34, 45, 58],
+      lineColor: [224, 231, 239],
+      lineWidth: 0.2,
+      overflow: "linebreak",
+    },
+    head: [["Area", "Basis", "Formula"]],
+    headStyles: {
+      fillColor: [236, 244, 252],
+      textColor: [0, 49, 108],
+      fontStyle: "bold",
+    },
+    body: results.assumptionTransparency.items.map((item) => [
+      item.label,
+      item.basis,
+      item.formula,
+    ]),
+    margin: { left: 14, right: 14 },
+    columnStyles: {
+      0: { cellWidth: 38 },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 72 },
+    },
   });
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
@@ -208,73 +273,6 @@ export async function exportBioPilotAssessmentPdf(params: {
       1: { cellWidth: 24 },
       2: { cellWidth: 112 },
     },
-  });
-
-  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
-  y = ensurePage(doc, y);
-  y = drawSectionHeading(doc, "Evidence Confidence And Calculation Basis", y);
-  y = drawParagraph(doc, results.evidenceConfidence.summary, y);
-
-  autoTable(doc, {
-    startY: y,
-    theme: "grid",
-    styles: {
-      fontSize: 9.5,
-      cellPadding: 3,
-      textColor: [34, 45, 58],
-      lineColor: [224, 231, 239],
-      lineWidth: 0.2,
-      overflow: "linebreak",
-    },
-    head: [["Area", "Basis", "Formula"]],
-    headStyles: {
-      fillColor: [236, 244, 252],
-      textColor: [0, 49, 108],
-      fontStyle: "bold",
-    },
-    body: results.assumptionTransparency.items.map((item) => [
-      item.label,
-      item.basis,
-      item.formula,
-    ]),
-    margin: { left: 14, right: 14 },
-    columnStyles: {
-      0: { cellWidth: 38 },
-      1: { cellWidth: 70 },
-      2: { cellWidth: 72 },
-    },
-  });
-
-  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
-  y = ensurePage(doc, y);
-  y = drawSectionHeading(doc, "Submitted Process Context", y);
-
-  autoTable(doc, {
-    startY: y,
-    theme: "grid",
-    styles: {
-      fontSize: 9.5,
-      cellPadding: 3,
-      textColor: [34, 45, 58],
-      lineColor: [224, 231, 239],
-      lineWidth: 0.2,
-    },
-    head: [["Input", "Submitted Value"]],
-    headStyles: {
-      fillColor: [236, 244, 252],
-      textColor: [0, 49, 108],
-      fontStyle: "bold",
-    },
-    body: [
-      ["Process Family", results.profile.label],
-      ["Active Programs", formatNumber(inputs.activePrograms)],
-      ["Runs Per Year", formatNumber(inputs.runsPerYear)],
-      ["Sites Or Partners", formatNumber(inputs.sites)],
-      ["Transfer Events", formatNumber(inputs.transferEventsPerYear)],
-      ["Vendor Platforms", formatNumber(inputs.vendorPlatforms)],
-      ["Planned BioPilot Investment", formatCurrency(inputs.plannedProgramInvestment)],
-    ],
-    margin: { left: 14, right: 14 },
   });
 
   y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;

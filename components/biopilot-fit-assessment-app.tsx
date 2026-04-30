@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
@@ -59,7 +59,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
 const STORAGE_KEY = "biopilot-fit-assessment-state-v1";
@@ -1459,7 +1459,6 @@ function InputsStep({
     INPUT_SECTIONS[0].id,
   );
   const [completionError, setCompletionError] = useState<string | null>(null);
-  const hasMountedInputStep = useRef(false);
   const profile = PROCESS_PROFILE_MAP[inputs.processProfileId];
   const stage = LIFECYCLE_STAGE_MAP[inputs.lifecycleStageId];
   const selectedSample = BIOPILOT_SAMPLE_CONFIGS.find((item) => item.id === selectedSampleId) ?? null;
@@ -1480,15 +1479,6 @@ function InputsStep({
   const allInputSectionsComplete = INPUT_SECTIONS.every((section) =>
     completedSectionSet.has(section.id),
   );
-
-  useEffect(() => {
-    if (!hasMountedInputStep.current) {
-      hasMountedInputStep.current = true;
-      return undefined;
-    }
-
-    return scheduleElementScroll("input-progress-panel");
-  }, [activeInputSectionId]);
 
   const handleResetInputs = () => {
     setSelectedSampleId("");
@@ -1514,6 +1504,7 @@ function InputsStep({
 
     if (nextSection) {
       setActiveInputSectionId(nextSection.id);
+      void scheduleElementScroll("input-progress-panel");
     }
   };
 
@@ -1523,6 +1514,7 @@ function InputsStep({
         `Confirm ${incompleteSections[0].title.toLowerCase()} before generating the final report.`,
       );
       setActiveInputSectionId(incompleteSections[0].id);
+      void scheduleElementScroll("input-progress-panel");
       return;
     }
 
@@ -1536,6 +1528,7 @@ function InputsStep({
     }
 
     setActiveInputSectionId(value as InputSectionId);
+    void scheduleElementScroll("input-progress-panel");
   };
 
   return (
@@ -1560,11 +1553,24 @@ function InputsStep({
                   Review the selected process family or go back to choose a different one.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="mt-4 grid gap-5 p-0 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start">
-                <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(243,248,252,0.96))] p-3">
-                  <ProcessFamilyIllustration profileId={profile.id} variant="panel" />
+              <CardContent className="mt-4 grid gap-5 p-0 lg:grid-cols-[minmax(300px,360px)_minmax(0,1fr)] lg:items-stretch">
+                <div className="grid aspect-square min-h-[300px] content-between overflow-hidden rounded-[28px] border border-[rgba(0,95,189,0.18)] bg-[linear-gradient(180deg,rgba(228,241,255,0.95),rgba(216,233,252,0.96))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.92)]">
+                  <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(244,249,253,0.96),rgba(233,243,251,0.96))] p-3">
+                    <ProcessFamilyIllustration profileId={profile.id} variant="tile" />
+                  </div>
+                  <div className="mt-5 flex items-end justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
+                        {PROCESS_FAMILY_TAGS[profile.id]}
+                      </p>
+                      <p className="mt-3 text-[1.45rem] font-semibold leading-tight tracking-[-0.03em] text-[color:var(--foreground)] text-balance">
+                        {profile.label}
+                      </p>
+                    </div>
+                    <span className="mb-1 size-3 shrink-0 rounded-full bg-[color:var(--brand-blue)]" />
+                  </div>
                 </div>
-                <div className="grid gap-4">
+                <div className="grid min-w-0 gap-4">
                   <div>
                     <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                       Process Family
@@ -1753,53 +1759,53 @@ function InputsStep({
                     );
                   })}
                 </TabsList>
-                {INPUT_SECTIONS.map((section) => (
-                  <TabsContent key={section.id} value={section.id} className="mt-0">
-                    <div id={section.id === activeInputSectionId ? "input-question-set" : undefined}>
-                      <InputSectionCard
-                        section={section}
-                        inputs={inputs}
-                        onPatch={(patch) => {
-                          onPatch(patch);
-                          onInvalidateInputSection(section.id);
-                        }}
-                      />
-                    </div>
-                    <div className="mt-4 grid gap-3 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
-                      <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
-                        {completedSectionSet.has(section.id)
-                          ? "This section is confirmed. Updating any field will mark it for review again."
-                          : "Confirm this section once the values are suitable for the estimate."}
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className={SECONDARY_BUTTON}
-                        onClick={() => {
-                          const previousSection =
-                            INPUT_SECTIONS[Math.max(activeInputSectionIndex - 1, 0)];
-                          setActiveInputSectionId(previousSection.id);
-                        }}
-                        disabled={activeInputSectionIndex === 0}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        type="button"
-                        className={
-                          completedSectionSet.has(section.id)
-                            ? SECONDARY_BUTTON
-                            : PRIMARY_BUTTON
-                        }
-                        onClick={() => handleCompleteSection(section.id)}
-                      >
-                        {activeInputSectionIndex === INPUT_SECTIONS.length - 1
-                          ? "Confirm Section"
-                          : "Confirm And Continue"}
-                      </Button>
-                    </div>
-                  </TabsContent>
-                ))}
+                <div className="mt-0">
+                  <div id="input-question-set">
+                    <InputSectionCard
+                      section={activeInputSection}
+                      inputs={inputs}
+                      onPatch={(patch) => {
+                        onPatch(patch);
+                        onInvalidateInputSection(activeInputSection.id);
+                      }}
+                    />
+                  </div>
+                  <div className="mt-4 grid gap-3 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+                    <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
+                      {completedSectionSet.has(activeInputSection.id)
+                        ? "This section is confirmed. Updating any field will mark it for review again."
+                        : "Confirm this section once the values are suitable for the estimate."}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={SECONDARY_BUTTON}
+                      onClick={() => {
+                        const previousSection =
+                          INPUT_SECTIONS[Math.max(activeInputSectionIndex - 1, 0)];
+                        setCompletionError(null);
+                        setActiveInputSectionId(previousSection.id);
+                        void scheduleElementScroll("input-progress-panel");
+                      }}
+                      disabled={activeInputSectionIndex === 0}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      type="button"
+                      className={
+                        completedSectionSet.has(activeInputSection.id)
+                          ? SECONDARY_BUTTON
+                          : PRIMARY_BUTTON
+                      }
+                      onClick={() => handleCompleteSection(activeInputSection.id)}
+                    >
+                      {activeInputSectionIndex === INPUT_SECTIONS.length - 1
+                        ? "Confirm Section"
+                        : "Confirm And Continue"}
+                    </Button>
+                  </div>
+                </div>
               </Tabs>
             </CardContent>
           </Card>
@@ -2152,7 +2158,11 @@ function ReportStep({
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+      {submittedProcessProfileCard}
+
+      {estimateCalculationCard}
+
+      <div className="grid gap-4">
         <Card className={cn(PANEL_CARD, "h-fit p-5")}>
           <CardHeader className="p-0">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2208,52 +2218,6 @@ function ReportStep({
             </div>
           </CardContent>
         </Card>
-
-        <div className="grid gap-4">
-          <Card className={cn(PANEL_CARD, "h-fit p-5")}>
-            <CardHeader className="p-0">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                    Evidence Confidence
-                  </CardTitle>
-                  <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                    {results.evidenceConfidence.summary}
-                  </CardDescription>
-                </div>
-                <Badge className="rounded-full bg-[color:var(--brand-indigo)] px-3 py-1.5 text-white">
-                  {results.evidenceConfidence.band}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="mt-5 grid gap-4 p-0">
-              <div className={cn(SOFT_CARD, "p-4")}>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-base font-semibold text-[color:var(--foreground)]">
-                    Confidence Score
-                  </p>
-                  <p className="font-heading text-[1.75rem] leading-none tracking-[-0.05em] text-[color:var(--brand-blue)]">
-                    {formatPercent(results.evidenceConfidence.score)}
-                  </p>
-                </div>
-                <div className="mt-3 grid gap-2 text-sm leading-5 text-[color:var(--muted-foreground)] sm:grid-cols-3">
-                  <span>{results.evidenceConfidence.userEnteredFields} User-Entered Fields</span>
-                  <span>{results.evidenceConfidence.sampleFields} Sample Fields</span>
-                  <span>{results.evidenceConfidence.defaultFields} Default Fields</span>
-                </div>
-              </div>
-              {results.evidenceConfidence.warnings.length ? (
-                <Alert className="border-[color:var(--brand-yellow)]/40 bg-[rgba(255,238,0,0.08)]">
-                  <CircleAlert className="size-4 text-[color:var(--brand-indigo)]" />
-                  <AlertTitle>Before Formal Planning</AlertTitle>
-                  <AlertDescription>
-                    {results.evidenceConfidence.warnings.join(" ")}
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
@@ -2501,10 +2465,6 @@ function ReportStep({
           </CardContent>
         ) : null}
       </Card>
-
-      {submittedProcessProfileCard}
-
-      {estimateCalculationCard}
 
       <Card className={cn(PANEL_CARD, "p-6")}>
         <CardHeader className="p-0">
