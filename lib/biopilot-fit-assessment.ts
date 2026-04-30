@@ -1732,10 +1732,20 @@ export function assessBioPilotFit(
       "This calculator sizes the opportunity and operating shortfall. Proposal pricing should be added later to turn the opportunity case into final ROI.",
   };
 
-  const executiveSummary = `${profile.label} in ${stage.label.toLowerCase()} shows ${fitBand.charAt(0).toLowerCase()}${fitBand.slice(1)} because the operation still carries ${Math.round(manualBurdenIndex)} / 100 manual burden and only ${Math.round(digitalCoverage)} / 100 digital coverage. The strongest BioPilot priority is ${topPlay?.title.toLowerCase() ?? "data and workflow unification"}, which points to an estimated ${annualRecoveredHours.toFixed(0)} annual hours recovered and ${topLever ? `about ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(topLever.annualValue)} in the largest value driver` : "a meaningful value opportunity"}.`;
+  const formatSentencePhrase = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/\bsop\b/g, "SOP")
+      .replace(/\bpat\b/g, "PAT")
+      .replace(/\bqa\b/g, "QA")
+      .replace(/\blims\b/g, "LIMS")
+      .replace(/\bmes\b/g, "MES");
+  const topPlayPhrase = topPlay ? formatSentencePhrase(topPlay.title) : "data and workflow unification";
+
+  const executiveSummary = `${profile.label} in ${stage.label.toLowerCase()} shows a ${fitBand} because the operation still carries ${Math.round(manualBurdenIndex)} / 100 manual burden and only ${Math.round(digitalCoverage)} / 100 digital coverage. The strongest BioPilot priority is ${topPlayPhrase}, which points to an estimated ${annualRecoveredHours.toFixed(0)} annual hours recovered and ${topLever ? `about ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(topLever.annualValue)} in the largest value driver` : "a meaningful value opportunity"}.`;
 
   const nextStep = topSignal
-    ? `Confirm the process around ${topSignal.title.toLowerCase()}, then verify three inputs before relying on the estimate: actual review hours, current failed-run cost, and transfer package effort.`
+    ? `Confirm the process around ${formatSentencePhrase(topSignal.title)}, then verify three inputs before relying on the estimate: actual review hours, current failed-run cost, and transfer package effort.`
     : "Confirm the operating data behind the top value driver before relying on the estimate.";
 
   return {

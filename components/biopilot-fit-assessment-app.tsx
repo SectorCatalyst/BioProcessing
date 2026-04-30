@@ -108,21 +108,29 @@ const scheduleElementScroll = (elementId: string) => {
     return undefined;
   }
 
+  let layoutFrame: number | undefined;
   const animationFrame = window.requestAnimationFrame(() => {
-    const target = window.document.getElementById(elementId);
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    layoutFrame = window.requestAnimationFrame(() => {
+      const target = window.document.getElementById(elementId);
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    if (!target) {
-      return;
-    }
+      if (!target) {
+        return;
+      }
 
-    target.scrollIntoView({
-      behavior: prefersReducedMotion ? "auto" : "smooth",
-      block: "start",
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
     });
   });
 
-  return () => window.cancelAnimationFrame(animationFrame);
+  return () => {
+    window.cancelAnimationFrame(animationFrame);
+    if (layoutFrame !== undefined) {
+      window.cancelAnimationFrame(layoutFrame);
+    }
+  };
 };
 
 const SAMPLE_LEAD: LeadCaptureFormInput = {
@@ -1553,8 +1561,8 @@ function InputsStep({
                   Review the selected process family or go back to choose a different one.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="mt-4 grid gap-5 p-0 lg:grid-cols-[minmax(300px,360px)_minmax(0,1fr)] lg:items-stretch">
-                <div className="grid aspect-square min-h-[300px] content-between overflow-hidden rounded-[28px] border border-[rgba(0,95,189,0.18)] bg-[linear-gradient(180deg,rgba(228,241,255,0.95),rgba(216,233,252,0.96))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.92)]">
+              <CardContent className="mt-4 grid gap-5 p-0 lg:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] lg:items-stretch">
+                <div className="grid min-h-[360px] content-between overflow-hidden rounded-[26px] border border-[rgba(0,95,189,0.18)] bg-[linear-gradient(180deg,rgba(228,241,255,0.95),rgba(216,233,252,0.96))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.92)]">
                   <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(244,249,253,0.96),rgba(233,243,251,0.96))] p-3">
                     <ProcessFamilyIllustration profileId={profile.id} variant="tile" />
                   </div>
@@ -1780,7 +1788,8 @@ function InputsStep({
                       type="button"
                       variant="outline"
                       className={SECONDARY_BUTTON}
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.currentTarget.blur();
                         const previousSection =
                           INPUT_SECTIONS[Math.max(activeInputSectionIndex - 1, 0)];
                         setCompletionError(null);
@@ -1798,7 +1807,10 @@ function InputsStep({
                           ? SECONDARY_BUTTON
                           : PRIMARY_BUTTON
                       }
-                      onClick={() => handleCompleteSection(activeInputSection.id)}
+                      onClick={(event) => {
+                        event.currentTarget.blur();
+                        handleCompleteSection(activeInputSection.id);
+                      }}
                     >
                       {activeInputSectionIndex === INPUT_SECTIONS.length - 1
                         ? "Confirm Section"

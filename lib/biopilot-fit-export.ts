@@ -25,6 +25,28 @@ const formatPercent = (value: number) => `${Math.round(value)}%`;
 const formatDecimal = (value: number) => decimalFormatter.format(value);
 const formatNumber = (value: number) => numberFormatter.format(Math.round(value));
 
+type PdfColor = [number, number, number];
+
+const PAGE_WIDTH = 210;
+const PAGE_HEIGHT = 297;
+const PAGE_MARGIN_X = 14;
+const PAGE_BOTTOM_Y = 252;
+const YFA_LOGO_URL = "/yfa-logo-new-alpha.png";
+const YFA_LOGO_ASPECT_RATIO = 1988 / 498;
+
+const COLORS = {
+  background: [247, 250, 252] as PdfColor,
+  card: [255, 255, 255] as PdfColor,
+  cardSoft: [241, 247, 252] as PdfColor,
+  ink: [12, 29, 53] as PdfColor,
+  muted: [83, 104, 132] as PdfColor,
+  border: [213, 225, 237] as PdfColor,
+  blue: [0, 79, 155] as PdfColor,
+  navy: [0, 31, 68] as PdfColor,
+  cyan: [24, 184, 199] as PdfColor,
+  yellow: [255, 238, 0] as PdfColor,
+};
+
 const buildFileName = (profileLabel: string) => {
   const slug = profileLabel
     .toLowerCase()
@@ -35,13 +57,27 @@ const buildFileName = (profileLabel: string) => {
   return `biopilot-fit-assessment-${slug}-${timestamp}.pdf`;
 };
 
+const setFillColor = (doc: JsPdfType, color: PdfColor) => {
+  doc.setFillColor(color[0], color[1], color[2]);
+};
+
+const setDrawColor = (doc: JsPdfType, color: PdfColor) => {
+  doc.setDrawColor(color[0], color[1], color[2]);
+};
+
+const setTextColor = (doc: JsPdfType, color: PdfColor) => {
+  doc.setTextColor(color[0], color[1], color[2]);
+};
+
 const seedPage = (doc: JsPdfType) => {
-  doc.setFillColor(248, 250, 252);
-  doc.rect(0, 0, 210, 297, "F");
+  setFillColor(doc, COLORS.background);
+  doc.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, "F");
+  setFillColor(doc, [232, 241, 249]);
+  doc.rect(0, 0, 3.2, PAGE_HEIGHT, "F");
 };
 
 const ensurePage = (doc: JsPdfType, y: number) => {
-  if (y < 266) {
+  if (y < PAGE_BOTTOM_Y) {
     return y;
   }
 
@@ -50,21 +86,209 @@ const ensurePage = (doc: JsPdfType, y: number) => {
   return 18;
 };
 
-const drawSectionHeading = (doc: JsPdfType, heading: string, y: number) => {
+const ensureSpace = (doc: JsPdfType, y: number, minimumHeight: number) => {
+  if (y + minimumHeight < PAGE_BOTTOM_Y) {
+    return y;
+  }
+
+  doc.addPage();
+  seedPage(doc);
+  return 18;
+};
+
+const loadImageDataUrl = async (url: string) => {
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const blob = await response.blob();
+
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
+const addLogo = (
+  doc: JsPdfType,
+  logoDataUrl: string | null,
+  x: number,
+  y: number,
+  width: number,
+) => {
+  if (!logoDataUrl) {
+    setTextColor(doc, COLORS.ink);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.text("Yokogawa Fluence Analytics", x, y + 7);
+    return;
+  }
+
+  doc.addImage(logoDataUrl, "PNG", x, y, width, width / YFA_LOGO_ASPECT_RATIO);
+};
+
+const drawLabel = (doc: JsPdfType, label: string, x: number, y: number, color = COLORS.muted) => {
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.setTextColor(0, 49, 108);
+  doc.setFontSize(7.5);
+  setTextColor(doc, color);
+  doc.text(label.toUpperCase(), x, y, { charSpace: 0.9 });
+};
+
+const drawSectionHeading = (doc: JsPdfType, heading: string, y: number) => {
+  setDrawColor(doc, COLORS.border);
+  doc.setLineWidth(0.25);
+  doc.line(PAGE_MARGIN_X, y - 4, PAGE_WIDTH - PAGE_MARGIN_X, y - 4);
+  setFillColor(doc, COLORS.yellow);
+  doc.roundedRect(PAGE_MARGIN_X, y - 5.4, 12, 2.2, 1.1, 1.1, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  setTextColor(doc, COLORS.ink);
   doc.text(heading, 14, y);
   return y + 8;
 };
 
-const drawParagraph = (doc: JsPdfType, text: string, y: number) => {
+const drawParagraph = (doc: JsPdfType, text: string, y: number, width = 180) => {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10.5);
-  doc.setTextColor(56, 71, 89);
-  const lines = doc.splitTextToSize(text, 180);
+  setTextColor(doc, COLORS.muted);
+  const lines = doc.splitTextToSize(text, width);
   doc.text(lines, 14, y);
   return y + lines.length * 4.8 + 4;
+};
+
+const drawMetricCard = (
+  doc: JsPdfType,
+  x: number,
+  y: number,
+  width: number,
+  label: string,
+  value: string,
+  detail: string,
+  emphasis: PdfColor,
+) => {
+  setFillColor(doc, COLORS.card);
+  setDrawColor(doc, COLORS.border);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(x, y, width, 27, 5, 5, "FD");
+  setFillColor(doc, emphasis);
+  doc.roundedRect(x, y, 3, 27, 1.5, 1.5, "F");
+  drawLabel(doc, label, x + 7, y + 7);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  setTextColor(doc, COLORS.ink);
+  doc.text(value, x + 7, y + 16.8);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.2);
+  setTextColor(doc, COLORS.muted);
+  doc.text(doc.splitTextToSize(detail, width - 12), x + 7, y + 22);
+};
+
+const drawCoverHeader = (params: {
+  doc: JsPdfType;
+  logoDataUrl: string | null;
+  generatedAt: string;
+  profileLabel: string;
+  stageLabel: string;
+  fitBand: string;
+  fitScore: string;
+}) => {
+  const { doc, logoDataUrl, generatedAt, profileLabel, stageLabel, fitBand, fitScore } = params;
+
+  setFillColor(doc, COLORS.card);
+  setDrawColor(doc, COLORS.border);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(14, 12, 91, 26, 6, 6, "FD");
+  addLogo(doc, logoDataUrl, 18, 17, 72);
+
+  setFillColor(doc, COLORS.cardSoft);
+  setDrawColor(doc, COLORS.border);
+  doc.roundedRect(126, 14, 70, 18, 5, 5, "FD");
+  drawLabel(doc, "Clinical Planning Report", 131, 21, COLORS.blue);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.2);
+  setTextColor(doc, COLORS.muted);
+  doc.text(generatedAt, 131, 27);
+
+  setFillColor(doc, COLORS.navy);
+  doc.roundedRect(14, 48, 182, 47, 8, 8, "F");
+  setFillColor(doc, COLORS.yellow);
+  doc.roundedRect(18, 53, 22, 2.5, 1.2, 1.2, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(23);
+  setTextColor(doc, [255, 255, 255]);
+  doc.text("BioPilot Fit Assessment", 18, 68);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10.2);
+  doc.text(doc.splitTextToSize(profileLabel, 110), 18, 78);
+  setTextColor(doc, [188, 214, 236]);
+  doc.text(stageLabel, 18, 88);
+
+  setFillColor(doc, [255, 255, 255]);
+  doc.roundedRect(136, 56, 50, 27, 6, 6, "F");
+  drawLabel(doc, fitBand, 142, 64, COLORS.blue);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  setTextColor(doc, COLORS.ink);
+  doc.text(fitScore, 142, 76);
+
+  return 108;
+};
+
+const drawTable = (
+  autoTable: (doc: JsPdfType, options: Record<string, unknown>) => void,
+  doc: JsPdfType,
+  options: Record<string, unknown>,
+) => {
+  autoTable(doc, {
+    theme: "plain",
+    styles: {
+      fontSize: 9.2,
+      cellPadding: { top: 3.1, right: 3, bottom: 3.1, left: 3 },
+      textColor: COLORS.ink,
+      lineColor: COLORS.border,
+      lineWidth: 0.12,
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: COLORS.cardSoft,
+      textColor: COLORS.blue,
+      fontStyle: "bold",
+    },
+    alternateRowStyles: {
+      fillColor: [251, 253, 255],
+    },
+    rowPageBreak: "avoid",
+    margin: { left: PAGE_MARGIN_X, right: PAGE_MARGIN_X, bottom: 24 },
+    ...options,
+  });
+};
+
+const getLastAutoTableY = (doc: JsPdfType, fallbackY: number) =>
+  ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? fallbackY);
+
+const addFooters = (doc: JsPdfType, logoDataUrl: string | null) => {
+  const pageCount = doc.getNumberOfPages();
+
+  for (let page = 1; page <= pageCount; page += 1) {
+    doc.setPage(page);
+    setDrawColor(doc, COLORS.border);
+    doc.setLineWidth(0.2);
+    doc.line(PAGE_MARGIN_X, 280, PAGE_WIDTH - PAGE_MARGIN_X, 280);
+    addLogo(doc, logoDataUrl, PAGE_MARGIN_X, 284, 38);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    setTextColor(doc, COLORS.muted);
+    doc.text("Directional planning output. Validate operating evidence before formal ROI decisions.", 66, 289);
+    doc.text(`${page} / ${pageCount}`, 190, 289, { align: "right" });
+  }
 };
 
 const downloadBlob = (blob: Blob, fileName: string) => {
@@ -86,115 +310,103 @@ export async function exportBioPilotAssessmentPdf(params: {
     import("jspdf"),
     import("jspdf-autotable"),
   ]);
-  const autoTable = autoTableModule.default ?? autoTableModule.autoTable;
+  const autoTable = (autoTableModule.default ?? autoTableModule.autoTable) as (
+    doc: JsPdfType,
+    options: Record<string, unknown>,
+  ) => void;
+  const logoDataUrl = await loadImageDataUrl(YFA_LOGO_URL);
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
   seedPage(doc);
-
-  doc.setFillColor(0, 49, 108);
-  doc.roundedRect(12, 12, 186, 34, 8, 8, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(255, 238, 0);
-  doc.text("Yokogawa BioPilot", 18, 22);
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.text("Fit Assessment Report", 18, 33);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10.5);
-  doc.text(results.profile.label, 18, 40);
-
-  let y = 56;
 
   const generatedAt = new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date());
 
-  autoTable(doc, {
+  let y = drawCoverHeader({
+    doc,
+    logoDataUrl,
+    generatedAt,
+    profileLabel: results.profile.label,
+    stageLabel: results.stage.label,
+    fitBand: results.fitBand,
+    fitScore: formatPercent(results.fitScore),
+  });
+
+  drawMetricCard(
+    doc,
+    14,
+    y,
+    87,
+    "Annual Value",
+    formatCurrency(results.annualValuePotential),
+    "Estimated annual value from the submitted assumptions.",
+    COLORS.blue,
+  );
+  drawMetricCard(
+    doc,
+    109,
+    y,
+    87,
+    "3-Year ROI",
+    formatPercent(results.threeYearRoi),
+    "Directional return against the submitted BioPilot investment.",
+    COLORS.cyan,
+  );
+  y += 33;
+  drawMetricCard(
+    doc,
+    14,
+    y,
+    87,
+    "Recovered Hours",
+    `${formatNumber(results.annualRecoveredHours)} hrs`,
+    "Annual time released back to science, review, and transfer work.",
+    COLORS.cyan,
+  );
+  drawMetricCard(
+    doc,
+    109,
+    y,
+    87,
+    "Payback",
+    `${formatDecimal(results.paybackMonths)} mo`,
+    "Estimated payback period for the submitted scenario.",
+    COLORS.blue,
+  );
+  y += 39;
+
+  y = drawSectionHeading(doc, "Assessment Details", y);
+  drawTable(autoTable, doc, {
     startY: y,
-    theme: "grid",
-    styles: {
-      fontSize: 9.5,
-      cellPadding: 3,
-      textColor: [34, 45, 58],
-      lineColor: [224, 231, 239],
-      lineWidth: 0.2,
-    },
-    headStyles: {
-      fillColor: [236, 244, 252],
-      textColor: [0, 49, 108],
-      fontStyle: "bold",
-    },
     body: [
       ["Generated", generatedAt],
       ["Contact", leadCapture ? `${leadCapture.firstName} ${leadCapture.lastName}` : "Not Captured"],
       ["Company", leadCapture?.company ?? "Not Captured"],
       ["Work Email", leadCapture?.workEmail ?? "Not Captured"],
+      ["Process Family", results.profile.label],
       ["Lifecycle Stage", results.stage.label],
+      ["Digital Plant Maturity", `Level ${results.digitalPlantMaturity.level}: ${results.digitalPlantMaturity.label}`],
+      ["Decision Days", `${formatDecimal(results.annualDecisionDaysRecovered)} days / year`],
     ],
     columnStyles: {
       0: { cellWidth: 36, fontStyle: "bold" },
       1: { cellWidth: 138 },
     },
-    margin: { left: 14, right: 14 },
   });
 
-  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
+  y = getLastAutoTableY(doc, y) + 10;
+  y = ensureSpace(doc, y, 34);
   y = drawSectionHeading(doc, "Executive Summary", y);
   y = drawParagraph(doc, results.executiveSummary, y);
 
-  y = ensurePage(doc, y + 4);
-  autoTable(doc, {
-    startY: y,
-    theme: "grid",
-    styles: {
-      fontSize: 9.5,
-      cellPadding: 3,
-      textColor: [34, 45, 58],
-      lineColor: [224, 231, 239],
-      lineWidth: 0.2,
-    },
-    head: [["Metric", "Reported Value"]],
-    headStyles: {
-      fillColor: [236, 244, 252],
-      textColor: [0, 49, 108],
-      fontStyle: "bold",
-    },
-    body: [
-      ["Fit Score", formatPercent(results.fitScore)],
-      ["Annual Value", formatCurrency(results.annualValuePotential)],
-      ["3-Year ROI", formatPercent(results.threeYearRoi)],
-      ["3-Year Net Benefit", formatCurrency(results.threeYearNetBenefit)],
-      ["Payback", `${formatDecimal(results.paybackMonths)} months`],
-      ["Recovered Hours", `${formatNumber(results.annualRecoveredHours)} hours / year`],
-      ["Decision Days Recovered", `${formatDecimal(results.annualDecisionDaysRecovered)} days / year`],
-      ["DPMM Level", `Level ${results.digitalPlantMaturity.level}: ${results.digitalPlantMaturity.label}`],
-      ["DPMM Score", formatPercent(results.digitalPlantMaturity.score)],
-    ],
-    margin: { left: 14, right: 14 },
-  });
-
-  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
-  y = ensurePage(doc, y);
+  y = ensureSpace(doc, y + 2, 72);
   y = drawSectionHeading(doc, "Submitted Process Context", y);
 
-  autoTable(doc, {
+  drawTable(autoTable, doc, {
     startY: y,
-    theme: "grid",
-    styles: {
-      fontSize: 9.5,
-      cellPadding: 3,
-      textColor: [34, 45, 58],
-      lineColor: [224, 231, 239],
-      lineWidth: 0.2,
-    },
     head: [["Input", "Submitted Value"]],
-    headStyles: {
-      fillColor: [236, 244, 252],
-      textColor: [0, 49, 108],
-      fontStyle: "bold",
-    },
     body: [
       ["Process Family", results.profile.label],
       ["Active Programs", formatNumber(inputs.activePrograms)],
@@ -204,36 +416,24 @@ export async function exportBioPilotAssessmentPdf(params: {
       ["Vendor Platforms", formatNumber(inputs.vendorPlatforms)],
       ["Planned BioPilot Investment", formatCurrency(inputs.plannedProgramInvestment)],
     ],
-    margin: { left: 14, right: 14 },
+    columnStyles: {
+      0: { cellWidth: 48, fontStyle: "bold" },
+      1: { cellWidth: 126 },
+    },
   });
 
-  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
-  y = ensurePage(doc, y);
+  y = getLastAutoTableY(doc, y) + 8;
+  y = ensureSpace(doc, y, 76);
   y = drawSectionHeading(doc, "How The Estimate Was Calculated", y);
 
-  autoTable(doc, {
+  drawTable(autoTable, doc, {
     startY: y,
-    theme: "grid",
-    styles: {
-      fontSize: 9.5,
-      cellPadding: 3,
-      textColor: [34, 45, 58],
-      lineColor: [224, 231, 239],
-      lineWidth: 0.2,
-      overflow: "linebreak",
-    },
     head: [["Area", "Basis", "Formula"]],
-    headStyles: {
-      fillColor: [236, 244, 252],
-      textColor: [0, 49, 108],
-      fontStyle: "bold",
-    },
     body: results.assumptionTransparency.items.map((item) => [
       item.label,
       item.basis,
       item.formula,
     ]),
-    margin: { left: 14, right: 14 },
     columnStyles: {
       0: { cellWidth: 38 },
       1: { cellWidth: 70 },
@@ -241,33 +441,18 @@ export async function exportBioPilotAssessmentPdf(params: {
     },
   });
 
-  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
-  y = ensurePage(doc, y);
+  y = getLastAutoTableY(doc, y) + 8;
+  y = ensureSpace(doc, y, 70);
   y = drawSectionHeading(doc, "Digital Plant Maturity", y);
 
-  autoTable(doc, {
+  drawTable(autoTable, doc, {
     startY: y,
-    theme: "grid",
-    styles: {
-      fontSize: 9.5,
-      cellPadding: 3,
-      textColor: [34, 45, 58],
-      lineColor: [224, 231, 239],
-      lineWidth: 0.2,
-      overflow: "linebreak",
-    },
     head: [["Domain", "Score", "Why It Matters"]],
-    headStyles: {
-      fillColor: [236, 244, 252],
-      textColor: [0, 49, 108],
-      fontStyle: "bold",
-    },
     body: results.digitalPlantMaturity.domains.map((domain) => [
       domain.label,
       formatPercent(domain.score),
       domain.rationale,
     ]),
-    margin: { left: 14, right: 14 },
     columnStyles: {
       0: { cellWidth: 44 },
       1: { cellWidth: 24 },
@@ -275,26 +460,13 @@ export async function exportBioPilotAssessmentPdf(params: {
     },
   });
 
-  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
-  y = ensurePage(doc, y);
+  y = getLastAutoTableY(doc, y) + 8;
+  y = ensureSpace(doc, y, 70);
   y = drawSectionHeading(doc, "Operating Change Summary", y);
 
-  autoTable(doc, {
+  drawTable(autoTable, doc, {
     startY: y,
-    theme: "grid",
-    styles: {
-      fontSize: 9.5,
-      cellPadding: 3,
-      textColor: [34, 45, 58],
-      lineColor: [224, 231, 239],
-      lineWidth: 0.2,
-    },
     head: [["Measure", "Current", "With BioPilot"]],
-    headStyles: {
-      fillColor: [236, 244, 252],
-      textColor: [0, 49, 108],
-      fontStyle: "bold",
-    },
     body: [
       [
         "Manual Hours Per Run",
@@ -327,37 +499,26 @@ export async function exportBioPilotAssessmentPdf(params: {
         `${formatDecimal(results.bioPilotState.onboardingDays)} days`,
       ],
     ],
-    margin: { left: 14, right: 14 },
+    columnStyles: {
+      0: { cellWidth: 74 },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 50 },
+    },
   });
 
-  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
-  y = ensurePage(doc, y);
+  y = getLastAutoTableY(doc, y) + 8;
+  y = ensureSpace(doc, y, 70);
   y = drawSectionHeading(doc, "Operational Signals", y);
 
-  autoTable(doc, {
+  drawTable(autoTable, doc, {
     startY: y,
-    theme: "grid",
-    styles: {
-      fontSize: 9.5,
-      cellPadding: 3,
-      textColor: [34, 45, 58],
-      lineColor: [224, 231, 239],
-      lineWidth: 0.2,
-      overflow: "linebreak",
-    },
     head: [["Signal", "Severity", "Why It Matters", "Suggested Action"]],
-    headStyles: {
-      fillColor: [236, 244, 252],
-      textColor: [0, 49, 108],
-      fontStyle: "bold",
-    },
     body: results.buyingSignals.map((signal) => [
       signal.title,
       signal.severity,
       signal.summary,
       signal.action,
     ]),
-    margin: { left: 14, right: 14 },
     columnStyles: {
       0: { cellWidth: 34 },
       1: { cellWidth: 24 },
@@ -366,33 +527,18 @@ export async function exportBioPilotAssessmentPdf(params: {
     },
   });
 
-  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
-  y = ensurePage(doc, y);
+  y = getLastAutoTableY(doc, y) + 8;
+  y = ensureSpace(doc, y, 70);
   y = drawSectionHeading(doc, "Value Drivers", y);
 
-  autoTable(doc, {
+  drawTable(autoTable, doc, {
     startY: y,
-    theme: "grid",
-    styles: {
-      fontSize: 9.5,
-      cellPadding: 3,
-      textColor: [34, 45, 58],
-      lineColor: [224, 231, 239],
-      lineWidth: 0.2,
-      overflow: "linebreak",
-    },
     head: [["Lever", "Annual Value", "Summary"]],
-    headStyles: {
-      fillColor: [236, 244, 252],
-      textColor: [0, 49, 108],
-      fontStyle: "bold",
-    },
     body: results.valueLevers.map((lever) => [
       lever.label,
       formatCurrency(lever.annualValue),
       lever.summary,
     ]),
-    margin: { left: 14, right: 14 },
     columnStyles: {
       0: { cellWidth: 54 },
       1: { cellWidth: 34 },
@@ -400,17 +546,18 @@ export async function exportBioPilotAssessmentPdf(params: {
     },
   });
 
-  y = ((doc as JsPdfType & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y) + 8;
-  y = ensurePage(doc, y);
+  y = getLastAutoTableY(doc, y) + 8;
+  y = ensureSpace(doc, y, 34);
   y = drawSectionHeading(doc, "Recommended Next Step", y);
   y = drawParagraph(doc, results.nextStep, y);
   y = ensurePage(doc, y + 2);
-  drawParagraph(
+  y = drawParagraph(
     doc,
     "This estimate reflects the submitted inputs. Confirm the most important operating numbers before relying on it for formal planning.",
     y,
   );
 
+  addFooters(doc, logoDataUrl);
   const blob = doc.output("blob");
   downloadBlob(blob, buildFileName(results.profile.label));
 }
