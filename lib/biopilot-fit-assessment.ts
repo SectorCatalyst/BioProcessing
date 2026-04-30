@@ -642,10 +642,10 @@ export const DEFAULT_BIOPILOT_ASSESSMENT_INPUTS: BioPilotAssessmentInputs = {
   sites: 2,
   transferEventsPerYear: 3,
   vendorPlatforms: 4,
-  blendedHourlyRate: 150,
-  costPerFailedRun: 85000,
-  valuePerDayAcceleration: 40000,
-  plannedProgramInvestment: 320000,
+  blendedHourlyRate: 145,
+  costPerFailedRun: 80000,
+  valuePerDayAcceleration: 35000,
+  plannedProgramInvestment: 300000,
   bioreactorConnectivity: 45,
   sensorCoverage: 58,
   patCoverage: 34,
@@ -682,7 +682,9 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
       sites: 1,
       transferEventsPerYear: 2,
       vendorPlatforms: 5,
-      valuePerDayAcceleration: 28000,
+      blendedHourlyRate: 135,
+      costPerFailedRun: 45000,
+      valuePerDayAcceleration: 22000,
       plannedProgramInvestment: 220000,
       bioreactorConnectivity: 34,
       sensorCoverage: 52,
@@ -714,6 +716,9 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
       sites: 3,
       transferEventsPerYear: 6,
       vendorPlatforms: 4,
+      blendedHourlyRate: 150,
+      costPerFailedRun: 95000,
+      valuePerDayAcceleration: 40000,
       plannedProgramInvestment: 340000,
       bioreactorConnectivity: 48,
       sensorCoverage: 60,
@@ -746,9 +751,9 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
       transferEventsPerYear: 8,
       vendorPlatforms: 6,
       blendedHourlyRate: 165,
-      costPerFailedRun: 120000,
-      valuePerDayAcceleration: 52000,
-      plannedProgramInvestment: 460000,
+      costPerFailedRun: 150000,
+      valuePerDayAcceleration: 55000,
+      plannedProgramInvestment: 480000,
       bioreactorConnectivity: 62,
       sensorCoverage: 72,
       patCoverage: 48,
@@ -802,6 +807,15 @@ const randomBetween = (min: number, max: number) => min + Math.random() * (max -
 const jitter = (base: number, variance: number, min: number, max: number) =>
   clamp(Math.round((base + randomBetween(-variance, variance)) * 10) / 10, min, max);
 
+const wholeNumberJitter = (base: number, variance: number, min: number, max: number) =>
+  Math.round(jitter(base, variance, min, max));
+
+const roundedCurrencyJitter = (base: number, variance: number, min: number, max: number) =>
+  Math.round(jitter(base, variance, min, max) / 1000) * 1000;
+
+const roundedRateJitter = (base: number, variance: number, min: number, max: number) =>
+  Math.round(jitter(base, variance, min, max) / 5) * 5;
+
 export function normalizeAssessmentInputs(
   inputs: Partial<BioPilotAssessmentInputs>,
 ): BioPilotAssessmentInputs {
@@ -838,20 +852,25 @@ export function buildRandomizedSampleInputs(sampleId: string): BioPilotAssessmen
 
   return {
     ...normalized,
-    activePrograms: jitter(normalized.activePrograms, 1.5, 1, 12),
-    runsPerYear: jitter(normalized.runsPerYear, Math.max(4, normalized.runsPerYear * 0.14), 1, 220),
-    sites: Math.round(jitter(normalized.sites, 0.75, 1, 6)),
-    transferEventsPerYear: Math.round(jitter(normalized.transferEventsPerYear, 1.5, 0, 12)),
-    vendorPlatforms: Math.round(jitter(normalized.vendorPlatforms, 1, 1, 8)),
-    blendedHourlyRate: jitter(normalized.blendedHourlyRate, 14, 90, 260),
-    costPerFailedRun: jitter(normalized.costPerFailedRun, normalized.costPerFailedRun * 0.16, 15000, 250000),
-    valuePerDayAcceleration: jitter(
+    activePrograms: wholeNumberJitter(normalized.activePrograms, 1.5, 1, 12),
+    runsPerYear: wholeNumberJitter(normalized.runsPerYear, Math.max(4, normalized.runsPerYear * 0.14), 1, 220),
+    sites: wholeNumberJitter(normalized.sites, 0.75, 1, 6),
+    transferEventsPerYear: wholeNumberJitter(normalized.transferEventsPerYear, 1.5, 0, 12),
+    vendorPlatforms: wholeNumberJitter(normalized.vendorPlatforms, 1, 1, 8),
+    blendedHourlyRate: roundedRateJitter(normalized.blendedHourlyRate, 14, 90, 260),
+    costPerFailedRun: roundedCurrencyJitter(
+      normalized.costPerFailedRun,
+      normalized.costPerFailedRun * 0.16,
+      15000,
+      250000,
+    ),
+    valuePerDayAcceleration: roundedCurrencyJitter(
       normalized.valuePerDayAcceleration,
       normalized.valuePerDayAcceleration * 0.18,
       10000,
       150000,
     ),
-    plannedProgramInvestment: jitter(
+    plannedProgramInvestment: roundedCurrencyJitter(
       stage.annualProgramInvestment,
       stage.annualProgramInvestment * 0.18,
       100000,
