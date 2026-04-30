@@ -2,11 +2,14 @@
   "name": "bioprocess-development-roi-calculator",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
-    "start": "next start",
-    "lint": "eslint",
+    "start": "next start --hostname 0.0.0.0 --port ${PORT:-3000}",
+    "lint": "eslint app components lib store --max-warnings=0",
     "ui:add": "npx shadcn@latest add"
   },
   "dependencies": {

@@ -61,12 +61,31 @@ Both commands pass in the current workspace.
 
 ## Render Setup
 
-To persist the lead gate into Render-hosted Postgres, create:
+The repository includes a [`render.yaml`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/render.yaml) blueprint for a Render Web Service plus Postgres database.
+
+The blueprint uses:
+
+- `npm ci && npm run build` for deterministic installs from `package-lock.json`.
+- `npm start`, which binds Next.js to `0.0.0.0` and Render's `PORT`.
+- `/api/health` as the public Render health-check path.
+- `NODE_VERSION=22`.
+- `autoDeployTrigger: commit` on the `codex/bioprocess-simulator-rework` branch.
+
+To persist lead capture and assessment reports into Render-hosted Postgres, configure:
 
 1. A Render Postgres instance in the same region as the web service.
 2. A `DATABASE_URL` environment variable on the web service, using the database's internal connection string.
 3. A `LEAD_CAPTURE_ADMIN_KEY` environment variable on the web service for protected lead-management access.
-4. A redeploy of the web service after the env vars are present.
+4. Optionally, a `SALES_NOTIFICATION_WEBHOOK_URL` environment variable for internal assessment-submission notifications.
+5. Optionally, a `NEXT_PUBLIC_SITE_URL` environment variable with the final Render or custom-domain URL for share-card metadata.
+6. A redeploy of the web service after the env vars are present.
+
+Before sharing the hosted URL with clients, verify:
+
+- `GET /api/health` returns `ok: true`.
+- `GET /api/admin/db-health` succeeds after entering the `LEAD_CAPTURE_ADMIN_KEY` in the `x-admin-key` header.
+- A fresh actual assessment can be submitted and appears in [`/admin/leads`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/admin/leads/page.tsx).
+- The same assessment can export a PDF from the final report screen.
 
 Once `DATABASE_URL` is available, the built-in [`/api/lead-capture`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/api/lead-capture/route.ts) route will:
 

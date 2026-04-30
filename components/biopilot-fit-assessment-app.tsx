@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
   ArrowRight,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
@@ -400,7 +401,7 @@ const FIELD_COPY: Record<
 const INPUT_SECTIONS = [
   {
     id: "operating-frame",
-    title: "Operating frame",
+    title: "Operating Frame",
     description: "Enter count, rate, and USD assumptions for the current 12-month operating model.",
     fields: [
       "activePrograms",
@@ -416,7 +417,7 @@ const INPUT_SECTIONS = [
   },
   {
     id: "connected-stack",
-    title: "Connected bioprocess stack",
+    title: "Connected Bioprocess Stack",
     description: "Use 0-100 scores to estimate current digital coverage across instruments, data, and review evidence.",
     fields: [
       "bioreactorConnectivity",
@@ -432,7 +433,7 @@ const INPUT_SECTIONS = [
   },
   {
     id: "manual-burden",
-    title: "Manual burden and review drag",
+    title: "Manual Burden And Review Drag",
     description: "Enter current delay, review, investigation, transfer, and ramp effort as measurable time assumptions.",
     fields: [
       "manualTranscriptionShare",
@@ -1081,9 +1082,11 @@ function IntroStep({
     defaultValues: mapLeadToFormDefaults(initialLead),
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isActualSessionOpen, setIsActualSessionOpen] = useState(Boolean(initialLead));
 
   useEffect(() => {
     form.reset(mapLeadToFormDefaults(initialLead));
+    setIsActualSessionOpen(Boolean(initialLead));
   }, [form, initialLead]);
 
   const handleSubmit = form.handleSubmit(async (values) => {
@@ -1191,7 +1194,7 @@ function IntroStep({
             Choose your assessment path
           </CardTitle>
           <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
-            Use an example session for a fast walkthrough, or enter your details to assess a real process.
+            Use an example session for a fast walkthrough, or select an actual session to assess a real process.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2.5 px-5 py-3.5">
@@ -1201,7 +1204,7 @@ function IntroStep({
                 <FlaskConical className="mt-1 size-5 text-[color:var(--brand-yellow)]" />
                 <div>
                   <p className="text-base font-semibold text-[color:var(--foreground)]">
-                    Example session
+                    Example Session
                   </p>
                   <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
                     Walk through BioPilot fit using realistic sample data. Best for a quick demo or internal review.
@@ -1212,108 +1215,132 @@ function IntroStep({
                 Launch example session
               </Button>
             </div>
-            <div className={cn(SOFT_CARD, "p-4")}>
-              <p className="text-base font-semibold text-[color:var(--foreground)]">
-                Actual session
-              </p>
-              <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
-                Use your own operating data to create a directional value estimate and BioPilot fit report.
-              </p>
-            </div>
-          </div>
-          <form className="space-y-2.5" onSubmit={handleSubmit}>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-base font-semibold text-[color:var(--foreground)]">
-                  First name
-                </label>
-                <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("firstName")} />
-                {form.formState.errors.firstName ? (
-                  <p className="text-base text-[color:var(--destructive)]">
-                    {form.formState.errors.firstName.message}
-                  </p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <label className="text-base font-semibold text-[color:var(--foreground)]">
-                  Last name
-                </label>
-                <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("lastName")} />
-                {form.formState.errors.lastName ? (
-                  <p className="text-base text-[color:var(--destructive)]">
-                    {form.formState.errors.lastName.message}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-base font-semibold text-[color:var(--foreground)]">
-                  Work email
-                </label>
-                <Input
-                  className={cn(INPUT_CLASS, "h-[48px] text-base")}
-                  type="email"
-                  {...form.register("workEmail")}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-base font-semibold text-[color:var(--foreground)]">
-                  Company
-                </label>
-                <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("company")} />
-              </div>
-            </div>
-            {form.formState.errors.workEmail ? (
-              <p className="-mt-1 text-base text-[color:var(--destructive)]">
-                {form.formState.errors.workEmail.message}
-              </p>
-            ) : null}
-            {form.formState.errors.company ? (
-              <p className="-mt-1 text-base text-[color:var(--destructive)]">
-                {form.formState.errors.company.message}
-              </p>
-            ) : null}
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-base font-semibold text-[color:var(--foreground)]">
-                  Job title
-                </label>
-                <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("jobTitle")} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-base font-semibold text-[color:var(--foreground)]">
-                  Country or region
-                </label>
-                <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("countryRegion")} />
-              </div>
-            </div>
-
-            <div className={cn(SOFT_CARD, "flex items-start gap-3 p-3")}>
-              <Checkbox
-                checked={form.watch("consentToContact")}
-                onCheckedChange={(checked) =>
-                  form.setValue("consentToContact", Boolean(checked), {
-                    shouldValidate: true,
-                  })
-                }
-              />
+            <div className={cn(SOFT_CARD, "grid gap-3 p-4")}>
               <div>
                 <p className="text-base font-semibold text-[color:var(--foreground)]">
-                  Consent to contact
+                  Actual Session
                 </p>
                 <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
-                  I agree to be contacted about BioPilot and the next steps needed to validate the business case.
+                  Use your own operating data to create a directional value estimate and BioPilot fit report.
                 </p>
               </div>
+              {isActualSessionOpen ? (
+                <div
+                  className="flex h-11 items-center gap-2 rounded-[14px] border border-[rgba(24,184,199,0.22)] bg-[rgba(24,184,199,0.08)] px-4 text-[0.95rem] font-semibold text-[color:var(--brand-blue)]"
+                  role="status"
+                >
+                  <CheckCircle2 className="size-4" aria-hidden="true" />
+                  Actual session selected
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  aria-controls="actual-session-form"
+                  aria-expanded={isActualSessionOpen}
+                  className={PRIMARY_BUTTON}
+                  onClick={() => setIsActualSessionOpen(true)}
+                >
+                  Select actual session
+                </Button>
+              )}
             </div>
+          </div>
 
-            <Button type="submit" className={cn(PRIMARY_BUTTON, "w-full")} disabled={isSubmitting}>
-              {isSubmitting ? "Saving details..." : "Start actual assessment"}
-            </Button>
-          </form>
+          {isActualSessionOpen ? (
+            <form id="actual-session-form" className="space-y-2.5" onSubmit={handleSubmit}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-base font-semibold text-[color:var(--foreground)]">
+                    First name
+                  </label>
+                  <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("firstName")} />
+                  {form.formState.errors.firstName ? (
+                    <p className="text-base text-[color:var(--destructive)]">
+                      {form.formState.errors.firstName.message}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-base font-semibold text-[color:var(--foreground)]">
+                    Last name
+                  </label>
+                  <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("lastName")} />
+                  {form.formState.errors.lastName ? (
+                    <p className="text-base text-[color:var(--destructive)]">
+                      {form.formState.errors.lastName.message}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-base font-semibold text-[color:var(--foreground)]">
+                    Work email
+                  </label>
+                  <Input
+                    className={cn(INPUT_CLASS, "h-[48px] text-base")}
+                    type="email"
+                    {...form.register("workEmail")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-base font-semibold text-[color:var(--foreground)]">
+                    Company
+                  </label>
+                  <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("company")} />
+                </div>
+              </div>
+              {form.formState.errors.workEmail ? (
+                <p className="-mt-1 text-base text-[color:var(--destructive)]">
+                  {form.formState.errors.workEmail.message}
+                </p>
+              ) : null}
+              {form.formState.errors.company ? (
+                <p className="-mt-1 text-base text-[color:var(--destructive)]">
+                  {form.formState.errors.company.message}
+                </p>
+              ) : null}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-base font-semibold text-[color:var(--foreground)]">
+                    Job title
+                  </label>
+                  <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("jobTitle")} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-base font-semibold text-[color:var(--foreground)]">
+                    Country or region
+                  </label>
+                  <Input className={cn(INPUT_CLASS, "h-[48px] text-base")} {...form.register("countryRegion")} />
+                </div>
+              </div>
+
+              <div className={cn(SOFT_CARD, "flex items-start gap-3 p-3")}>
+                <Checkbox
+                  checked={form.watch("consentToContact")}
+                  onCheckedChange={(checked) =>
+                    form.setValue("consentToContact", Boolean(checked), {
+                      shouldValidate: true,
+                    })
+                  }
+                />
+                <div>
+                  <p className="text-base font-semibold text-[color:var(--foreground)]">
+                    Consent to contact
+                  </p>
+                  <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
+                    I agree to be contacted about BioPilot and the next steps needed to validate the business case.
+                  </p>
+                </div>
+              </div>
+
+              <Button type="submit" className={cn(PRIMARY_BUTTON, "w-full")} disabled={isSubmitting}>
+                {isSubmitting ? "Saving details..." : "Start actual assessment"}
+              </Button>
+            </form>
+          ) : null}
         </CardContent>
       </Card>
     </div>
@@ -1462,7 +1489,7 @@ function InputsStep({
     completedSectionSet.has(section.id),
   );
 
-  useEffect(() => scheduleElementScroll("input-question-set"), [activeInputSectionId]);
+  useEffect(() => scheduleElementScroll("input-progress-panel"), [activeInputSectionId]);
 
   const handleResetInputs = () => {
     setSelectedSampleId("");
@@ -1657,7 +1684,7 @@ function InputsStep({
             </Card>
           </div>
 
-          <Card className={cn(PANEL_CARD, "overflow-hidden p-0")}>
+          <Card id="input-progress-panel" className={cn(PANEL_CARD, "overflow-hidden p-0")}>
             <CardHeader className="border-b border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,250,252,0.96))] px-5 py-4">
               <div className="grid gap-4">
                 <div>
@@ -1690,25 +1717,37 @@ function InputsStep({
                 className="gap-5"
               >
                 <TabsList className="grid !h-auto w-full grid-cols-1 gap-2 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-2 md:grid-cols-3">
-                  {INPUT_SECTIONS.map((section, index) => (
-                    <TabsTrigger
-                      key={section.id}
-                      value={section.id}
-                      className="h-auto justify-start rounded-[18px] border border-transparent px-4 py-3 text-left text-base font-semibold text-[color:var(--muted-foreground)] after:hidden data-active:border-[rgba(0,79,155,0.24)] data-active:bg-[color:var(--brand-indigo)] data-active:text-white data-active:shadow-[0_10px_24px_rgba(11,28,59,0.1)]"
-                    >
-                      <span
-                        className={cn(
-                          "mr-2 rounded-full px-2 py-0.5 text-sm",
-                          completedSectionSet.has(section.id)
-                            ? "bg-[rgba(24,184,199,0.18)] text-[color:var(--brand-blue)]"
-                            : "bg-[rgba(0,79,155,0.08)] text-[color:var(--brand-blue)]",
-                        )}
+                  {INPUT_SECTIONS.map((section, index) => {
+                    const isComplete = completedSectionSet.has(section.id);
+                    const isActiveTab = section.id === activeInputSectionId;
+
+                    return (
+                      <TabsTrigger
+                        key={section.id}
+                        value={section.id}
+                        aria-label={`${section.title}${isComplete ? " completed" : ""}`}
+                        className="h-auto justify-start rounded-[18px] border border-transparent px-4 py-3 text-left text-base font-semibold text-[color:var(--muted-foreground)] after:hidden data-active:border-[rgba(0,79,155,0.24)] data-active:bg-[color:var(--brand-indigo)] data-active:text-white data-active:shadow-[0_10px_24px_rgba(11,28,59,0.1)]"
                       >
-                        {index + 1}
-                      </span>
-                      {section.title}
-                    </TabsTrigger>
-                  ))}
+                        <span
+                          className={cn(
+                            "mr-2 flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                            isActiveTab
+                              ? "bg-white/18 text-white"
+                              : isComplete
+                                ? "bg-[rgba(24,184,199,0.18)] text-[color:var(--brand-blue)]"
+                                : "bg-[rgba(0,79,155,0.08)] text-[color:var(--brand-blue)]",
+                          )}
+                        >
+                          {isComplete ? (
+                            <CheckCircle2 className="size-4" aria-hidden="true" />
+                          ) : (
+                            index + 1
+                          )}
+                        </span>
+                        <span>{section.title}</span>
+                      </TabsTrigger>
+                    );
+                  })}
                 </TabsList>
                 {INPUT_SECTIONS.map((section) => (
                   <TabsContent key={section.id} value={section.id} className="mt-0">
