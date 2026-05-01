@@ -587,24 +587,6 @@ function buildInputSources(source: AssessmentInputSource) {
   ) as Partial<Record<AdjustableFieldKey, AssessmentInputSource>>;
 }
 
-function mapLeadToFormDefaults(
-  leadCapture: LeadCaptureRecord | null,
-): LeadCaptureFormInput {
-  if (!leadCapture) {
-    return defaultLeadCaptureInput;
-  }
-
-  return {
-    firstName: leadCapture.firstName,
-    lastName: leadCapture.lastName,
-    workEmail: leadCapture.workEmail,
-    company: leadCapture.company,
-    jobTitle: leadCapture.jobTitle,
-    countryRegion: leadCapture.countryRegion,
-    consentToContact: leadCapture.consentToContact,
-  };
-}
-
 function InputSectionCard({
   section,
   inputs,
@@ -1075,12 +1057,10 @@ function NumberField({
 }
 
 function IntroStep({
-  initialLead,
   onSubmitLead,
   onUseSample,
   onGoHome,
 }: {
-  initialLead: LeadCaptureRecord | null;
   onSubmitLead: (record: LeadCaptureRecord) => void;
   onUseSample: () => void;
   onGoHome: () => void;
@@ -1088,15 +1068,15 @@ function IntroStep({
   const form = useForm<LeadCaptureFormInput>({
     resolver: zodResolver(leadCaptureSchema),
     mode: "onBlur",
-    defaultValues: mapLeadToFormDefaults(initialLead),
+    defaultValues: defaultLeadCaptureInput,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isActualSessionOpen, setIsActualSessionOpen] = useState(Boolean(initialLead));
+  const [isActualSessionOpen, setIsActualSessionOpen] = useState(true);
 
   useEffect(() => {
-    form.reset(mapLeadToFormDefaults(initialLead));
-    setIsActualSessionOpen(Boolean(initialLead));
-  }, [form, initialLead]);
+    form.reset(defaultLeadCaptureInput);
+    setIsActualSessionOpen(true);
+  }, [form]);
 
   const handleSubmit = form.handleSubmit(async (values) => {
     setIsSubmitting(true);
@@ -2973,7 +2953,6 @@ export function BioPilotFitAssessmentApp() {
         {currentStep === "intro" ? (
           <div className={cn(SHELL_CARD, "overflow-hidden p-4 sm:p-4 lg:p-5")}>
             <IntroStep
-              initialLead={leadCapture}
               onSubmitLead={handleSubmitLead}
               onUseSample={handleUseSampleContact}
               onGoHome={handleGoHome}

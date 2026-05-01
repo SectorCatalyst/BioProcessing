@@ -7,9 +7,14 @@ import {
   isAuthorizedAdmin,
   upsertLeadCapture,
 } from "@/lib/server/biopilot-persistence";
-import { enforcePublicPostGuard, rejectHoneypotPayload } from "@/lib/server/request-guards";
+import {
+  enforcePublicPostGuard,
+  readLimitedJsonPayload,
+  rejectHoneypotPayload,
+} from "@/lib/server/request-guards";
 
 export const runtime = "nodejs";
+const MAX_LEAD_CAPTURE_BYTES = 16 * 1024;
 
 export async function GET(request: Request) {
   const pool = getPool();
@@ -100,13 +105,21 @@ export async function POST(request: Request) {
     key: "lead-capture",
     limit: 8,
     windowMs: 10 * 60 * 1000,
+    maxContentLength: MAX_LEAD_CAPTURE_BYTES,
   });
 
   if (guardResponse) {
     return guardResponse;
   }
 
-  const payload = await request.json().catch(() => null);
+  const { payload, response } = await readLimitedJsonPayload(request, {
+    maxContentLength: MAX_LEAD_CAPTURE_BYTES,
+  });
+
+  if (response) {
+    return response;
+  }
+
   const honeypotResponse = rejectHoneypotPayload(payload);
 
   if (honeypotResponse) {

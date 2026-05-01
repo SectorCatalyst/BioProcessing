@@ -28,9 +28,10 @@ Open [http://localhost:3000](http://localhost:3000).
 ```bash
 npm run lint
 npm run build
+npm run test:e2e
 ```
 
-Both commands pass in the current workspace.
+These commands cover linting, production build/type checking, and Playwright coverage for the actual-session start, example-session start, report generation, PDF export, and public API guard behavior.
 
 ## What Is Implemented
 
@@ -113,6 +114,7 @@ If `DATABASE_URL` is missing or the insert fails, the gate still unlocks using l
 - No separate API service is required unless you want one; the existing Next.js app can own the lead-capture endpoint.
 - Lead and assessment management is available at [`/admin/leads`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/admin/leads/page.tsx) and requires the same `LEAD_CAPTURE_ADMIN_KEY` value entered into the admin page.
 - For local development, leave `DATABASE_URL` unset if you want to test the local-only fallback. Use `.env.example` as the env var template.
+- Public POST routes require JSON, enforce request-size limits, rate-limit repeated submissions, reject cross-origin browser submissions, and block simple honeypot/spam payloads.
 
 ## Modeling Notes
 

@@ -17,9 +17,14 @@ import {
   mapAssessmentProgressAdminRow,
   upsertAssessmentProgress,
 } from "@/lib/server/biopilot-persistence";
-import { enforcePublicPostGuard, rejectHoneypotPayload } from "@/lib/server/request-guards";
+import {
+  enforcePublicPostGuard,
+  readLimitedJsonPayload,
+  rejectHoneypotPayload,
+} from "@/lib/server/request-guards";
 
 export const runtime = "nodejs";
+const MAX_ASSESSMENT_PROGRESS_BYTES = 96 * 1024;
 
 const assessmentProgressSchema = leadCaptureSchema.extend({
   sessionId: z.string().trim().min(8).max(120),
@@ -135,13 +140,21 @@ export async function POST(request: Request) {
     key: "assessment-progress",
     limit: 240,
     windowMs: 10 * 60 * 1000,
+    maxContentLength: MAX_ASSESSMENT_PROGRESS_BYTES,
   });
 
   if (guardResponse) {
     return guardResponse;
   }
 
-  const payload = await request.json().catch(() => null);
+  const { payload, response } = await readLimitedJsonPayload(request, {
+    maxContentLength: MAX_ASSESSMENT_PROGRESS_BYTES,
+  });
+
+  if (response) {
+    return response;
+  }
+
   const honeypotResponse = rejectHoneypotPayload(payload);
 
   if (honeypotResponse) {

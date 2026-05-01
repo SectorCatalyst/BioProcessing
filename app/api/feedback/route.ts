@@ -8,9 +8,14 @@ import {
   isAuthorizedAdmin,
   mapFeedbackAdminRow,
 } from "@/lib/server/biopilot-persistence";
-import { enforcePublicPostGuard, rejectHoneypotPayload } from "@/lib/server/request-guards";
+import {
+  enforcePublicPostGuard,
+  readLimitedJsonPayload,
+  rejectHoneypotPayload,
+} from "@/lib/server/request-guards";
 
 export const runtime = "nodejs";
+const MAX_FEEDBACK_BYTES = 24 * 1024;
 
 const feedbackSchema = z.object({
   assessmentId: z.number().int().positive().nullable().optional(),
@@ -95,13 +100,21 @@ export async function POST(request: Request) {
     key: "feedback",
     limit: 20,
     windowMs: 10 * 60 * 1000,
+    maxContentLength: MAX_FEEDBACK_BYTES,
   });
 
   if (guardResponse) {
     return guardResponse;
   }
 
-  const payload = await request.json().catch(() => null);
+  const { payload, response } = await readLimitedJsonPayload(request, {
+    maxContentLength: MAX_FEEDBACK_BYTES,
+  });
+
+  if (response) {
+    return response;
+  }
+
   const honeypotResponse = rejectHoneypotPayload(payload);
 
   if (honeypotResponse) {
