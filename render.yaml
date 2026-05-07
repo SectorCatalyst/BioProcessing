@@ -2,7 +2,7 @@ services:
   - type: web
     name: bioprocessing-roi
     runtime: node
-    branch: codex/bioprocess-simulator-rework
+    branch: codex/biopilot-survey-data-enhancements
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /api/health

@@ -31,7 +31,7 @@ npm run build
 npm run test:e2e
 ```
 
-These commands cover linting, production build/type checking, and Playwright coverage for the actual-session start, example-session start, report generation, PDF export, and public API guard behavior.
+These commands cover linting, production build/type checking, and Playwright coverage for the actual-session start, example-session start, four-section input flow, over-40 numeric inputs, survey benchmark application, report generation, PDF export, and public API guard behavior.
 
 ## What Is Implemented
 
@@ -47,6 +47,7 @@ These commands cover linting, production build/type checking, and Playwright cov
 - Built-in assessment-submission API route with server-side calculation, persisted report storage, and Postgres-backed admin retrieval when `DATABASE_URL` is configured.
 - Demo/test-data controls that can load illustrative governed datasets and restore the previous working model.
 - JSON, CSV, and PDF export flows with the required top-level ordering rules applied in code.
+- BioPilot model version `2.0.0` with batch-failure occurrence, failure-cause exposure, failed-run recovery effort, neutral BioPlan 2023 survey benchmark application, and persisted model-version metadata across progress, submissions, admin exports, and PDF reports.
 
 ## Project Structure
 
@@ -121,6 +122,7 @@ If `DATABASE_URL` is missing or the insert fails, the gate still unlocks using l
 - Percentages are stored as whole numbers and converted to decimals inside the calculation engine.
 - Annual runs are derived as `Runs per Month × 12`.
 - Saved labor is monetized once and routed to Hard-Dollar, Capacity, or a mixed split based on Labor Treatment Mode.
+- BioPilot v2 separates ordinary batch-review effort from failed/degraded-run recovery and uses the neutral survey benchmark only when the user explicitly applies it.
 - Cycle-Time Acceleration and Transfer Delay Avoidance apply Capture Factor and Confidence Factor.
 - Strategic Proxy remains separate and discounted by design.
 - Decision-lag reduction is tracked but not independently monetized in version 1.
@@ -129,6 +131,6 @@ If `DATABASE_URL` is missing or the insert fails, the gate still unlocks using l
 
 - The handoff document references locked acceptance tests and golden vectors `GV-001` through `GV-005`, but the numeric fixtures themselves were not present in the provided DOCX. The implementation therefore includes the governed engine and reporting surfaces, but not authoritative vector verification.
 - Validation ranges and messages were implemented conservatively from the handoff model, not from a separate locked micro-spec pack.
-- Benchmark guidance is implemented as contextual field hints. No external benchmark dataset was provided, so benchmark provenance can be surfaced but not populated from a formal source pack.
+- Benchmark guidance includes a neutral public survey benchmark for batch-failure recency and failure-cause exposure. It remains a planning assumption until replaced by site-specific failure logs, deviation records, and recovery effort.
 - The PDF export is structurally compliant with the required section order, but intentionally plain.
 - `npm install` currently reports one high-severity dependency vulnerability from the installed dependency tree. It was not remediated in this pass because no package upgrade strategy was specified.

@@ -21,8 +21,8 @@ const downloadBlob = (blob: Blob, filename: string) => {
 };
 
 const buildFileStem = (scenarioId: ScenarioId) => {
-  const date = new Date().toISOString().slice(0, 10);
-  return `bioprocess-development-roi-${scenarioId}-${date}`;
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `bioprocess-development-roi-${scenarioId}-${timestamp}`;
 };
 
 const buildProvenanceSummary = (provenance: ProvenanceMap) => {

@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   assessBioPilotFit,
   assessmentEvidenceMetaSchema,
+  BIOPILOT_MODEL_VERSION,
   bioPilotAssessmentInputsSchema,
   normalizeAssessmentInputs,
   normalizeEvidenceMeta,
@@ -27,6 +28,7 @@ const MAX_ASSESSMENT_SUBMISSION_BYTES = 96 * 1024;
 
 const assessmentSubmissionSchema = leadCaptureSchema.extend({
   sessionMode: z.enum(["example", "actual"]).default("actual"),
+  modelVersion: z.literal(BIOPILOT_MODEL_VERSION).default(BIOPILOT_MODEL_VERSION),
   inputs: bioPilotAssessmentInputsSchema,
   evidenceMeta: assessmentEvidenceMetaSchema.optional(),
 });
@@ -121,6 +123,7 @@ export async function GET(request: Request) {
       payback_months: number;
       digital_coverage: number;
       manual_burden_index: number;
+      model_version: string;
       generated_report: ReturnType<typeof assessBioPilotFit>;
       session_mode: string;
       created_at: string;
@@ -144,6 +147,7 @@ export async function GET(request: Request) {
         payback_months,
         digital_coverage,
         manual_burden_index,
+        model_version,
         generated_report,
         session_mode,
         created_at,

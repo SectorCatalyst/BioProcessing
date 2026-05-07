@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+export const BIOPILOT_MODEL_VERSION = "2.0.0";
+
+export const BIOPLAN_2023_BATCH_FAILURE_BENCHMARK = {
+  id: "bioplan-2023-batch-failure",
+  label: "BioPlan 2023 Batch-Failure Benchmark",
+  shortLabel: "BioPlan 2023 Survey",
+  weeksSinceLastBatchFailure: 64,
+  failureCauseExposureScore: 35,
+  context:
+    "BioPlan 2023 reported an industry average of roughly 64 weeks between batch failures and highlighted equipment failure, contamination, operator error, material failure, specification misses, and cross-product contamination as tracked failure causes.",
+} as const;
+
 export const PROCESS_PROFILE_IDS = [
   "mab-cho",
   "biosimilar-antibody",
@@ -78,6 +90,9 @@ export interface BioPilotAssessmentInputs {
   offlineDataDelayHours: number;
   batchReviewHours: number;
   deviationInvestigationHours: number;
+  weeksSinceLastBatchFailure: number;
+  failureCauseExposureScore: number;
+  failedRunRecoveryHours: number;
   techTransferPackageHours: number;
   onboardingDays: number;
 }
@@ -91,11 +106,12 @@ export const BIOPILOT_INPUT_SECTION_IDS = [
   "operating-frame",
   "connected-stack",
   "manual-burden",
+  "batch-failure",
 ] as const;
 
 export type BioPilotInputSectionId = (typeof BIOPILOT_INPUT_SECTION_IDS)[number];
 
-export type AssessmentInputSource = "default" | "sample" | "user";
+export type AssessmentInputSource = "default" | "sample" | "survey" | "user";
 
 export interface AssessmentEvidenceMeta {
   completedSectionIds?: BioPilotInputSectionId[];
@@ -141,6 +157,7 @@ export interface AssessmentStateSnapshot {
   reviewHours: number;
   decisionLagHours: number;
   runSuccessRate: number;
+  failureRecoveryHours: number;
   transferPackageHours: number;
   onboardingDays: number;
 }
@@ -169,6 +186,7 @@ export interface EvidenceConfidenceAssessment {
   completedSections: number;
   totalSections: number;
   userEnteredFields: number;
+  surveyFields: number;
   sampleFields: number;
   defaultFields: number;
   warnings: string[];
@@ -196,6 +214,7 @@ export interface SalesFollowUpBrief {
 }
 
 export interface BioPilotAssessmentResults {
+  modelVersion: string;
   profile: ProcessProfile;
   stage: LifecycleStage;
   digitalCoverage: number;
@@ -252,11 +271,14 @@ export const bioPilotAssessmentInputsSchema = z.object({
   offlineDataDelayHours: boundedNumber(1, 36),
   batchReviewHours: boundedNumber(2, 48),
   deviationInvestigationHours: boundedNumber(2, 48),
+  weeksSinceLastBatchFailure: boundedNumber(0, 156),
+  failureCauseExposureScore: boundedNumber(0, 100),
+  failedRunRecoveryHours: boundedNumber(0, 240),
   techTransferPackageHours: boundedNumber(8, 160),
-  onboardingDays: boundedNumber(3, 40),
+  onboardingDays: boundedNumber(3, 120),
 });
 
-export const assessmentInputSourceSchema = z.enum(["default", "sample", "user"]);
+export const assessmentInputSourceSchema = z.enum(["default", "sample", "survey", "user"]);
 
 export const assessmentEvidenceMetaSchema = z.object({
   completedSectionIds: z.array(z.enum(BIOPILOT_INPUT_SECTION_IDS)).optional(),
@@ -659,6 +681,9 @@ export const DEFAULT_BIOPILOT_ASSESSMENT_INPUTS: BioPilotAssessmentInputs = {
   offlineDataDelayHours: 14,
   batchReviewHours: 20,
   deviationInvestigationHours: 18,
+  weeksSinceLastBatchFailure: 64,
+  failureCauseExposureScore: 35,
+  failedRunRecoveryHours: 36,
   techTransferPackageHours: 78,
   onboardingDays: 16,
 };
@@ -699,6 +724,9 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
       offlineDataDelayHours: 11,
       batchReviewHours: 14,
       deviationInvestigationHours: 12,
+      weeksSinceLastBatchFailure: 52,
+      failureCauseExposureScore: 38,
+      failedRunRecoveryHours: 24,
       techTransferPackageHours: 48,
       onboardingDays: 13,
     },
@@ -733,6 +761,9 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
       offlineDataDelayHours: 16,
       batchReviewHours: 24,
       deviationInvestigationHours: 20,
+      weeksSinceLastBatchFailure: 64,
+      failureCauseExposureScore: 36,
+      failedRunRecoveryHours: 42,
       techTransferPackageHours: 94,
       onboardingDays: 18,
     },
@@ -767,6 +798,9 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
       offlineDataDelayHours: 18,
       batchReviewHours: 28,
       deviationInvestigationHours: 22,
+      weeksSinceLastBatchFailure: 88,
+      failureCauseExposureScore: 28,
+      failedRunRecoveryHours: 64,
       techTransferPackageHours: 102,
       onboardingDays: 20,
     },
@@ -796,6 +830,9 @@ export const BIOPILOT_ADJUSTABLE_INPUT_KEYS: BioPilotAdjustableInputKey[] = [
   "offlineDataDelayHours",
   "batchReviewHours",
   "deviationInvestigationHours",
+  "weeksSinceLastBatchFailure",
+  "failureCauseExposureScore",
+  "failedRunRecoveryHours",
   "techTransferPackageHours",
   "onboardingDays",
 ];
@@ -899,13 +936,31 @@ export function buildRandomizedSampleInputs(sampleId: string): BioPilotAssessmen
       2,
       48,
     ),
+    weeksSinceLastBatchFailure: wholeNumberJitter(
+      normalized.weeksSinceLastBatchFailure - opportunityShift * 0.45,
+      8,
+      0,
+      156,
+    ),
+    failureCauseExposureScore: jitter(
+      normalized.failureCauseExposureScore + opportunityShift * 0.55,
+      7,
+      0,
+      100,
+    ),
+    failedRunRecoveryHours: wholeNumberJitter(
+      normalized.failedRunRecoveryHours + opportunityShift * 0.85,
+      8,
+      0,
+      240,
+    ),
     techTransferPackageHours: jitter(
       normalized.techTransferPackageHours + opportunityShift * 0.85,
       9,
       8,
       160,
     ),
-    onboardingDays: jitter(normalized.onboardingDays + opportunityShift * 0.35, 3, 3, 40),
+    onboardingDays: jitter(normalized.onboardingDays + opportunityShift * 0.35, 3, 3, 120),
   };
 }
 
@@ -931,7 +986,7 @@ export function normalizeEvidenceMeta(
   for (const key of BIOPILOT_ADJUSTABLE_INPUT_KEYS) {
     const source = rawInputSources[key];
 
-    if (source === "sample" || source === "user" || source === "default") {
+    if (source === "sample" || source === "survey" || source === "user" || source === "default") {
       inputSources[key] = source;
     }
   }
@@ -1007,6 +1062,7 @@ const buildDigitalPlantMaturity = (
         inputs.reviewByException,
         percentageInverse(inputs.batchReviewHours * 2.1),
         percentageInverse(inputs.deviationInvestigationHours * 2.4),
+        percentageInverse(inputs.failedRunRecoveryHours * 0.55),
       ]),
       currentState: "Evidence is still being assembled after the run instead of being review-ready during execution.",
       targetState: "Review packages are assembled continuously, with exceptions surfaced while the run is active.",
@@ -1064,23 +1120,33 @@ const buildEvidenceConfidence = (
   const userEnteredFields = BIOPILOT_ADJUSTABLE_INPUT_KEYS.filter(
     (key) => inputSources[key] === "user",
   ).length;
+  const surveyFields = BIOPILOT_ADJUSTABLE_INPUT_KEYS.filter(
+    (key) => inputSources[key] === "survey",
+  ).length;
   const sampleFields = BIOPILOT_ADJUSTABLE_INPUT_KEYS.filter(
     (key) => inputSources[key] === "sample",
   ).length;
   const defaultFields = Math.max(
     0,
-    BIOPILOT_ADJUSTABLE_INPUT_KEYS.length - userEnteredFields - sampleFields,
+    BIOPILOT_ADJUSTABLE_INPUT_KEYS.length - userEnteredFields - surveyFields - sampleFields,
   );
   const sectionCompletionScore =
     (completedSections / BIOPILOT_INPUT_SECTION_IDS.length) * 42;
   const userEvidenceScore =
-    (userEnteredFields / BIOPILOT_ADJUSTABLE_INPUT_KEYS.length) * 46;
+    (userEnteredFields / BIOPILOT_ADJUSTABLE_INPUT_KEYS.length) * 42;
+  const surveySupportScore =
+    (surveyFields / BIOPILOT_ADJUSTABLE_INPUT_KEYS.length) * 10;
   const sampleSupportScore =
-    (sampleFields / BIOPILOT_ADJUSTABLE_INPUT_KEYS.length) * 12;
+    (sampleFields / BIOPILOT_ADJUSTABLE_INPUT_KEYS.length) * 8;
   const samplePenalty = normalizedMeta.usedSampleData && userEnteredFields < 8 ? 12 : 0;
   const defaultPenalty = defaultFields > 8 ? 10 : defaultFields > 3 ? 5 : 0;
   const score = clamp(
-    sectionCompletionScore + userEvidenceScore + sampleSupportScore - samplePenalty - defaultPenalty,
+    sectionCompletionScore +
+      userEvidenceScore +
+      surveySupportScore +
+      sampleSupportScore -
+      samplePenalty -
+      defaultPenalty,
     0,
     100,
   );
@@ -1100,12 +1166,17 @@ const buildEvidenceConfidence = (
     warnings.push("Sample data was used; replace sample assumptions before formal planning.");
   }
 
+  if (surveyFields > 0) {
+    warnings.push("Survey benchmark assumptions were used; replace them with site-specific operating evidence when available.");
+  }
+
   return {
     score,
     band,
     completedSections,
     totalSections: BIOPILOT_INPUT_SECTION_IDS.length,
     userEnteredFields,
+    surveyFields,
     sampleFields,
     defaultFields,
     warnings,
@@ -1124,23 +1195,34 @@ const buildAssumptionTransparency = (
   annualValuePotential: number,
   threeYearRoi: number,
   paybackMonths: number,
-): AssumptionTransparency => ({
-  summary:
-    "This report estimates current inefficiency and potential improvement from submitted time, maturity, and value assumptions.",
-  items: [
+  evidenceMeta?: AssessmentEvidenceMeta | null,
+): AssumptionTransparency => {
+  const normalizedMeta = normalizeEvidenceMeta(evidenceMeta);
+  const surveyBackedFields = BIOPILOT_ADJUSTABLE_INPUT_KEYS.filter(
+    (key) => normalizedMeta.inputSources?.[key] === "survey",
+  );
+  const items: AssumptionTransparencyItem[] = [
     {
       label: "Annual Recovered Hours",
       basis: `${Math.round(inputs.runsPerYear)} annual runs plus transfer, deviation, and onboarding effort.`,
       formula:
-        "Recovered hours = run coordination savings + review savings + investigation savings + transfer savings + onboarding savings.",
-      sensitivity: `Current estimate: ${Math.round(annualRecoveredHours).toLocaleString("en-US")} hours per year. Review hours and runs per year are usually the most sensitive time drivers.`,
+        "Recovered hours = run coordination savings + review savings + investigation savings + failure recovery savings + transfer savings + onboarding savings.",
+      sensitivity: `Current estimate: ${Math.round(annualRecoveredHours).toLocaleString("en-US")} hours per year. Review hours, failure recovery hours, and runs per year are usually the most sensitive time drivers.`,
     },
     {
       label: "Annual Value",
-      basis: "Submitted hourly rate, failed-run cost, and value per accelerated decision day.",
+      basis: "Submitted hourly rate, failed-run impact, failure recovery effort, and value per accelerated decision day.",
       formula:
-        "Annual value = recovered hours x blended hourly rate + avoided failed runs x failed-run cost + accelerated decision value.",
-      sensitivity: `Current estimate: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(annualValuePotential)}. Failed-run cost can dominate the result if the process is high value or scarce-capacity.`,
+        "Annual value = recovered hours x blended hourly rate + avoided failed runs x failed-run impact + accelerated decision value.",
+      sensitivity: `Current estimate: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(annualValuePotential)}. Failed-run impact can dominate the result if the process is high value or scarce-capacity. Set recovery hours to 0 if the failed-run impact already includes recovery labor.`,
+    },
+    {
+      label: "Batch Failure And Recovery",
+      basis: `${Math.round(inputs.weeksSinceLastBatchFailure)} weeks since the last batch failure, ${Math.round(inputs.failureCauseExposureScore)} / 100 failure-cause exposure, and ${Math.round(inputs.failedRunRecoveryHours)} recovery hours per failed or materially degraded run.`,
+      formula:
+        "Failure value = modeled avoided failed or degraded runs x failed-run impact, plus avoided recovery hours valued at the loaded labor rate.",
+      sensitivity:
+        "This area is most sensitive to actual failure frequency, failure impact, and whether recovery effort is already included in the failed-run impact assumption.",
     },
     {
       label: "ROI And Payback",
@@ -1157,10 +1239,27 @@ const buildAssumptionTransparency = (
       sensitivity:
         "The DPMM score is most sensitive to connectivity, data contextualization, SOP automation, and review-by-exception inputs.",
     },
-  ],
-  planningCaveat:
-    "Use this as a planning and opportunity-development estimate. Final ROI should be revisited with confirmed operating evidence and the actual BioPilot proposal scope.",
-});
+  ];
+
+  if (surveyBackedFields.length > 0) {
+    items.push({
+      label: "Survey Benchmark Context",
+      basis: `${BIOPLAN_2023_BATCH_FAILURE_BENCHMARK.shortLabel}: ${BIOPLAN_2023_BATCH_FAILURE_BENCHMARK.context}`,
+      formula:
+        "Survey-backed values are used as planning benchmarks only. User-entered site evidence overrides the benchmark in the estimate.",
+      sensitivity:
+        "Replacing benchmark assumptions with site-specific failure logs, deviation records, and recovery effort usually improves confidence more than changing low-impact fields.",
+    });
+  }
+
+  return {
+    summary:
+      "This report estimates current inefficiency and potential improvement from submitted time, maturity, batch-failure, and value assumptions.",
+    items,
+    planningCaveat:
+      "Use this as a planning and opportunity-development estimate. Final ROI should be revisited with confirmed operating evidence and the actual BioPilot proposal scope.",
+  };
+};
 
 const rankSeverity = (value: number): BuyingSignal["severity"] => {
   if (value >= 76) {
@@ -1198,6 +1297,8 @@ export function assessBioPilotFit(
       (inputs.offlineDataDelayHours / 24) * 18 +
       (inputs.batchReviewHours / 24) * 18 +
       (inputs.deviationInvestigationHours / 24) * 12 +
+      (inputs.failedRunRecoveryHours / 120) * 6 +
+      (inputs.failureCauseExposureScore / 100) * 5 +
       (inputs.techTransferPackageHours / (profile.base.transferPackageHours * 1.2)) * 10 +
       (inputs.onboardingDays / (stage.onboardingBaselineDays * 1.35)) * 8,
     0,
@@ -1257,6 +1358,13 @@ export function assessBioPilotFit(
     96,
   );
 
+  const failureRecencyRisk = clamp(
+    ((104 - inputs.weeksSinceLastBatchFailure) / 104) * 100,
+    0,
+    100,
+  );
+  const failureCauseRisk = clamp(inputs.failureCauseExposureScore, 0, 100);
+
   const currentRunSuccessRate = clamp(
     profile.base.runSuccessRate +
       inputs.sensorCoverage * 0.03 +
@@ -1265,6 +1373,8 @@ export function assessBioPilotFit(
       inputs.sopAutomation * 0.015 +
       inputs.dataContextualization * 0.018 -
       inputs.manualTranscriptionShare * 0.03 -
+      failureRecencyRisk * 0.025 -
+      failureCauseRisk * 0.025 -
       Math.max(inputs.vendorPlatforms - 2, 0) * 0.7 -
       Math.max(inputs.sites - 1, 0) * 0.9,
     72,
@@ -1282,7 +1392,7 @@ export function assessBioPilotFit(
     inputs.onboardingDays *
       (1 + percentageInverse(inputs.sopAutomation) / 350),
     4,
-    45,
+    160,
   );
 
   const enablementMultiplier = clamp(0.26 + fitScore / 210, 0.24, 0.68);
@@ -1316,6 +1426,12 @@ export function assessBioPilotFit(
     currentOnboardingDays * (1 - enablementMultiplier * 0.36),
     3,
     currentOnboardingDays,
+  );
+  const currentFailureRecoveryHours = clamp(inputs.failedRunRecoveryHours, 0, 240);
+  const bioPilotFailureRecoveryHours = clamp(
+    currentFailureRecoveryHours * (1 - enablementMultiplier * 0.4),
+    0,
+    currentFailureRecoveryHours,
   );
 
   const expectedDeviationEvents = Math.max(
@@ -1351,20 +1467,24 @@ export function assessBioPilotFit(
     8 *
     annualUsersRequiringRamp;
 
-  const annualRecoveredHours = Math.max(
-    0,
-    runCoordinationRecoveredHours +
-      reviewRecoveredHours +
-      deviationRecoveredHours +
-      transferRecoveredHours +
-      onboardingRecoveredHours,
-  );
-
   const baselineFailedRuns =
     inputs.runsPerYear * ((100 - currentRunSuccessRate) / 100);
   const modeledFailedRuns =
     inputs.runsPerYear * ((100 - bioPilotRunSuccessRate) / 100);
   const avoidedFailedRuns = Math.max(0, baselineFailedRuns - modeledFailedRuns);
+  const failureRecoveryRecoveredHours =
+    (currentFailureRecoveryHours - bioPilotFailureRecoveryHours) *
+    avoidedFailedRuns;
+
+  const annualRecoveredHours = Math.max(
+    0,
+    runCoordinationRecoveredHours +
+      reviewRecoveredHours +
+      deviationRecoveredHours +
+      failureRecoveryRecoveredHours +
+      transferRecoveredHours +
+      onboardingRecoveredHours,
+  );
 
   const annualDecisionDaysRecovered = Math.max(
     0,
@@ -1400,10 +1520,12 @@ export function assessBioPilotFit(
     },
     {
       id: "failure",
-      label: "Avoided Failed Or Materially Degraded Runs",
-      annualValue: avoidedFailedRuns * inputs.costPerFailedRun,
+      label: "Avoided Failed Runs And Recovery Effort",
+      annualValue:
+        avoidedFailedRuns * inputs.costPerFailedRun +
+        failureRecoveryRecoveredHours * inputs.blendedHourlyRate,
       summary:
-        "Estimated from the modeled improvement in run success and fewer lost batches.",
+        "Estimated from modeled run-success improvement, fewer lost batches, and less recovery or restart effort.",
     },
     {
       id: "acceleration",
@@ -1507,15 +1629,17 @@ export function assessBioPilotFit(
       label: "Review And Release Readiness",
       currentScore: clamp(
         inputs.reviewByException * 0.44 +
-          percentageInverse(inputs.batchReviewHours * 3.6) * 0.32 +
-          percentageInverse(inputs.deviationInvestigationHours * 4.2) * 0.24,
+          percentageInverse(inputs.batchReviewHours * 3.6) * 0.28 +
+          percentageInverse(inputs.deviationInvestigationHours * 4.2) * 0.2 +
+          percentageInverse(inputs.failedRunRecoveryHours * 0.7) * 0.08,
         0,
         100,
       ),
       enabledScore: clamp(
         inputs.reviewByException * 0.44 +
-          percentageInverse(inputs.batchReviewHours * 3.6) * 0.32 +
-          percentageInverse(inputs.deviationInvestigationHours * 4.2) * 0.24 +
+          percentageInverse(inputs.batchReviewHours * 3.6) * 0.28 +
+          percentageInverse(inputs.deviationInvestigationHours * 4.2) * 0.2 +
+          percentageInverse(inputs.failedRunRecoveryHours * 0.7) * 0.08 +
           enablementMultiplier * 24,
         0,
         100,
@@ -1608,7 +1732,23 @@ export function assessBioPilotFit(
       relevanceScore: clamp(
         percentageInverse(inputs.reviewByException) * 0.46 +
           clamp(inputs.batchReviewHours * 3.6, 0, 100) * 0.32 +
-          clamp(inputs.deviationInvestigationHours * 4.4, 0, 100) * 0.22,
+          clamp(inputs.deviationInvestigationHours * 4.4, 0, 100) * 0.14 +
+          clamp(inputs.failedRunRecoveryHours * 0.9, 0, 100) * 0.08,
+        0,
+        100,
+      ),
+    },
+    {
+      id: "failure-risk",
+      title: "Reduce Batch Failure And Recovery Exposure",
+      summary:
+        "Use better monitoring, PAT context, and guided response to reduce failed-run risk and recovery effort.",
+      whyBioPilot:
+        "Most relevant when recent failure occurrence, failure-cause exposure, or recovery hours are material.",
+      relevanceScore: clamp(
+        failureRecencyRisk * 0.36 +
+          inputs.failureCauseExposureScore * 0.34 +
+          clamp(inputs.failedRunRecoveryHours * 0.8, 0, 100) * 0.3,
         0,
         100,
       ),
@@ -1650,12 +1790,26 @@ export function assessBioPilotFit(
       title: "Review And Investigation Drag",
       severity: rankSeverity(
         clamp(inputs.batchReviewHours * 3.2, 0, 100) * 0.58 +
-          percentageInverse(inputs.reviewByException) * 0.42,
+          percentageInverse(inputs.reviewByException) * 0.34 +
+          clamp(inputs.failedRunRecoveryHours * 0.8, 0, 100) * 0.08,
       ),
       summary:
         "The organization is still building evidence after the run instead of keeping it review-ready during execution.",
       action:
         "Focus on review-ready evidence, exception handling, and linked process context.",
+    },
+    {
+      id: "batch-failure",
+      title: "Batch Failure And Recovery Risk",
+      severity: rankSeverity(
+        failureRecencyRisk * 0.38 +
+          inputs.failureCauseExposureScore * 0.34 +
+          clamp(inputs.failedRunRecoveryHours * 0.85, 0, 100) * 0.28,
+      ),
+      summary:
+        "Failure occurrence, root-cause exposure, and recovery effort are large enough to deserve explicit review.",
+      action:
+        "Validate the last failed run, dominant failure causes, recovery effort, and which process-monitoring or PAT controls would reduce recurrence.",
     },
     {
       id: "late-context",
@@ -1716,11 +1870,12 @@ export function assessBioPilotFit(
     annualValuePotential,
     threeYearRoi,
     paybackMonths,
+    evidenceMeta,
   );
   const salesFollowUp: SalesFollowUpBrief = {
     priority: topSignal?.title ?? topPlay?.title ?? "Confirm the top operating friction",
     discoveryFocus: [
-      "Validate the submitted review, investigation, and transfer effort with one recent run.",
+      "Validate the submitted review, investigation, failure recovery, and transfer effort with one recent run.",
       "Confirm which BioPilot scope maps to the lowest DPMM maturity domain.",
       "Replace planning-level investment with proposal pricing before calling the model a final ROI.",
     ],
@@ -1745,10 +1900,11 @@ export function assessBioPilotFit(
   const executiveSummary = `${profile.label} in ${stage.label.toLowerCase()} shows a ${fitBand} because the operation still carries ${Math.round(manualBurdenIndex)} / 100 manual burden and only ${Math.round(digitalCoverage)} / 100 digital coverage. The strongest BioPilot priority is ${topPlayPhrase}, which points to an estimated ${annualRecoveredHours.toFixed(0)} annual hours recovered and ${topLever ? `about ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(topLever.annualValue)} in the largest value driver` : "a meaningful value opportunity"}.`;
 
   const nextStep = topSignal
-    ? `Confirm the process around ${formatSentencePhrase(topSignal.title)}, then verify three inputs before relying on the estimate: actual review hours, current failed-run cost, and transfer package effort.`
+    ? `Confirm the process around ${formatSentencePhrase(topSignal.title)}, then verify four inputs before relying on the estimate: actual review hours, current failed-run impact, recovery hours, and transfer package effort.`
     : "Confirm the operating data behind the top value driver before relying on the estimate.";
 
   return {
+    modelVersion: BIOPILOT_MODEL_VERSION,
     profile,
     stage,
     digitalCoverage,
@@ -1761,6 +1917,7 @@ export function assessBioPilotFit(
       reviewHours: currentReviewHours,
       decisionLagHours: currentDecisionLagHours,
       runSuccessRate: currentRunSuccessRate,
+      failureRecoveryHours: currentFailureRecoveryHours,
       transferPackageHours: currentTransferPackageHours,
       onboardingDays: currentOnboardingDays,
     },
@@ -1769,6 +1926,7 @@ export function assessBioPilotFit(
       reviewHours: bioPilotReviewHours,
       decisionLagHours: bioPilotDecisionLagHours,
       runSuccessRate: bioPilotRunSuccessRate,
+      failureRecoveryHours: bioPilotFailureRecoveryHours,
       transferPackageHours: bioPilotTransferPackageHours,
       onboardingDays: bioPilotOnboardingDays,
     },

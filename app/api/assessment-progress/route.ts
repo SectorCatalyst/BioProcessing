@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   BIOPILOT_INPUT_SECTION_IDS,
+  BIOPILOT_MODEL_VERSION,
   assessmentEvidenceMetaSchema,
   bioPilotAssessmentInputsSchema,
   normalizeAssessmentInputs,
@@ -29,6 +30,7 @@ const MAX_ASSESSMENT_PROGRESS_BYTES = 96 * 1024;
 const assessmentProgressSchema = leadCaptureSchema.extend({
   sessionId: z.string().trim().min(8).max(120),
   sessionMode: z.enum(["example", "actual"]),
+  modelVersion: z.literal(BIOPILOT_MODEL_VERSION).default(BIOPILOT_MODEL_VERSION),
   currentStep: z.enum(["intro", "profile", "inputs", "report"]),
   status: z
     .enum([
@@ -89,6 +91,7 @@ export async function GET(request: Request) {
       fit_band: string;
       fit_score: number;
       annual_value_potential: number;
+      model_version: string;
       generated_report: BioPilotAssessmentResults;
       updated_at: string;
       created_at: string;
@@ -112,6 +115,7 @@ export async function GET(request: Request) {
         fit_band,
         fit_score,
         annual_value_potential,
+        model_version,
         generated_report,
         updated_at,
         created_at

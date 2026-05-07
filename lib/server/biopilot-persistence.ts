@@ -2,6 +2,7 @@ import { Pool } from "pg";
 
 import {
   assessBioPilotFit,
+  BIOPILOT_MODEL_VERSION,
   type AssessmentEvidenceMeta,
   type BioPilotAssessmentInputs,
   type BioPilotAssessmentResults,
@@ -33,6 +34,7 @@ export interface AssessmentSubmissionRecord {
   paybackMonths: number;
   digitalCoverage: number;
   manualBurdenIndex: number;
+  modelVersion: string;
   digitalPlantMaturityScore: number | null;
   digitalPlantMaturityLevel: number | null;
   evidenceConfidenceScore: number | null;
@@ -76,6 +78,7 @@ export interface AssessmentProgressRecord {
   fitBand: string;
   fitScore: number;
   annualValuePotential: number;
+  modelVersion: string;
   evidenceConfidenceScore: number | null;
   evidenceConfidenceBand: string | null;
   topPriority: string;
@@ -180,6 +183,7 @@ export const ensureAssessmentTable = async (pool: Pool) => {
       payback_months DOUBLE PRECISION NOT NULL,
       digital_coverage DOUBLE PRECISION NOT NULL,
       manual_burden_index DOUBLE PRECISION NOT NULL,
+      model_version TEXT NOT NULL DEFAULT '2.0.0',
       evidence_meta JSONB NOT NULL DEFAULT '{}'::jsonb,
       submitted_inputs JSONB NOT NULL,
       generated_report JSONB NOT NULL,
@@ -197,6 +201,11 @@ export const ensureAssessmentTable = async (pool: Pool) => {
   await pool.query(`
     ALTER TABLE roi_assessment_submissions
     ADD COLUMN IF NOT EXISTS session_mode TEXT NOT NULL DEFAULT 'actual';
+  `);
+
+  await pool.query(`
+    ALTER TABLE roi_assessment_submissions
+    ADD COLUMN IF NOT EXISTS model_version TEXT NOT NULL DEFAULT '2.0.0';
   `);
 
   await pool.query(`
@@ -258,6 +267,7 @@ export const ensureAssessmentProgressTable = async (pool: Pool) => {
       fit_band TEXT NOT NULL,
       fit_score DOUBLE PRECISION NOT NULL,
       annual_value_potential DOUBLE PRECISION NOT NULL,
+      model_version TEXT NOT NULL DEFAULT '2.0.0',
       evidence_meta JSONB NOT NULL DEFAULT '{}'::jsonb,
       submitted_inputs JSONB NOT NULL,
       generated_report JSONB NOT NULL,
@@ -270,6 +280,11 @@ export const ensureAssessmentProgressTable = async (pool: Pool) => {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS roi_assessment_progress_work_email_idx
       ON roi_assessment_progress (work_email);
+  `);
+
+  await pool.query(`
+    ALTER TABLE roi_assessment_progress
+    ADD COLUMN IF NOT EXISTS model_version TEXT NOT NULL DEFAULT '2.0.0';
   `);
 
   await pool.query(`
@@ -372,13 +387,14 @@ export const insertAssessmentSubmission = async ({
         payback_months,
         digital_coverage,
         manual_burden_index,
+        model_version,
         evidence_meta,
         submitted_inputs,
         generated_report
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8,
-        $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19::jsonb, $20::jsonb
+        $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19::jsonb, $20::jsonb, $21::jsonb
       )
       RETURNING id, created_at, updated_at
     `,
@@ -400,6 +416,7 @@ export const insertAssessmentSubmission = async ({
       results.paybackMonths,
       results.digitalCoverage,
       results.manualBurdenIndex,
+      BIOPILOT_MODEL_VERSION,
       JSON.stringify(evidenceMeta ?? {}),
       JSON.stringify(inputs),
       JSON.stringify(results),
@@ -435,6 +452,7 @@ export const mapAssessmentAdminRow = (
     payback_months: number;
     digital_coverage: number;
     manual_burden_index: number;
+    model_version?: string | null;
     generated_report: BioPilotAssessmentResults;
     created_at: string;
     updated_at: string;
@@ -458,6 +476,7 @@ export const mapAssessmentAdminRow = (
   paybackMonths: row.payback_months,
   digitalCoverage: row.digital_coverage,
   manualBurdenIndex: row.manual_burden_index,
+  modelVersion: row.model_version ?? row.generated_report?.modelVersion ?? BIOPILOT_MODEL_VERSION,
   digitalPlantMaturityScore: row.generated_report?.digitalPlantMaturity?.score ?? null,
   digitalPlantMaturityLevel: row.generated_report?.digitalPlantMaturity?.level ?? null,
   evidenceConfidenceScore: row.generated_report?.evidenceConfidence?.score ?? null,
@@ -514,13 +533,14 @@ export const upsertAssessmentProgress = async ({
         fit_band,
         fit_score,
         annual_value_potential,
+        model_version,
         evidence_meta,
         submitted_inputs,
         generated_report
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-        $11, $12::jsonb, $13, $14, $15, $16, $17, $18::jsonb, $19::jsonb, $20::jsonb
+        $11, $12::jsonb, $13, $14, $15, $16, $17, $18, $19::jsonb, $20::jsonb, $21::jsonb
       )
       ON CONFLICT (session_id)
       DO UPDATE SET
@@ -540,6 +560,7 @@ export const upsertAssessmentProgress = async ({
         fit_band = EXCLUDED.fit_band,
         fit_score = EXCLUDED.fit_score,
         annual_value_potential = EXCLUDED.annual_value_potential,
+        model_version = EXCLUDED.model_version,
         evidence_meta = EXCLUDED.evidence_meta,
         submitted_inputs = EXCLUDED.submitted_inputs,
         generated_report = EXCLUDED.generated_report,
@@ -564,6 +585,7 @@ export const upsertAssessmentProgress = async ({
       results.fitBand,
       results.fitScore,
       results.annualValuePotential,
+      BIOPILOT_MODEL_VERSION,
       JSON.stringify(evidenceMeta ?? {}),
       JSON.stringify(inputs),
       JSON.stringify(results),
@@ -598,6 +620,7 @@ export const mapAssessmentProgressAdminRow = (row: {
   fit_band: string;
   fit_score: number;
   annual_value_potential: number;
+  model_version?: string | null;
   generated_report: BioPilotAssessmentResults;
   updated_at: string;
   created_at: string;
@@ -622,6 +645,7 @@ export const mapAssessmentProgressAdminRow = (row: {
   fitBand: row.fit_band,
   fitScore: row.fit_score,
   annualValuePotential: row.annual_value_potential,
+  modelVersion: row.model_version ?? row.generated_report?.modelVersion ?? BIOPILOT_MODEL_VERSION,
   evidenceConfidenceScore: row.generated_report?.evidenceConfidence?.score ?? null,
   evidenceConfidenceBand: row.generated_report?.evidenceConfidence?.band ?? null,
   topPriority: row.generated_report?.salesFollowUp?.priority ?? row.generated_report?.plays?.[0]?.title ?? "",

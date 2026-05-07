@@ -19,7 +19,9 @@ import {
   assessBioPilotFit,
   BIOPILOT_ADJUSTABLE_INPUT_KEYS,
   BIOPILOT_INPUT_SECTION_IDS,
+  BIOPILOT_MODEL_VERSION,
   BIOPILOT_SAMPLE_CONFIGS,
+  BIOPLAN_2023_BATCH_FAILURE_BENCHMARK,
   buildRandomizedSampleInputs,
   DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
   LIFECYCLE_STAGES,
@@ -62,7 +64,8 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
-const STORAGE_KEY = "biopilot-fit-assessment-state-v1";
+const LEGACY_STORAGE_KEY = "biopilot-fit-assessment-state-v1";
+const STORAGE_KEY = "biopilot-fit-assessment-state-v2";
 
 const SHELL_CARD =
   "glass-edge relative rounded-[40px] border border-[color:var(--border-strong)] bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(245,248,252,0.96))] backdrop-blur-2xl before:pointer-events-none before:absolute before:inset-x-12 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/90 before:to-transparent";
@@ -77,9 +80,9 @@ const DARK_SOFT =
 const INPUT_CLASS =
   "h-[56px] rounded-[18px] border-[color:var(--input)] bg-[color:var(--surface-3)] px-4 text-lg font-medium text-[color:var(--foreground)] shadow-[inset_0_1px_0_rgba(255,255,255,0.62)] placeholder:text-[color:var(--muted-foreground)] focus-visible:border-[color:var(--border-strong)] focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]";
 const PRIMARY_BUTTON =
-  "h-11 rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[linear-gradient(135deg,#004f9b,#0b7fff)] px-4 text-[0.95rem] font-semibold text-white shadow-[0_10px_24px_rgba(0,95,189,0.18)] hover:shadow-[0_14px_30px_rgba(0,95,189,0.22)]";
+  "h-11 rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[linear-gradient(135deg,#004f9b,#0b7fff)] px-4 text-[0.95rem] font-semibold text-white shadow-[0_10px_24px_rgba(0,95,189,0.18)] hover:text-white hover:shadow-[0_14px_30px_rgba(0,95,189,0.22)]";
 const SECONDARY_BUTTON =
-  "h-11 rounded-[14px] border-[color:var(--border-strong)] bg-[color:var(--surface-3)] px-4 text-[0.95rem] font-semibold text-[color:var(--foreground)] hover:bg-[color:var(--surface-elevated)]";
+  "h-11 rounded-[14px] border-[color:var(--border-strong)] bg-[color:var(--surface-3)] px-4 text-[0.95rem] font-semibold text-[color:var(--foreground)] hover:bg-[color:var(--surface-elevated)] hover:text-[color:var(--foreground)]";
 const ACCENT_BUTTON =
   "h-11 rounded-[14px] border border-[rgba(255,238,0,0.28)] bg-[linear-gradient(135deg,#ffee00,#f2da00)] px-4 text-[0.95rem] font-semibold text-[color:var(--brand-indigo)] shadow-[0_8px_18px_rgba(255,238,0,0.14)] hover:shadow-[0_12px_24px_rgba(255,238,0,0.18)]";
 const SELECT_CONTENT_CLASS =
@@ -386,6 +389,33 @@ const FIELD_COPY: Record<
     suffix: "hrs",
     kind: "number",
   },
+  weeksSinceLastBatchFailure: {
+    label: "Weeks Since Last Batch Failure",
+    description: "Weeks since the most recent lost, repeated, or materially degraded run in this operating scope.",
+    min: 0,
+    max: 156,
+    step: 1,
+    suffix: "weeks",
+    kind: "number",
+  },
+  failureCauseExposureScore: {
+    label: "Failure-Cause Exposure",
+    description: "Score 0-100 for exposure to equipment failure, contamination, operator error, material failure, specification misses, or cross-product contamination.",
+    min: 0,
+    max: 100,
+    step: 1,
+    suffix: "%",
+    kind: "range",
+  },
+  failedRunRecoveryHours: {
+    label: "Failed-Run Recovery Hours",
+    description: "Specialist hours required to investigate, recover, restart, or rebuild evidence after one failed or materially degraded run.",
+    min: 0,
+    max: 240,
+    step: 1,
+    suffix: "hrs",
+    kind: "number",
+  },
   techTransferPackageHours: {
     label: "Transfer Package Hours",
     description: "Average hours required to assemble one scale-up, site-transfer, or partner handoff package.",
@@ -399,7 +429,7 @@ const FIELD_COPY: Record<
     label: "Operator Ramp Days",
     description: "Typical calendar days before a new operator, scientist, or reviewer can work independently in this process.",
     min: 3,
-    max: 40,
+    max: 120,
     step: 1,
     suffix: "days",
     kind: "number",
@@ -448,6 +478,16 @@ const INPUT_SECTIONS = [
       "offlineDataDelayHours",
       "batchReviewHours",
       "deviationInvestigationHours",
+    ] as AdjustableFieldKey[],
+  },
+  {
+    id: "batch-failure",
+    title: "Batch Failure And Recovery",
+    description: "Use recent failure occurrence, cause exposure, and recovery effort to size failure-risk value explicitly.",
+    fields: [
+      "weeksSinceLastBatchFailure",
+      "failureCauseExposureScore",
+      "failedRunRecoveryHours",
       "techTransferPackageHours",
       "onboardingDays",
     ] as AdjustableFieldKey[],
@@ -507,6 +547,8 @@ const INPUT_SECTION_GUIDANCE: Record<InputSectionId, string> = {
     "These 0-100 scores define the digital plant maturity baseline across instruments, PAT, analyzer context, and operating evidence.",
   "manual-burden":
     "These time assumptions directly drive recoverable hours. Use recent run reviews or team estimates when exact data is not available.",
+  "batch-failure":
+    "These values separate ordinary review effort from failure occurrence and recovery. Use site records when available, or apply the survey benchmark as a planning starting point.",
 };
 
 const HERO_SUPPORT_BULLETS = [
@@ -548,6 +590,11 @@ const REPORT_CHANGE_ITEMS = [
     currentSuffix: "%",
   },
   {
+    label: "Failure Recovery Effort",
+    currentKey: "failureRecoveryHours",
+    currentSuffix: " hrs",
+  },
+  {
     label: "Transfer Package Effort",
     currentKey: "transferPackageHours",
     currentSuffix: " hrs",
@@ -567,16 +614,21 @@ function loadInitialInputs(): BioPilotAssessmentInputs {
     return DEFAULT_BIOPILOT_ASSESSMENT_INPUTS;
   }
 
-  const saved = window.localStorage.getItem(STORAGE_KEY);
+  const saved =
+    window.localStorage.getItem(STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_STORAGE_KEY);
   if (!saved) {
     return DEFAULT_BIOPILOT_ASSESSMENT_INPUTS;
   }
 
   try {
     const parsed = JSON.parse(saved) as Partial<BioPilotAssessmentInputs>;
-    return normalizeAssessmentInputs(parsed);
+    const migrated = normalizeAssessmentInputs(parsed);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    return migrated;
   } catch {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     return DEFAULT_BIOPILOT_ASSESSMENT_INPUTS;
   }
 }
@@ -625,7 +677,7 @@ function InputSectionCard({
             />
           ) : (
             <NumberField
-              key={field}
+              key={`${field}-${inputs[field]}`}
               field={field}
               value={inputs[field]}
               onChange={(next) => onPatch({ [field]: next })}
@@ -1010,16 +1062,26 @@ function NumberField({
   onChange: (next: number) => void;
 }) {
   const copy = FIELD_COPY[field];
+  const [draftValue, setDraftValue] = useState(String(value));
+  const [rangeError, setRangeError] = useState<string | null>(null);
+
   const handleValueChange = (rawValue: string) => {
     const normalizedValue = rawValue.replace(/[^\d.]/g, "");
+    setDraftValue(normalizedValue);
 
     if (!normalizedValue) {
-      onChange(copy.min);
+      setRangeError(`Enter a value from ${copy.min} to ${copy.max}${copy.suffix ? ` ${copy.suffix}` : ""}.`);
       return;
     }
 
     const parsedValue = Number(normalizedValue);
     if (!Number.isFinite(parsedValue)) {
+      setRangeError("Enter a valid number.");
+      return;
+    }
+
+    if (parsedValue < copy.min || parsedValue > copy.max) {
+      setRangeError(`Enter a value from ${copy.min} to ${copy.max}${copy.suffix ? ` ${copy.suffix}` : ""}.`);
       return;
     }
 
@@ -1027,7 +1089,8 @@ function NumberField({
     const roundedValue =
       decimals > 0 ? Number(parsedValue.toFixed(decimals)) : Math.round(parsedValue);
 
-    onChange(Math.min(copy.max, Math.max(copy.min, roundedValue)));
+    setRangeError(null);
+    onChange(roundedValue);
   };
 
   return (
@@ -1043,13 +1106,29 @@ function NumberField({
           className={INPUT_CLASS}
           type="text"
           inputMode={copy.step < 1 ? "decimal" : "numeric"}
-          value={String(value)}
+          aria-label={copy.label}
+          aria-invalid={Boolean(rangeError)}
+          value={draftValue}
           onChange={(event) => handleValueChange(event.target.value)}
+          onBlur={() => {
+            if (!draftValue || rangeError) {
+              setDraftValue(String(value));
+              setRangeError(null);
+            }
+          }}
         />
         {copy.suffix ? (
           <div className="min-w-fit rounded-full border border-[color:var(--border)] bg-[color:var(--surface-elevated)] px-3 py-2 text-base font-semibold text-[color:var(--muted-foreground)]">
             {copy.suffix}
           </div>
+        ) : null}
+      </div>
+      <div className="mt-3 flex flex-wrap justify-between gap-2 text-[13px] leading-5 text-[color:var(--muted-foreground)]">
+        <span>
+          Range: {copy.min}-{copy.max}{copy.suffix ? ` ${copy.suffix}` : ""}
+        </span>
+        {rangeError ? (
+          <span className="font-semibold text-[color:var(--destructive)]">{rangeError}</span>
         ) : null}
       </div>
     </div>
@@ -1431,7 +1510,10 @@ function InputsStep({
   isGeneratingReport,
 }: {
   inputs: BioPilotAssessmentInputs;
-  onPatch: (patch: Partial<BioPilotAssessmentInputs>) => void;
+  onPatch: (
+    patch: Partial<BioPilotAssessmentInputs>,
+    source?: AssessmentInputSource,
+  ) => void;
   onLoadSample: (sampleId: string) => void;
   onReset: () => void;
   completedInputSectionIds: InputSectionId[];
@@ -1484,11 +1566,46 @@ function InputsStep({
     setActiveInputSectionId(INPUT_SECTIONS[0].id);
   };
 
+  const handleApplySurveyBenchmark = () => {
+    setCompletionError(null);
+    onPatch(
+      {
+        weeksSinceLastBatchFailure:
+          BIOPLAN_2023_BATCH_FAILURE_BENCHMARK.weeksSinceLastBatchFailure,
+        failureCauseExposureScore:
+          BIOPLAN_2023_BATCH_FAILURE_BENCHMARK.failureCauseExposureScore,
+      },
+      "survey",
+    );
+    onInvalidateInputSection("batch-failure");
+    setActiveInputSectionId("batch-failure");
+    void scheduleElementScroll("input-progress-panel");
+  };
+
   const handleCompleteSection = (sectionId: InputSectionId) => {
     setCompletionError(null);
     onCompleteInputSection(sectionId);
 
+    const nextCompletedSectionSet = new Set([...completedInputSectionIds, sectionId]);
+    const firstIncompleteSection = INPUT_SECTIONS.find(
+      (section) => !nextCompletedSectionSet.has(section.id),
+    );
+    const firstIncompleteSectionIndex = firstIncompleteSection
+      ? INPUT_SECTIONS.findIndex((section) => section.id === firstIncompleteSection.id)
+      : -1;
     const nextSection = INPUT_SECTIONS[activeInputSectionIndex + 1];
+
+    if (
+      firstIncompleteSection &&
+      (firstIncompleteSectionIndex < activeInputSectionIndex || !nextSection)
+    ) {
+      setCompletionError(
+        `${firstIncompleteSection.title} still needs confirmation before the report can be generated.`,
+      );
+      setActiveInputSectionId(firstIncompleteSection.id);
+      void scheduleElementScroll("input-progress-panel");
+      return;
+    }
 
     if (nextSection) {
       setActiveInputSectionId(nextSection.id);
@@ -1541,12 +1658,12 @@ function InputsStep({
                   Review the selected process family or go back to choose a different one.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="mt-4 grid gap-5 p-0 lg:grid-cols-[minmax(280px,320px)_minmax(0,1fr)] lg:items-stretch">
-                <div className="grid min-h-[360px] content-between overflow-hidden rounded-[26px] border border-[rgba(0,95,189,0.18)] bg-[linear-gradient(180deg,rgba(228,241,255,0.95),rgba(216,233,252,0.96))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.92)]">
+              <CardContent className="mt-4 grid gap-5 p-0 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] lg:items-stretch">
+                <div className="flex h-full min-h-[300px] flex-col overflow-hidden rounded-[26px] border border-[rgba(0,95,189,0.18)] bg-[linear-gradient(180deg,rgba(228,241,255,0.95),rgba(216,233,252,0.96))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.92)]">
                   <div className="rounded-[24px] border border-[rgba(0,49,108,0.08)] bg-[linear-gradient(180deg,rgba(244,249,253,0.96),rgba(233,243,251,0.96))] p-3">
                     <ProcessFamilyIllustration profileId={profile.id} variant="tile" />
                   </div>
-                  <div className="mt-5 flex items-end justify-between gap-4">
+                  <div className="mt-4 flex items-end justify-between gap-4">
                     <div className="min-w-0">
                       <p className="text-[12px] font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
                         {PROCESS_FAMILY_TAGS[profile.id]}
@@ -1558,7 +1675,7 @@ function InputsStep({
                     <span className="mb-1 size-3 shrink-0 rounded-full bg-[color:var(--brand-blue)]" />
                   </div>
                 </div>
-                <div className="grid min-w-0 gap-4">
+                <div className="flex h-full min-w-0 flex-col gap-4">
                   <div>
                     <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                       Process Family
@@ -1574,13 +1691,13 @@ function InputsStep({
                     {profile.focusAreas.slice(0, 3).map((focus) => (
                       <span
                         key={focus}
-                        className="rounded-full border border-[rgba(11,79,155,0.12)] bg-[rgba(0,79,155,0.05)] px-3 py-1.5 text-sm font-semibold text-[color:var(--brand-blue)]"
+                        className="inline-flex min-h-[38px] items-center rounded-full border border-[rgba(11,79,155,0.12)] bg-[rgba(0,79,155,0.05)] px-3.5 py-0 text-sm font-semibold leading-tight text-[color:var(--brand-blue)]"
                       >
                         {focus}
                       </span>
                     ))}
                   </div>
-                  <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={onBack}>
+                  <Button type="button" variant="outline" className={cn(SECONDARY_BUTTON, "mt-auto w-full")} onClick={onBack}>
                     <ChevronLeft className="size-4" />
                     Change Process Family
                   </Button>
@@ -1594,7 +1711,7 @@ function InputsStep({
                   Scenario Setup
                 </CardTitle>
                 <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                  Set the lifecycle stage, or apply a sample scenario before editing the numbers.
+                  Set the lifecycle stage, apply a sample scenario, or use a neutral survey benchmark for batch-failure fields.
                 </CardDescription>
               </CardHeader>
               <CardContent className="mt-4 grid gap-4 p-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
@@ -1678,6 +1795,19 @@ function InputsStep({
                     </Button>
                   </div>
                 </div>
+                <div className={cn(SOFT_CARD, "grid gap-3 p-4 lg:col-span-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center")}>
+                  <div>
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                      Neutral Batch-Failure Benchmark
+                    </p>
+                    <p className="mt-2 text-base leading-6 text-[color:var(--muted-foreground)]">
+                      Apply {BIOPLAN_2023_BATCH_FAILURE_BENCHMARK.shortLabel} values for weeks since last batch failure and failure-cause exposure when site records are not available. Recovery hours remain user-entered because they vary by process.
+                    </p>
+                  </div>
+                  <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={handleApplySurveyBenchmark}>
+                    Apply Survey Benchmark
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -1714,7 +1844,7 @@ function InputsStep({
                 onValueChange={handleInputSectionChange}
                 className="gap-5"
               >
-                <TabsList className="grid !h-auto w-full grid-cols-1 gap-2 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-2 md:grid-cols-3">
+                <TabsList className="grid !h-auto w-full grid-cols-1 gap-2 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-2 md:grid-cols-2 2xl:grid-cols-4">
                   {INPUT_SECTIONS.map((section, index) => {
                     const isComplete = completedSectionSet.has(section.id);
                     const isActiveTab = section.id === activeInputSectionId;
@@ -1724,7 +1854,7 @@ function InputsStep({
                         key={section.id}
                         value={section.id}
                         aria-label={`${section.title}${isComplete ? " Completed" : ""}`}
-                        className="h-auto justify-start rounded-[18px] border border-transparent px-4 py-3 text-left text-base font-semibold text-[color:var(--muted-foreground)] after:hidden data-active:border-[rgba(0,79,155,0.24)] data-active:bg-[color:var(--brand-indigo)] data-active:text-white data-active:shadow-[0_10px_24px_rgba(11,28,59,0.1)]"
+                        className="group/input-tab min-h-[64px] min-w-0 justify-start rounded-[18px] border border-transparent px-3 py-3 text-left text-[0.95rem] font-semibold leading-tight whitespace-normal text-[color:var(--muted-foreground)] after:hidden hover:text-[color:var(--foreground)] data-active:border-[rgba(0,79,155,0.24)] data-active:bg-[color:var(--brand-indigo)] data-active:!text-white data-active:shadow-[0_10px_24px_rgba(11,28,59,0.1)] data-active:hover:!text-white"
                       >
                         <span
                           className={cn(
@@ -1742,7 +1872,16 @@ function InputsStep({
                             index + 1
                           )}
                         </span>
-                        <span>{section.title}</span>
+                        <span
+                          className={cn(
+                            "min-w-0 text-balance transition-colors",
+                            isActiveTab
+                              ? "text-white group-hover/input-tab:text-white"
+                              : "text-[color:var(--muted-foreground)] group-hover/input-tab:text-[color:var(--foreground)]",
+                          )}
+                        >
+                          {section.title}
+                        </span>
                       </TabsTrigger>
                     );
                   })}
@@ -1768,8 +1907,7 @@ function InputsStep({
                       type="button"
                       variant="outline"
                       className={SECONDARY_BUTTON}
-                      onClick={(event) => {
-                        event.currentTarget.blur();
+                      onClick={() => {
                         const previousSection =
                           INPUT_SECTIONS[Math.max(activeInputSectionIndex - 1, 0)];
                         setCompletionError(null);
@@ -1787,8 +1925,7 @@ function InputsStep({
                           ? SECONDARY_BUTTON
                           : PRIMARY_BUTTON
                       }
-                      onClick={(event) => {
-                        event.currentTarget.blur();
+                      onClick={() => {
                         handleCompleteSection(activeInputSection.id);
                       }}
                     >
@@ -1883,6 +2020,7 @@ function ReportStep({
   const maxLeverValue = results.valueLevers[0]?.annualValue ?? 0;
   const topValueLever = results.valueLevers[0];
   const topPriority = results.plays[0];
+  const usesSurveyBenchmark = results.evidenceConfidence.surveyFields > 0;
 
   const formatChangeValue = (
     key: (typeof REPORT_CHANGE_ITEMS)[number]["currentKey"],
@@ -1968,14 +2106,34 @@ function ReportStep({
       </CardHeader>
       <CardContent className="mt-5 grid gap-3 p-0">
         {results.assumptionTransparency.items.map((item) => (
-          <details key={item.label} className={cn(SOFT_CARD, "group p-4")}>
-            <summary className="cursor-pointer text-base font-semibold text-[color:var(--foreground)]">
-              {item.label}
+          <details
+            key={item.label}
+            className={cn(
+              SOFT_CARD,
+              "group/calculation overflow-hidden [&>summary::-webkit-details-marker]:hidden",
+            )}
+          >
+            <summary className="flex min-h-[58px] cursor-pointer list-none items-center gap-3 px-4 py-3 text-base font-semibold text-[color:var(--foreground)] transition-colors hover:bg-[color:var(--surface-elevated)] hover:text-[color:var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]">
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[rgba(0,79,155,0.08)] text-[color:var(--brand-blue)]">
+                <ChevronRight className="size-4 transition-transform group-open/calculation:rotate-90" />
+              </span>
+              <span>{item.label}</span>
             </summary>
-            <div className="mt-3 grid gap-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
-              <p>{item.basis}</p>
-              <p>{item.formula}</p>
-              <p>{item.sensitivity}</p>
+            <div className="grid gap-3 border-t border-[color:var(--border)] bg-[rgba(255,255,255,0.56)] p-4 text-sm leading-6 text-[color:var(--muted-foreground)] md:grid-cols-3">
+              {[
+                ["Basis", item.basis],
+                ["Formula", item.formula],
+                ["Sensitivity", item.sensitivity],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-[18px] border border-[color:var(--border)] bg-[color:var(--surface-3)] p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--brand-blue)]">
+                    {label}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
+                    {value}
+                  </p>
+                </div>
+              ))}
             </div>
           </details>
         ))}
@@ -2007,17 +2165,25 @@ function ReportStep({
         <div className="grid gap-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <ContextMetric label="Lifecycle Stage" value={results.stage.label} />
+            <ContextMetric label="Model Version" value={results.modelVersion ?? BIOPILOT_MODEL_VERSION} />
             <ContextMetric label="Active Programs" value={formatNumber(inputs.activePrograms)} />
             <ContextMetric label="Runs Per Year" value={formatNumber(inputs.runsPerYear)} />
             <ContextMetric label="Sites Or Partners" value={formatNumber(inputs.sites)} />
             <ContextMetric label="Transfer Events" value={formatNumber(inputs.transferEventsPerYear)} />
             <ContextMetric label="Vendor Platforms" value={formatNumber(inputs.vendorPlatforms)} />
+            <ContextMetric label="Last Batch Failure" value={`${formatNumber(inputs.weeksSinceLastBatchFailure)} weeks`} />
+            <ContextMetric label="Failure-Cause Exposure" value={formatPercent(inputs.failureCauseExposureScore)} />
+            <ContextMetric label="Recovery Per Failure" value={`${formatNumber(inputs.failedRunRecoveryHours)} hrs`} />
           </div>
           <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
             <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
-            <AlertTitle>Use This Estimate As A Planning Tool</AlertTitle>
+            <AlertTitle>
+              {usesSurveyBenchmark ? "Survey Benchmark Used" : "Use This Estimate As A Planning Tool"}
+            </AlertTitle>
             <AlertDescription>
-              Confirm the most important operating numbers before relying on this report for formal planning.
+              {usesSurveyBenchmark
+                ? `${BIOPLAN_2023_BATCH_FAILURE_BENCHMARK.shortLabel} supported one or more batch-failure assumptions. Replace benchmark values with site evidence when available.`
+                : "Confirm the most important operating numbers before relying on this report for formal planning."}
             </AlertDescription>
           </Alert>
         </div>
@@ -2617,6 +2783,7 @@ export function BioPilotFitAssessmentApp() {
         completedSectionIds: completedInputSectionIds,
         inputs: normalizedInputs,
         evidenceMeta,
+        modelVersion: BIOPILOT_MODEL_VERSION,
       };
     },
     [
@@ -2824,6 +2991,7 @@ export function BioPilotFitAssessmentApp() {
           sessionMode,
           inputs: normalizedInputs,
           evidenceMeta,
+          modelVersion: BIOPILOT_MODEL_VERSION,
         }),
       });
       const payload = (await response.json().catch(() => null)) as

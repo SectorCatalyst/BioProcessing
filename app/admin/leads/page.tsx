@@ -49,6 +49,7 @@ interface AssessmentAdminEntry {
   paybackMonths: number;
   digitalCoverage: number;
   manualBurdenIndex: number;
+  modelVersion: string;
   digitalPlantMaturityScore: number | null;
   digitalPlantMaturityLevel: number | null;
   evidenceConfidenceScore: number | null;
@@ -79,6 +80,7 @@ interface AssessmentProgressAdminEntry {
   fitBand: string;
   fitScore: number;
   annualValuePotential: number;
+  modelVersion: string;
   evidenceConfidenceScore: number | null;
   evidenceConfidenceBand: string | null;
   topPriority: string;
@@ -199,6 +201,7 @@ const exportAssessmentCsv = (entries: AssessmentAdminEntry[]) => {
       "payback_months",
       "digital_coverage",
       "manual_burden_index",
+      "model_version",
       "dpmm_score",
       "dpmm_level",
       "evidence_confidence_score",
@@ -228,6 +231,7 @@ const exportAssessmentCsv = (entries: AssessmentAdminEntry[]) => {
       String(entry.paybackMonths),
       String(entry.digitalCoverage),
       String(entry.manualBurdenIndex),
+      entry.modelVersion,
       entry.digitalPlantMaturityScore === null ? "" : String(entry.digitalPlantMaturityScore),
       entry.digitalPlantMaturityLevel === null ? "" : String(entry.digitalPlantMaturityLevel),
       entry.evidenceConfidenceScore === null ? "" : String(entry.evidenceConfidenceScore),
@@ -262,6 +266,7 @@ const exportProgressCsv = (entries: AssessmentProgressAdminEntry[]) => {
       "fit_band",
       "fit_score",
       "annual_value",
+      "model_version",
       "evidence_confidence_score",
       "evidence_confidence_band",
       "top_priority",
@@ -288,6 +293,7 @@ const exportProgressCsv = (entries: AssessmentProgressAdminEntry[]) => {
       entry.fitBand,
       String(entry.fitScore),
       String(entry.annualValuePotential),
+      entry.modelVersion,
       entry.evidenceConfidenceScore === null ? "" : String(entry.evidenceConfidenceScore),
       entry.evidenceConfidenceBand ?? "",
       entry.topPriority,
@@ -916,7 +922,7 @@ export default function LeadAdminPage() {
                   <p className="mt-2 text-base leading-7 text-[color:var(--muted-foreground)]">
                     {selectedProgress.sessionMode === "example" ? "Example session" : "Actual session"} stopped at{" "}
                     {selectedProgress.currentStep.replace(/_/g, " ")} with{" "}
-                    {selectedProgress.completedSections.length}/3 input sections confirmed.
+                    {selectedProgress.completedSections.length}/4 input sections confirmed.
                   </p>
                   <p className="mt-3 text-base leading-7 text-[color:var(--foreground)]">
                     {selectedProgress.generatedReport?.executiveSummary ??
@@ -932,6 +938,7 @@ export default function LeadAdminPage() {
                         selectedProgress.processProfileId,
                     ],
                     ["Fit", `${selectedProgress.fitBand} (${percentFormatter.format(selectedProgress.fitScore)}%)`],
+                    ["Model", selectedProgress.modelVersion],
                     ["Annual value", currencyFormatter.format(selectedProgress.annualValuePotential)],
                     ["Top priority", selectedProgress.topPriority || "Not available"],
                   ].map(([label, value]) => (
@@ -964,6 +971,7 @@ export default function LeadAdminPage() {
                         "Process",
                         "Fit",
                         "Annual Value",
+                        "Model",
                         "Last Activity",
                         "Actions",
                       ].map((label) => (
@@ -1001,7 +1009,7 @@ export default function LeadAdminPage() {
                             {entry.status.replace(/_/g, " ")}
                           </td>
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
-                            {entry.completedSections.length}/3
+                            {entry.completedSections.length}/4
                           </td>
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
                             {PROCESS_PROFILE_MAP[entry.processProfileId]?.label ?? entry.processProfileId}
@@ -1017,6 +1025,9 @@ export default function LeadAdminPage() {
                           </td>
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
                             {currencyFormatter.format(entry.annualValuePotential)}
+                          </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.modelVersion}
                           </td>
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--muted-foreground)]">
                             {formatDateTime(entry.updatedAt)}
@@ -1046,7 +1057,7 @@ export default function LeadAdminPage() {
                     ) : (
                       <tr>
                         <td
-                          colSpan={10}
+                          colSpan={11}
                           className="px-4 py-10 text-center text-base text-[color:var(--muted-foreground)]"
                         >
                           {progressEntries.length
@@ -1090,7 +1101,7 @@ export default function LeadAdminPage() {
                 <table className="min-w-full border-collapse">
                   <thead className="bg-[color:var(--surface-elevated)]">
                     <tr className="text-left">
-                      {["Contact", "Process", "Stage", "Fit", "DPMM", "Evidence", "Annual Value", "ROI", "Priority", "Captured", "Actions"].map((label) => (
+                      {["Contact", "Process", "Stage", "Fit", "DPMM", "Evidence", "Annual Value", "ROI", "Model", "Priority", "Captured", "Actions"].map((label) => (
                         <th
                           key={label}
                           className="border-b border-[color:var(--border)] px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]"
@@ -1152,6 +1163,9 @@ export default function LeadAdminPage() {
                               {entry.paybackMonths.toFixed(1)} mo payback
                             </div>
                           </td>
+                          <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                            {entry.modelVersion}
+                          </td>
                           <td className="max-w-[260px] px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
                             {entry.topPriority || "Not captured"}
                           </td>
@@ -1174,7 +1188,7 @@ export default function LeadAdminPage() {
                     ) : (
                       <tr>
                         <td
-                          colSpan={11}
+                          colSpan={12}
                           className="px-4 py-10 text-center text-base text-[color:var(--muted-foreground)]"
                         >
                           {assessments.length

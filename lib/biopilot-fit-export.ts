@@ -2,7 +2,11 @@
 
 import type { jsPDF as JsPdfType } from "jspdf";
 
-import type { BioPilotAssessmentInputs, BioPilotAssessmentResults } from "@/lib/biopilot-fit-assessment";
+import {
+  BIOPILOT_MODEL_VERSION,
+  type BioPilotAssessmentInputs,
+  type BioPilotAssessmentResults,
+} from "@/lib/biopilot-fit-assessment";
 import type { LeadCaptureRecord } from "@/lib/model";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
@@ -387,6 +391,7 @@ export async function exportBioPilotAssessmentPdf(params: {
       ["Work Email", leadCapture?.workEmail ?? "Not Captured"],
       ["Process Family", results.profile.label],
       ["Lifecycle Stage", results.stage.label],
+      ["Model Version", results.modelVersion ?? BIOPILOT_MODEL_VERSION],
       ["Digital Plant Maturity", `Level ${results.digitalPlantMaturity.level}: ${results.digitalPlantMaturity.label}`],
       ["Decision Days", `${formatDecimal(results.annualDecisionDaysRecovered)} days / year`],
     ],
@@ -414,6 +419,9 @@ export async function exportBioPilotAssessmentPdf(params: {
       ["Sites Or Partners", formatNumber(inputs.sites)],
       ["Transfer Events", formatNumber(inputs.transferEventsPerYear)],
       ["Vendor Platforms", formatNumber(inputs.vendorPlatforms)],
+      ["Weeks Since Last Batch Failure", `${formatNumber(inputs.weeksSinceLastBatchFailure)} weeks`],
+      ["Failure-Cause Exposure", formatPercent(inputs.failureCauseExposureScore)],
+      ["Failed-Run Recovery Hours", `${formatNumber(inputs.failedRunRecoveryHours)} hrs`],
       ["Planned BioPilot Investment", formatCurrency(inputs.plannedProgramInvestment)],
     ],
     columnStyles: {
@@ -487,6 +495,11 @@ export async function exportBioPilotAssessmentPdf(params: {
         "Run Success Rate",
         formatPercent(results.currentState.runSuccessRate),
         formatPercent(results.bioPilotState.runSuccessRate),
+      ],
+      [
+        "Failure Recovery Effort",
+        `${formatDecimal(results.currentState.failureRecoveryHours)} hrs`,
+        `${formatDecimal(results.bioPilotState.failureRecoveryHours)} hrs`,
       ],
       [
         "Transfer Package Effort",
