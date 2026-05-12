@@ -42,6 +42,9 @@ export interface AssessmentSubmissionRecord {
   topPriority: string;
   salesFollowUp: string;
   executiveSummary: string;
+  evidenceMeta: AssessmentEvidenceMeta;
+  submittedInputs: BioPilotAssessmentInputs;
+  generatedReport: BioPilotAssessmentResults;
   createdAt: string;
   updatedAt: string;
 }
@@ -82,6 +85,8 @@ export interface AssessmentProgressRecord {
   evidenceConfidenceScore: number | null;
   evidenceConfidenceBand: string | null;
   topPriority: string;
+  evidenceMeta: AssessmentEvidenceMeta;
+  submittedInputs: BioPilotAssessmentInputs;
   generatedReport: BioPilotAssessmentResults;
   updatedAt: string;
   createdAt: string;
@@ -453,6 +458,8 @@ export const mapAssessmentAdminRow = (
     digital_coverage: number;
     manual_burden_index: number;
     model_version?: string | null;
+    evidence_meta: AssessmentEvidenceMeta;
+    submitted_inputs: BioPilotAssessmentInputs;
     generated_report: BioPilotAssessmentResults;
     created_at: string;
     updated_at: string;
@@ -484,6 +491,9 @@ export const mapAssessmentAdminRow = (
   topPriority: row.generated_report?.salesFollowUp?.priority ?? row.generated_report?.plays?.[0]?.title ?? "",
   salesFollowUp: row.generated_report?.salesFollowUp?.recommendedAction ?? "",
   executiveSummary: row.generated_report?.executiveSummary ?? "",
+  evidenceMeta: row.evidence_meta ?? {},
+  submittedInputs: row.submitted_inputs,
+  generatedReport: row.generated_report,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -621,6 +631,8 @@ export const mapAssessmentProgressAdminRow = (row: {
   fit_score: number;
   annual_value_potential: number;
   model_version?: string | null;
+  evidence_meta: AssessmentEvidenceMeta;
+  submitted_inputs: BioPilotAssessmentInputs;
   generated_report: BioPilotAssessmentResults;
   updated_at: string;
   created_at: string;
@@ -649,6 +661,8 @@ export const mapAssessmentProgressAdminRow = (row: {
   evidenceConfidenceScore: row.generated_report?.evidenceConfidence?.score ?? null,
   evidenceConfidenceBand: row.generated_report?.evidenceConfidence?.band ?? null,
   topPriority: row.generated_report?.salesFollowUp?.priority ?? row.generated_report?.plays?.[0]?.title ?? "",
+  evidenceMeta: row.evidence_meta ?? {},
+  submittedInputs: row.submitted_inputs,
   generatedReport: row.generated_report,
   updatedAt: row.updated_at,
   createdAt: row.created_at,

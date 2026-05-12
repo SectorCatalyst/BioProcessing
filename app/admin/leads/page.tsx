@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, RefreshCw, Search, Shield, Trash2 } from "lucide-react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { Download, Eye, RefreshCw, Search, Shield, Trash2, X } from "lucide-react";
 
 import {
   LIFECYCLE_STAGE_MAP,
   PROCESS_PROFILE_MAP,
+  type AssessmentEvidenceMeta,
+  type BioPilotAssessmentInputs,
   type BioPilotAssessmentResults,
   type ProcessProfileId,
   type LifecycleStageId,
@@ -57,6 +59,9 @@ interface AssessmentAdminEntry {
   topPriority: string;
   salesFollowUp: string;
   executiveSummary: string;
+  evidenceMeta: AssessmentEvidenceMeta;
+  submittedInputs: BioPilotAssessmentInputs;
+  generatedReport: BioPilotAssessmentResults;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,6 +89,8 @@ interface AssessmentProgressAdminEntry {
   evidenceConfidenceScore: number | null;
   evidenceConfidenceBand: string | null;
   topPriority: string;
+  evidenceMeta: AssessmentEvidenceMeta;
+  submittedInputs: BioPilotAssessmentInputs;
   generatedReport: BioPilotAssessmentResults;
   updatedAt: string;
   createdAt: string;
@@ -101,6 +108,17 @@ interface FeedbackAdminEntry {
   page: string;
   createdAt: string;
 }
+
+type AdminRecordDetail =
+  | { kind: "lead"; entry: LeadAdminEntry }
+  | { kind: "progress"; entry: AssessmentProgressAdminEntry }
+  | { kind: "assessment"; entry: AssessmentAdminEntry }
+  | { kind: "feedback"; entry: FeedbackAdminEntry };
+
+type AdminRecordSelection = {
+  kind: AdminRecordDetail["kind"];
+  id: string;
+};
 
 const PANEL_CARD =
   "glass-edge relative rounded-[28px] border border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(246,249,252,0.98))] backdrop-blur-xl";
@@ -123,11 +141,189 @@ const percentFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
+const numberFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 1,
+});
+
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+
+const INPUT_LABELS: Record<keyof BioPilotAssessmentInputs, string> = {
+  processProfileId: "Process family",
+  lifecycleStageId: "Lifecycle stage",
+  activePrograms: "Active programs",
+  runsPerYear: "Runs per year",
+  sites: "Sites",
+  transferEventsPerYear: "Transfer events per year",
+  vendorPlatforms: "Vendor platforms",
+  blendedHourlyRate: "Blended hourly rate",
+  costPerFailedRun: "Cost per failed run",
+  valuePerDayAcceleration: "Value per day accelerated",
+  plannedProgramInvestment: "Planned program investment",
+  bioreactorConnectivity: "Bioreactor connectivity",
+  sensorCoverage: "Sensor coverage",
+  patCoverage: "PAT coverage",
+  analyzerConnectivity: "Analyzer connectivity",
+  downstreamVisibility: "Downstream visibility",
+  dataContextualization: "Data contextualization",
+  sopAutomation: "SOP automation",
+  reviewByException: "Review by exception",
+  crossSiteCollaboration: "Cross-site collaboration",
+  manualTranscriptionShare: "Manual transcription share",
+  offlineDataDelayHours: "Offline data delay",
+  batchReviewHours: "Batch review",
+  deviationInvestigationHours: "Deviation investigation",
+  weeksSinceLastBatchFailure: "Weeks since last batch failure",
+  failureCauseExposureScore: "Failure-cause exposure",
+  failedRunRecoveryHours: "Failed-run recovery effort",
+  techTransferPackageHours: "Tech-transfer package effort",
+  onboardingDays: "Operator ramp days",
+};
+
+const INPUT_GROUPS: Array<{
+  title: string;
+  keys: Array<keyof BioPilotAssessmentInputs>;
+}> = [
+  {
+    title: "Operating frame",
+    keys: [
+      "processProfileId",
+      "lifecycleStageId",
+      "activePrograms",
+      "runsPerYear",
+      "sites",
+      "transferEventsPerYear",
+      "vendorPlatforms",
+    ],
+  },
+  {
+    title: "Value assumptions",
+    keys: [
+      "blendedHourlyRate",
+      "costPerFailedRun",
+      "valuePerDayAcceleration",
+      "plannedProgramInvestment",
+    ],
+  },
+  {
+    title: "Connected stack",
+    keys: [
+      "bioreactorConnectivity",
+      "sensorCoverage",
+      "patCoverage",
+      "analyzerConnectivity",
+      "downstreamVisibility",
+      "dataContextualization",
+      "sopAutomation",
+      "reviewByException",
+      "crossSiteCollaboration",
+    ],
+  },
+  {
+    title: "Review burden",
+    keys: [
+      "manualTranscriptionShare",
+      "offlineDataDelayHours",
+      "batchReviewHours",
+      "deviationInvestigationHours",
+      "techTransferPackageHours",
+      "onboardingDays",
+    ],
+  },
+  {
+    title: "Batch failure and recovery",
+    keys: [
+      "weeksSinceLastBatchFailure",
+      "failureCauseExposureScore",
+      "failedRunRecoveryHours",
+    ],
+  },
+];
+
+const CURRENCY_INPUT_KEYS = new Set<keyof BioPilotAssessmentInputs>([
+  "blendedHourlyRate",
+  "costPerFailedRun",
+  "valuePerDayAcceleration",
+  "plannedProgramInvestment",
+]);
+
+const PERCENT_INPUT_KEYS = new Set<keyof BioPilotAssessmentInputs>([
+  "bioreactorConnectivity",
+  "sensorCoverage",
+  "patCoverage",
+  "analyzerConnectivity",
+  "downstreamVisibility",
+  "dataContextualization",
+  "sopAutomation",
+  "reviewByException",
+  "crossSiteCollaboration",
+  "manualTranscriptionShare",
+  "failureCauseExposureScore",
+]);
+
+const HOUR_INPUT_KEYS = new Set<keyof BioPilotAssessmentInputs>([
+  "offlineDataDelayHours",
+  "batchReviewHours",
+  "deviationInvestigationHours",
+  "failedRunRecoveryHours",
+  "techTransferPackageHours",
+]);
+
+const humanizeToken = (value: string) =>
+  value
+    .replace(/[_-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const formatInputValue = (
+  key: keyof BioPilotAssessmentInputs,
+  value: BioPilotAssessmentInputs[keyof BioPilotAssessmentInputs],
+) => {
+  if (key === "processProfileId") {
+    return PROCESS_PROFILE_MAP[value as ProcessProfileId]?.label ?? String(value);
+  }
+
+  if (key === "lifecycleStageId") {
+    return LIFECYCLE_STAGE_MAP[value as LifecycleStageId]?.label ?? String(value);
+  }
+
+  if (typeof value !== "number") {
+    return String(value ?? "Not captured");
+  }
+
+  if (key === "blendedHourlyRate") {
+    return `${currencyFormatter.format(value)}/hr`;
+  }
+
+  if (CURRENCY_INPUT_KEYS.has(key)) {
+    return currencyFormatter.format(value);
+  }
+
+  if (PERCENT_INPUT_KEYS.has(key)) {
+    return `${numberFormatter.format(value)}%`;
+  }
+
+  if (HOUR_INPUT_KEYS.has(key)) {
+    return `${numberFormatter.format(value)} hours`;
+  }
+
+  if (key === "onboardingDays") {
+    return `${numberFormatter.format(value)} days`;
+  }
+
+  if (key === "weeksSinceLastBatchFailure") {
+    return `${numberFormatter.format(value)} weeks`;
+  }
+
+  return numberFormatter.format(value);
+};
+
+const getCompletedSectionsLabel = (sections: string[] = []) =>
+  sections.length ? sections.map(humanizeToken).join(", ") : "None confirmed";
 
 const exportCsv = (filename: string, rows: string[][]) => {
   const csv = rows
@@ -333,6 +529,376 @@ const exportFeedbackCsv = (entries: FeedbackAdminEntry[]) => {
   ]);
 };
 
+function DetailSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="grid gap-3">
+      <div>
+        <h3 className="font-heading text-[1.28rem] tracking-[-0.025em] text-[color:var(--foreground)]">
+          {title}
+        </h3>
+        {description ? (
+          <p className="mt-1 text-sm leading-6 text-[color:var(--muted-foreground)]">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function DetailGrid({ items }: { items: Array<{ label: string; value: string }> }) {
+  return (
+    <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {items.map((item) => (
+        <div
+          key={`${item.label}-${item.value}`}
+          className="rounded-[16px] border border-[color:var(--border)] bg-[color:var(--surface-3)] px-4 py-3"
+        >
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+            {item.label}
+          </dt>
+          <dd className="mt-1 break-words text-sm font-semibold leading-6 text-[color:var(--foreground)]">
+            {item.value || "Not captured"}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function DetailTextBlock({ children }: { children: ReactNode }) {
+  return (
+    <div className="whitespace-pre-wrap break-words rounded-[18px] border border-[color:var(--border)] bg-[color:var(--surface-3)] px-4 py-3 text-base leading-7 text-[color:var(--foreground)]">
+      {children}
+    </div>
+  );
+}
+
+function SubmittedInputsView({ inputs }: { inputs: BioPilotAssessmentInputs }) {
+  return (
+    <div className="grid gap-5">
+      {INPUT_GROUPS.map((group) => (
+        <div key={group.title} className="grid gap-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
+            {group.title}
+          </p>
+          <DetailGrid
+            items={group.keys.map((key) => ({
+              label: INPUT_LABELS[key],
+              value: formatInputValue(key, inputs[key]),
+            }))}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReportResultDetails({ results }: { results: BioPilotAssessmentResults }) {
+  return (
+    <div className="grid gap-5">
+      <DetailSection title="Executive summary">
+        <DetailTextBlock>{results.executiveSummary || "No executive summary captured."}</DetailTextBlock>
+      </DetailSection>
+
+      <DetailSection title="Recommended follow-up">
+        <DetailGrid
+          items={[
+            ["Priority", results.salesFollowUp?.priority ?? "Not captured"],
+            ["Recommended action", results.salesFollowUp?.recommendedAction ?? "Not captured"],
+            ["Proposal use", results.salesFollowUp?.proposalUse ?? "Not captured"],
+            [
+              "Discovery focus",
+              results.salesFollowUp?.discoveryFocus?.length
+                ? results.salesFollowUp.discoveryFocus.join("; ")
+                : "Not captured",
+            ],
+          ].map(([label, value]) => ({ label, value }))}
+        />
+      </DetailSection>
+
+      <DetailSection title="Value levers">
+        <div className="grid gap-3 lg:grid-cols-3">
+          {results.valueLevers?.length ? (
+            results.valueLevers.map((lever) => (
+              <div
+                key={lever.id}
+                className="rounded-[18px] border border-[color:var(--border)] bg-[color:var(--surface-3)] px-4 py-3"
+              >
+                <p className="text-sm font-semibold text-[color:var(--foreground)]">{lever.label}</p>
+                <p className="mt-1 font-heading text-[1.45rem] tracking-[-0.035em] text-[color:var(--foreground)]">
+                  {currencyFormatter.format(lever.annualValue)}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
+                  {lever.summary}
+                </p>
+              </div>
+            ))
+          ) : (
+            <DetailTextBlock>No value levers captured.</DetailTextBlock>
+          )}
+        </div>
+      </DetailSection>
+
+      <DetailSection title="Buying signals">
+        <div className="grid gap-3 lg:grid-cols-2">
+          {results.buyingSignals?.length ? (
+            results.buyingSignals.map((signal) => (
+              <div
+                key={signal.id}
+                className="rounded-[18px] border border-[color:var(--border)] bg-[color:var(--surface-3)] px-4 py-3"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                  {signal.severity}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[color:var(--foreground)]">
+                  {signal.title}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
+                  {signal.summary}
+                </p>
+              </div>
+            ))
+          ) : (
+            <DetailTextBlock>No buying signals captured.</DetailTextBlock>
+          )}
+        </div>
+      </DetailSection>
+    </div>
+  );
+}
+
+function AdminRecordDetailPanel({
+  detail,
+  onClose,
+}: {
+  detail: AdminRecordDetail;
+  onClose: () => void;
+}) {
+  const title =
+    detail.kind === "lead"
+      ? `${detail.entry.firstName} ${detail.entry.lastName}`
+      : detail.kind === "feedback"
+        ? detail.entry.workEmail || "Feedback without email"
+        : `${detail.entry.firstName} ${detail.entry.lastName}`;
+  const eyebrow =
+    detail.kind === "lead"
+      ? "Lead record"
+      : detail.kind === "assessment"
+        ? "Assessment submission"
+        : detail.kind === "progress"
+          ? "Saved progress"
+          : "Internal feedback";
+
+  return (
+    <Card id="record-detail-panel" className={cn(PANEL_CARD, "scroll-mt-6 p-5")}>
+      <CardHeader className="p-0">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+              {eyebrow}
+            </p>
+            <CardTitle className="mt-2 font-heading text-[1.75rem] tracking-[-0.035em]">
+              {title}
+            </CardTitle>
+          </div>
+          <Button variant="outline" className={SECONDARY_BUTTON} onClick={onClose}>
+            <X className="size-4" />
+            Close
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="mt-5 grid gap-6 p-0">
+        {detail.kind === "lead" ? (
+          <DetailSection title="Contact and consent">
+            <DetailGrid
+              items={[
+                ["Lead ID", detail.entry.id],
+                ["Name", `${detail.entry.firstName} ${detail.entry.lastName}`],
+                ["Work email", detail.entry.workEmail],
+                ["Company", detail.entry.company],
+                ["Job title", detail.entry.jobTitle],
+                ["Country or region", detail.entry.countryRegion],
+                ["Consent to contact", detail.entry.consentToContact ? "Yes" : "No"],
+                ["Session mode", humanizeToken(detail.entry.sessionMode ?? "actual")],
+                ["Source", detail.entry.source],
+                ["Captured", formatDateTime(detail.entry.createdAt)],
+                ["Updated", formatDateTime(detail.entry.updatedAt)],
+              ].map(([label, value]) => ({ label, value }))}
+            />
+          </DetailSection>
+        ) : null}
+
+        {detail.kind === "assessment" ? (
+          <>
+            <DetailSection title="Submitted report">
+              <DetailGrid
+                items={[
+                  ["Assessment ID", detail.entry.id],
+                  ["Lead ID", detail.entry.leadCaptureId ?? "Not linked"],
+                  ["Session mode", humanizeToken(detail.entry.sessionMode)],
+                  ["Name", `${detail.entry.firstName} ${detail.entry.lastName}`],
+                  ["Work email", detail.entry.workEmail],
+                  ["Company", detail.entry.company],
+                  ["Job title", detail.entry.jobTitle],
+                  ["Country or region", detail.entry.countryRegion],
+                  [
+                    "Process",
+                    PROCESS_PROFILE_MAP[detail.entry.processProfileId]?.label ??
+                      detail.entry.processProfileId,
+                  ],
+                  [
+                    "Lifecycle stage",
+                    LIFECYCLE_STAGE_MAP[detail.entry.lifecycleStageId]?.label ??
+                      detail.entry.lifecycleStageId,
+                  ],
+                  ["Fit", `${detail.entry.fitBand} (${percentFormatter.format(detail.entry.fitScore)}%)`],
+                  ["Annual value", currencyFormatter.format(detail.entry.annualValuePotential)],
+                  ["Three-year ROI", `${percentFormatter.format(detail.entry.threeYearRoi)}%`],
+                  ["Payback", `${numberFormatter.format(detail.entry.paybackMonths)} months`],
+                  [
+                    "DPMM",
+                    detail.entry.digitalPlantMaturityLevel
+                      ? `Level ${detail.entry.digitalPlantMaturityLevel} (${percentFormatter.format(
+                          detail.entry.digitalPlantMaturityScore ?? 0,
+                        )}%)`
+                      : "Not captured",
+                  ],
+                  [
+                    "Evidence confidence",
+                    detail.entry.evidenceConfidenceBand
+                      ? `${detail.entry.evidenceConfidenceBand} (${percentFormatter.format(
+                          detail.entry.evidenceConfidenceScore ?? 0,
+                        )}%)`
+                      : "Not captured",
+                  ],
+                  [
+                    "Completed sections",
+                    getCompletedSectionsLabel(detail.entry.evidenceMeta.completedSectionIds ?? []),
+                  ],
+                  ["Used sample data", detail.entry.evidenceMeta.usedSampleData ? "Yes" : "No"],
+                  [
+                    "User confirmed at",
+                    detail.entry.evidenceMeta.userConfirmedAt
+                      ? formatDateTime(detail.entry.evidenceMeta.userConfirmedAt)
+                      : "Not captured",
+                  ],
+                  [
+                    "Input source mix",
+                    `User ${detail.entry.generatedReport.evidenceConfidence?.userEnteredFields ?? 0}, survey ${detail.entry.generatedReport.evidenceConfidence?.surveyFields ?? 0}, sample ${detail.entry.generatedReport.evidenceConfidence?.sampleFields ?? 0}, default ${detail.entry.generatedReport.evidenceConfidence?.defaultFields ?? 0}`,
+                  ],
+                  ["Model", detail.entry.modelVersion],
+                  ["Captured", formatDateTime(detail.entry.createdAt)],
+                  ["Updated", formatDateTime(detail.entry.updatedAt)],
+                ].map(([label, value]) => ({ label, value }))}
+              />
+            </DetailSection>
+
+            <ReportResultDetails results={detail.entry.generatedReport} />
+
+            <DetailSection
+              title="Submitted inputs"
+              description="All values saved with this assessment submission."
+            >
+              <SubmittedInputsView inputs={detail.entry.submittedInputs} />
+            </DetailSection>
+          </>
+        ) : null}
+
+        {detail.kind === "progress" ? (
+          <>
+            <DetailSection title="Saved checkpoint">
+              <DetailGrid
+                items={[
+                  ["Progress ID", detail.entry.id],
+                  ["Session ID", detail.entry.sessionId],
+                  ["Lead ID", detail.entry.leadCaptureId ?? "Not linked"],
+                  ["Session mode", humanizeToken(detail.entry.sessionMode)],
+                  ["Name", `${detail.entry.firstName} ${detail.entry.lastName}`],
+                  ["Work email", detail.entry.workEmail],
+                  ["Company", detail.entry.company],
+                  ["Job title", detail.entry.jobTitle],
+                  ["Country or region", detail.entry.countryRegion],
+                  ["Current step", humanizeToken(detail.entry.currentStep)],
+                  ["Status", humanizeToken(detail.entry.status)],
+                  ["Confirmed sections", getCompletedSectionsLabel(detail.entry.completedSections)],
+                  ["Used sample data", detail.entry.evidenceMeta.usedSampleData ? "Yes" : "No"],
+                  [
+                    "User confirmed at",
+                    detail.entry.evidenceMeta.userConfirmedAt
+                      ? formatDateTime(detail.entry.evidenceMeta.userConfirmedAt)
+                      : "Not captured",
+                  ],
+                  [
+                    "Input source mix",
+                    `User ${detail.entry.generatedReport.evidenceConfidence?.userEnteredFields ?? 0}, survey ${detail.entry.generatedReport.evidenceConfidence?.surveyFields ?? 0}, sample ${detail.entry.generatedReport.evidenceConfidence?.sampleFields ?? 0}, default ${detail.entry.generatedReport.evidenceConfidence?.defaultFields ?? 0}`,
+                  ],
+                  [
+                    "Process",
+                    PROCESS_PROFILE_MAP[detail.entry.processProfileId]?.label ??
+                      detail.entry.processProfileId,
+                  ],
+                  [
+                    "Lifecycle stage",
+                    LIFECYCLE_STAGE_MAP[detail.entry.lifecycleStageId]?.label ??
+                      detail.entry.lifecycleStageId,
+                  ],
+                  ["Fit", `${detail.entry.fitBand} (${percentFormatter.format(detail.entry.fitScore)}%)`],
+                  ["Annual value", currencyFormatter.format(detail.entry.annualValuePotential)],
+                  ["Model", detail.entry.modelVersion],
+                  ["Created", formatDateTime(detail.entry.createdAt)],
+                  ["Last activity", formatDateTime(detail.entry.updatedAt)],
+                ].map(([label, value]) => ({ label, value }))}
+              />
+            </DetailSection>
+
+            <ReportResultDetails results={detail.entry.generatedReport} />
+
+            <DetailSection
+              title="Saved inputs"
+              description="All values saved with the latest progress checkpoint."
+            >
+              <SubmittedInputsView inputs={detail.entry.submittedInputs} />
+            </DetailSection>
+          </>
+        ) : null}
+
+        {detail.kind === "feedback" ? (
+          <>
+            <DetailSection title="Feedback details">
+              <DetailGrid
+                items={[
+                  ["Feedback ID", detail.entry.id],
+                  ["Assessment ID", detail.entry.assessmentId ?? "Not linked"],
+                  ["Work email", detail.entry.workEmail || "No email captured"],
+                  ["Company", detail.entry.company || "No company captured"],
+                  ["Overall score", `${detail.entry.rating}/5`],
+                  ["Usefulness", `${detail.entry.usefulness}/5`],
+                  ["Clarity", `${detail.entry.clarity}/5`],
+                  ["Page", detail.entry.page],
+                  ["Captured", formatDateTime(detail.entry.createdAt)],
+                ].map(([label, value]) => ({ label, value }))}
+              />
+            </DetailSection>
+            <DetailSection title="Full comment">
+              <DetailTextBlock>{detail.entry.comment || "No comment"}</DetailTextBlock>
+            </DetailSection>
+          </>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function LeadAdminPage() {
   const [adminKey, setAdminKey] = useState("");
   const [leads, setLeads] = useState<LeadAdminEntry[]>([]);
@@ -345,7 +911,7 @@ export default function LeadAdminPage() {
   const [isDeletingAssessmentId, setIsDeletingAssessmentId] = useState<string | null>(null);
   const [isDeletingProgressId, setIsDeletingProgressId] = useState<string | null>(null);
   const [isDeletingFeedbackId, setIsDeletingFeedbackId] = useState<string | null>(null);
-  const [selectedProgressId, setSelectedProgressId] = useState<string | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<AdminRecordSelection | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -429,7 +995,7 @@ export default function LeadAdminPage() {
       setAssessments(assessmentPayload?.entries ?? []);
       setProgressEntries(progressPayload?.entries ?? []);
       setFeedbackEntries(feedbackPayload?.entries ?? []);
-      setSelectedProgressId(null);
+      setSelectedRecord(null);
       setStatusMessage(
         `Loaded ${leadPayload?.entries?.length ?? 0} leads, ${assessmentPayload?.entries?.length ?? 0} assessments, ${progressPayload?.entries?.length ?? 0} progress records, and ${feedbackPayload?.entries?.length ?? 0} feedback records.`,
       );
@@ -462,6 +1028,9 @@ export default function LeadAdminPage() {
       }
 
       setLeads((current) => current.filter((entry) => entry.id !== id));
+      setSelectedRecord((current) =>
+        current?.kind === "lead" && current.id === id ? null : current,
+      );
       setStatusMessage("Lead record deleted.");
     } catch {
       setErrorMessage("Lead record could not be deleted.");
@@ -492,6 +1061,9 @@ export default function LeadAdminPage() {
       }
 
       setAssessments((current) => current.filter((entry) => entry.id !== id));
+      setSelectedRecord((current) =>
+        current?.kind === "assessment" && current.id === id ? null : current,
+      );
       setStatusMessage("Assessment record deleted.");
     } catch {
       setErrorMessage("Assessment record could not be deleted.");
@@ -522,7 +1094,9 @@ export default function LeadAdminPage() {
       }
 
       setProgressEntries((current) => current.filter((entry) => entry.id !== id));
-      setSelectedProgressId((current) => (current === id ? null : current));
+      setSelectedRecord((current) =>
+        current?.kind === "progress" && current.id === id ? null : current,
+      );
       setStatusMessage("Progress record deleted.");
     } catch {
       setErrorMessage("Progress record could not be deleted.");
@@ -553,6 +1127,9 @@ export default function LeadAdminPage() {
       }
 
       setFeedbackEntries((current) => current.filter((entry) => entry.id !== id));
+      setSelectedRecord((current) =>
+        current?.kind === "feedback" && current.id === id ? null : current,
+      );
       setStatusMessage("Feedback record deleted.");
     } catch {
       setErrorMessage("Feedback record could not be deleted.");
@@ -671,9 +1248,39 @@ export default function LeadAdminPage() {
     progressEntries.filter((entry) => entry.sessionMode === "example").length +
     assessments.filter((entry) => entry.sessionMode === "example").length;
   const uniqueCompanies = new Set(actualLeads.map((entry) => entry.company.toLowerCase())).size;
-  const selectedProgress = selectedProgressId
-    ? progressEntries.find((entry) => entry.id === selectedProgressId) ?? null
-    : null;
+  const selectedRecordDetail = useMemo<AdminRecordDetail | null>(() => {
+    if (!selectedRecord) {
+      return null;
+    }
+
+    if (selectedRecord.kind === "lead") {
+      const entry = leads.find((item) => item.id === selectedRecord.id);
+      return entry ? { kind: "lead", entry } : null;
+    }
+
+    if (selectedRecord.kind === "assessment") {
+      const entry = assessments.find((item) => item.id === selectedRecord.id);
+      return entry ? { kind: "assessment", entry } : null;
+    }
+
+    if (selectedRecord.kind === "progress") {
+      const entry = progressEntries.find((item) => item.id === selectedRecord.id);
+      return entry ? { kind: "progress", entry } : null;
+    }
+
+    const entry = feedbackEntries.find((item) => item.id === selectedRecord.id);
+    return entry ? { kind: "feedback", entry } : null;
+  }, [assessments, feedbackEntries, leads, progressEntries, selectedRecord]);
+
+  const openRecordDetail = (kind: AdminRecordDetail["kind"], id: string) => {
+    setSelectedRecord({ kind, id });
+    window.requestAnimationFrame(() => {
+      document.getElementById("record-detail-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background px-4 py-6 text-foreground sm:px-6 lg:px-8">
@@ -790,6 +1397,13 @@ export default function LeadAdminPage() {
           </CardHeader>
         </Card>
 
+        {selectedRecordDetail ? (
+          <AdminRecordDetailPanel
+            detail={selectedRecordDetail}
+            onClose={() => setSelectedRecord(null)}
+          />
+        ) : null}
+
         <Card className={cn(PANEL_CARD, "p-5")}>
           <CardHeader className="p-0">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -856,15 +1470,26 @@ export default function LeadAdminPage() {
                             {formatDateTime(entry.updatedAt)}
                           </td>
                           <td className="px-4 py-4 align-top">
-                            <Button
-                              variant="outline"
-                              className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
-                              onClick={() => void handleDeleteLead(entry.id)}
-                              disabled={isDeletingLeadId === entry.id}
-                            >
-                              <Trash2 className="size-4" />
-                              {isDeletingLeadId === entry.id ? "Deleting..." : "Delete"}
-                            </Button>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
+                                onClick={() => openRecordDetail("lead", entry.id)}
+                                aria-label={`View lead details for ${entry.workEmail}`}
+                              >
+                                <Eye className="size-4" />
+                                View details
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
+                                onClick={() => void handleDeleteLead(entry.id)}
+                                disabled={isDeletingLeadId === entry.id}
+                              >
+                                <Trash2 className="size-4" />
+                                {isDeletingLeadId === entry.id ? "Deleting..." : "Delete"}
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -910,53 +1535,6 @@ export default function LeadAdminPage() {
             </div>
           </CardHeader>
           <CardContent className="mt-4 p-0">
-            {selectedProgress ? (
-              <div className={cn(SOFT_CARD, "mb-4 grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.62fr)]")}>
-                <div>
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--muted-foreground)]">
-                    Session detail
-                  </p>
-                  <h3 className="mt-2 font-heading text-2xl tracking-[-0.03em] text-[color:var(--foreground)]">
-                    {selectedProgress.firstName} {selectedProgress.lastName} at {selectedProgress.company}
-                  </h3>
-                  <p className="mt-2 text-base leading-7 text-[color:var(--muted-foreground)]">
-                    {selectedProgress.sessionMode === "example" ? "Example session" : "Actual session"} stopped at{" "}
-                    {selectedProgress.currentStep.replace(/_/g, " ")} with{" "}
-                    {selectedProgress.completedSections.length}/4 input sections confirmed.
-                  </p>
-                  <p className="mt-3 text-base leading-7 text-[color:var(--foreground)]">
-                    {selectedProgress.generatedReport?.executiveSummary ??
-                      "A draft report was generated from the latest saved checkpoint."}
-                  </p>
-                </div>
-                <div className="grid gap-3">
-                  {[
-                    ["Status", selectedProgress.status.replace(/_/g, " ")],
-                    [
-                      "Process",
-                      PROCESS_PROFILE_MAP[selectedProgress.processProfileId]?.label ??
-                        selectedProgress.processProfileId,
-                    ],
-                    ["Fit", `${selectedProgress.fitBand} (${percentFormatter.format(selectedProgress.fitScore)}%)`],
-                    ["Model", selectedProgress.modelVersion],
-                    ["Annual value", currencyFormatter.format(selectedProgress.annualValuePotential)],
-                    ["Top priority", selectedProgress.topPriority || "Not available"],
-                  ].map(([label, value]) => (
-                    <div
-                      key={label}
-                      className="rounded-[16px] border border-[color:var(--border)] bg-[color:var(--surface-3)] px-4 py-3"
-                    >
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
-                        {label}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-[color:var(--foreground)]">
-                        {value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
             <div className={cn(SOFT_CARD, "overflow-hidden")}>
               <div className="overflow-x-auto">
                 <table className="min-w-full border-collapse">
@@ -1037,9 +1615,11 @@ export default function LeadAdminPage() {
                               <Button
                                 variant="outline"
                                 className={cn(SECONDARY_BUTTON, "h-9 px-3 text-xs")}
-                                onClick={() => setSelectedProgressId(entry.id)}
+                                onClick={() => openRecordDetail("progress", entry.id)}
+                                aria-label={`View progress details for ${entry.workEmail}`}
                               >
-                                View
+                                <Eye className="size-3.5" />
+                                View details
                               </Button>
                               <Button
                                 variant="outline"
@@ -1173,15 +1753,26 @@ export default function LeadAdminPage() {
                             {formatDateTime(entry.createdAt)}
                           </td>
                           <td className="px-4 py-4 align-top">
-                            <Button
-                              variant="outline"
-                              className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
-                              onClick={() => void handleDeleteAssessment(entry.id)}
-                              disabled={isDeletingAssessmentId === entry.id}
-                            >
-                              <Trash2 className="size-4" />
-                              {isDeletingAssessmentId === entry.id ? "Deleting..." : "Delete"}
-                            </Button>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
+                                onClick={() => openRecordDetail("assessment", entry.id)}
+                                aria-label={`View assessment details for ${entry.workEmail}`}
+                              >
+                                <Eye className="size-4" />
+                                View details
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
+                                onClick={() => void handleDeleteAssessment(entry.id)}
+                                disabled={isDeletingAssessmentId === entry.id}
+                              >
+                                <Trash2 className="size-4" />
+                                {isDeletingAssessmentId === entry.id ? "Deleting..." : "Delete"}
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1260,7 +1851,7 @@ export default function LeadAdminPage() {
                               Useful {entry.usefulness}/5, clear {entry.clarity}/5
                             </div>
                           </td>
-                          <td className="max-w-[420px] px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
+                          <td className="min-w-[520px] max-w-[760px] whitespace-pre-wrap break-words px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
                             {entry.comment || "No comment"}
                           </td>
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
@@ -1270,15 +1861,26 @@ export default function LeadAdminPage() {
                             {formatDateTime(entry.createdAt)}
                           </td>
                           <td className="px-4 py-4 align-top">
-                            <Button
-                              variant="outline"
-                              className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
-                              onClick={() => void handleDeleteFeedback(entry.id)}
-                              disabled={isDeletingFeedbackId === entry.id}
-                            >
-                              <Trash2 className="size-4" />
-                              {isDeletingFeedbackId === entry.id ? "Deleting..." : "Delete"}
-                            </Button>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
+                                onClick={() => openRecordDetail("feedback", entry.id)}
+                                aria-label={`View feedback details for ${entry.workEmail || entry.id}`}
+                              >
+                                <Eye className="size-4" />
+                                View details
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className={cn(SECONDARY_BUTTON, "h-10 px-3 text-sm")}
+                                onClick={() => void handleDeleteFeedback(entry.id)}
+                                disabled={isDeletingFeedbackId === entry.id}
+                              >
+                                <Trash2 className="size-4" />
+                                {isDeletingFeedbackId === entry.id ? "Deleting..." : "Delete"}
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))

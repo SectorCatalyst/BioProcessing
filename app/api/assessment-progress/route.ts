@@ -92,6 +92,8 @@ export async function GET(request: Request) {
       fit_score: number;
       annual_value_potential: number;
       model_version: string;
+      evidence_meta: z.infer<typeof assessmentEvidenceMetaSchema>;
+      submitted_inputs: z.infer<typeof bioPilotAssessmentInputsSchema>;
       generated_report: BioPilotAssessmentResults;
       updated_at: string;
       created_at: string;
@@ -116,6 +118,8 @@ export async function GET(request: Request) {
         fit_score,
         annual_value_potential,
         model_version,
+        evidence_meta,
+        submitted_inputs,
         generated_report,
         updated_at,
         created_at

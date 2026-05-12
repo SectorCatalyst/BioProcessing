@@ -124,6 +124,8 @@ export async function GET(request: Request) {
       digital_coverage: number;
       manual_burden_index: number;
       model_version: string;
+      evidence_meta: z.infer<typeof assessmentEvidenceMetaSchema>;
+      submitted_inputs: z.infer<typeof bioPilotAssessmentInputsSchema>;
       generated_report: ReturnType<typeof assessBioPilotFit>;
       session_mode: string;
       created_at: string;
@@ -148,6 +150,8 @@ export async function GET(request: Request) {
         digital_coverage,
         manual_burden_index,
         model_version,
+        evidence_meta,
+        submitted_inputs,
         generated_report,
         session_mode,
         created_at,
