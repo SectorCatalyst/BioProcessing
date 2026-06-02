@@ -75,6 +75,12 @@ const confirmAllInputSections = async (page: Page) => {
   await expect(
     page.locator("#input-question-set").getByText("3-Year BioPilot Investment", { exact: true }),
   ).toBeVisible();
+  await page.locator("#input-question-set").getByRole("combobox").click();
+  await expect(page.getByText("Basic - $3,000 / month", { exact: true })).toBeVisible();
+  await expect(page.getByText("Professional - $9,000 / month", { exact: true })).toBeVisible();
+  await expect(page.getByText("Enterprise - $15,000 / month", { exact: true })).toBeVisible();
+  await expect(page.getByText("Custom Scope")).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await expect(page.getByText("Input Progress")).toBeVisible();
 
   await page.getByRole("button", { name: "Confirm And Continue" }).click();

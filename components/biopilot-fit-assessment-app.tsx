@@ -521,6 +521,8 @@ const FIELD_COPY: Record<
   },
 };
 
+const CLIENT_BIOPILOT_TIERS = BIOPILOT_TIERS.filter((tier) => tier.id !== "custom");
+
 const INPUT_SECTIONS = [
   {
     id: "operating-frame",
@@ -858,7 +860,7 @@ function BioPilotInvestmentScopePanel({
               <SelectValue placeholder="Choose BioPilot Scope" />
             </SelectTrigger>
             <SelectContent className={SELECT_CONTENT_CLASS}>
-              {BIOPILOT_TIERS.map((tier) => (
+              {CLIENT_BIOPILOT_TIERS.map((tier) => (
                 <SelectItem className={SELECT_ITEM_CLASS} key={tier.id} value={tier.id}>
                   {tier.label} - {formatCurrency(tier.monthlySubscription)} / month
                 </SelectItem>
@@ -884,7 +886,7 @@ function BioPilotInvestmentScopePanel({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {BIOPILOT_TIERS.filter((tier) => tier.id !== "custom").map((tier) => (
+        {CLIENT_BIOPILOT_TIERS.map((tier) => (
           <div
             key={tier.id}
             className={cn(
