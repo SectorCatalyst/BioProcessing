@@ -20,11 +20,10 @@ import {
   BIOPILOT_ADJUSTABLE_INPUT_KEYS,
   BIOPILOT_INPUT_SECTION_IDS,
   BIOPILOT_MODEL_VERSION,
+  BIOPILOT_OPERATING_FRAME_LIMITS,
   BIOPILOT_SAMPLE_CONFIGS,
-  BIOPILOT_TIERS,
   BIOPLAN_2023_BATCH_FAILURE_BENCHMARK,
   buildRandomizedSampleInputs,
-  calculateBioPilotInvestmentBasis,
   DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
   inferBioPilotTierId,
   LIFECYCLE_STAGES,
@@ -39,7 +38,6 @@ import {
   type BioPilotAdjustableInputKey,
   type BioPilotInputSectionId,
   type BioPilotNumericInputKey,
-  type BioPilotTierId,
   type ProcessProfileId,
 } from "@/lib/biopilot-fit-assessment";
 import {
@@ -199,6 +197,8 @@ const FIELD_COPY: Record<
     description: string;
     min: number;
     max: number;
+    typicalMin?: number;
+    typicalMax?: number;
     step: number;
     suffix?: string;
     kind: "number" | "range";
@@ -207,48 +207,60 @@ const FIELD_COPY: Record<
   activePrograms: {
     label: "Active Programs In Scope",
     description: "Number of products, campaigns, or programs using this operating model in the next 12 months.",
-    min: 1,
-    max: 18,
+    min: BIOPILOT_OPERATING_FRAME_LIMITS.activePrograms.min,
+    max: BIOPILOT_OPERATING_FRAME_LIMITS.activePrograms.max,
+    typicalMin: BIOPILOT_OPERATING_FRAME_LIMITS.activePrograms.typicalMin,
+    typicalMax: BIOPILOT_OPERATING_FRAME_LIMITS.activePrograms.typicalMax,
     step: 1,
     kind: "number",
   },
   runsPerYear: {
     label: "Process Runs Per Year",
     description: "Number of upstream or end-to-end runs expected in this scope over the next 12 months.",
-    min: 1,
-    max: 220,
+    min: BIOPILOT_OPERATING_FRAME_LIMITS.runsPerYear.min,
+    max: BIOPILOT_OPERATING_FRAME_LIMITS.runsPerYear.max,
+    typicalMin: BIOPILOT_OPERATING_FRAME_LIMITS.runsPerYear.typicalMin,
+    typicalMax: BIOPILOT_OPERATING_FRAME_LIMITS.runsPerYear.typicalMax,
     step: 1,
     kind: "number",
   },
   sites: {
     label: "Sites Or Partners In Scope",
     description: "Number of facilities, CDMOs, or major partners that must reproduce or review this process.",
-    min: 1,
-    max: 8,
+    min: BIOPILOT_OPERATING_FRAME_LIMITS.sites.min,
+    max: BIOPILOT_OPERATING_FRAME_LIMITS.sites.max,
+    typicalMin: BIOPILOT_OPERATING_FRAME_LIMITS.sites.typicalMin,
+    typicalMax: BIOPILOT_OPERATING_FRAME_LIMITS.sites.typicalMax,
     step: 1,
     kind: "number",
   },
   transferEventsPerYear: {
     label: "Annual Transfer Events",
     description: "Number of scale-up, site-transfer, validation, or partner handoff packages expected in the next 12 months.",
-    min: 0,
-    max: 12,
+    min: BIOPILOT_OPERATING_FRAME_LIMITS.transferEventsPerYear.min,
+    max: BIOPILOT_OPERATING_FRAME_LIMITS.transferEventsPerYear.max,
+    typicalMin: BIOPILOT_OPERATING_FRAME_LIMITS.transferEventsPerYear.typicalMin,
+    typicalMax: BIOPILOT_OPERATING_FRAME_LIMITS.transferEventsPerYear.typicalMax,
     step: 1,
     kind: "number",
   },
   vendorPlatforms: {
     label: "Data Platforms In Scope",
     description: "Number of separate bioreactor, analyzer, historian, LIMS/MES, modeling, or spreadsheet systems used for one process record.",
-    min: 1,
-    max: 8,
+    min: BIOPILOT_OPERATING_FRAME_LIMITS.vendorPlatforms.min,
+    max: BIOPILOT_OPERATING_FRAME_LIMITS.vendorPlatforms.max,
+    typicalMin: BIOPILOT_OPERATING_FRAME_LIMITS.vendorPlatforms.typicalMin,
+    typicalMax: BIOPILOT_OPERATING_FRAME_LIMITS.vendorPlatforms.typicalMax,
     step: 1,
     kind: "number",
   },
   blendedHourlyRate: {
     label: "Loaded Labor Rate",
     description: "Average fully loaded USD/hr rate for scientists, engineers, operators, QA, and review contributors.",
-    min: 80,
-    max: 260,
+    min: BIOPILOT_OPERATING_FRAME_LIMITS.blendedHourlyRate.min,
+    max: BIOPILOT_OPERATING_FRAME_LIMITS.blendedHourlyRate.max,
+    typicalMin: BIOPILOT_OPERATING_FRAME_LIMITS.blendedHourlyRate.typicalMin,
+    typicalMax: BIOPILOT_OPERATING_FRAME_LIMITS.blendedHourlyRate.typicalMax,
     step: 5,
     suffix: "$/hr",
     kind: "number",
@@ -256,8 +268,10 @@ const FIELD_COPY: Record<
   costPerFailedRun: {
     label: "Failed-Run Impact",
     description: "USD impact of one lost, unusable, or repeated run including materials, labor, analytics, and schedule drag.",
-    min: 15000,
-    max: 250000,
+    min: BIOPILOT_OPERATING_FRAME_LIMITS.costPerFailedRun.min,
+    max: BIOPILOT_OPERATING_FRAME_LIMITS.costPerFailedRun.max,
+    typicalMin: BIOPILOT_OPERATING_FRAME_LIMITS.costPerFailedRun.typicalMin,
+    typicalMax: BIOPILOT_OPERATING_FRAME_LIMITS.costPerFailedRun.typicalMax,
     step: 5000,
     suffix: "USD",
     kind: "number",
@@ -265,8 +279,10 @@ const FIELD_COPY: Record<
   valuePerDayAcceleration: {
     label: "Value Of One Day Faster",
     description: "USD value of moving one key process decision, transfer milestone, or campaign release forward by one day.",
-    min: 10000,
-    max: 150000,
+    min: BIOPILOT_OPERATING_FRAME_LIMITS.valuePerDayAcceleration.min,
+    max: BIOPILOT_OPERATING_FRAME_LIMITS.valuePerDayAcceleration.max,
+    typicalMin: BIOPILOT_OPERATING_FRAME_LIMITS.valuePerDayAcceleration.typicalMin,
+    typicalMax: BIOPILOT_OPERATING_FRAME_LIMITS.valuePerDayAcceleration.typicalMax,
     step: 5000,
     suffix: "USD",
     kind: "number",
@@ -312,7 +328,7 @@ const FIELD_COPY: Record<
     kind: "number",
   },
   customMonthlySubscription: {
-    label: "Confirmed Monthly Subscription",
+    label: "Inferred Monthly Subscription",
     description: "Use this when the BioPilot subscription is outside the standard scope options.",
     min: 1000,
     max: 50000,
@@ -521,8 +537,6 @@ const FIELD_COPY: Record<
   },
 };
 
-const CLIENT_BIOPILOT_TIERS = BIOPILOT_TIERS.filter((tier) => tier.id !== "custom");
-
 const INPUT_SECTIONS = [
   {
     id: "operating-frame",
@@ -541,18 +555,15 @@ const INPUT_SECTIONS = [
   },
   {
     id: "solution-investment",
-    title: "BioPilot Scope And Investment",
-    description: "Confirm the subscription scope, customer engineering time, and selected additional services used for ROI.",
+    title: "BioPilot Deployment Scope",
+    description: "Define the connected workflow scale and customer engineering time without introducing pricing yet.",
     fields: [
       "bioPilotBioreactors",
       "bioPilotRecipesRunning",
       "bioPilotRecipeStorage",
       "bioPilotPatEquipment",
       "bioPilotUsers",
-      "customMonthlySubscription",
       "customerEngineeringHours",
-      "customerEngineeringHourlyRate",
-      "additionalServicesInvestment",
     ] as AdjustableFieldKey[],
   },
   {
@@ -644,9 +655,9 @@ const getAssessmentProgressStatus = ({
 
 const INPUT_SECTION_GUIDANCE: Record<InputSectionId, string> = {
   "operating-frame":
-    "These values set the scale of the business case. Annual run count, failed-run cost, labor rate, and acceleration value usually move the opportunity estimate most.",
+    "These values set the scale of the business case. Typical planning ranges are guidance only; larger values are accepted and flagged for confirmation.",
   "solution-investment":
-    "These values connect the opportunity estimate to BioPilot scope. Use the closest subscription scope and include customer-side engineering time needed to launch the first workflow.",
+    "These values size the likely BioPilot deployment. The report will introduce the inferred investment basis after the operating value is established.",
   "connected-stack":
     "These 0-100 scores define the digital plant maturity baseline across instruments, PAT, analyzer context, and operating evidence.",
   "manual-burden":
@@ -756,10 +767,6 @@ function InputSectionCard({
   inputs: BioPilotAssessmentInputs;
   onPatch: (patch: Partial<BioPilotAssessmentInputs>) => void;
 }) {
-  const visibleFields = section.fields.filter(
-    (field) => field !== "customMonthlySubscription" || inputs.bioPilotTierId === "custom",
-  );
-
   return (
     <div className={cn(PANEL_CARD, "overflow-hidden p-0")}>
       <div className="border-b border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,250,252,0.96))] px-5 py-4">
@@ -778,11 +785,9 @@ function InputSectionCard({
           <AlertDescription>{INPUT_SECTION_GUIDANCE[section.id]}</AlertDescription>
         </Alert>
       </div>
-      {section.id === "solution-investment" ? (
-        <BioPilotInvestmentScopePanel inputs={inputs} onPatch={onPatch} />
-      ) : null}
+      {section.id === "solution-investment" ? <BioPilotDeploymentScopePanel /> : null}
       <div className="grid auto-rows-fr gap-3 px-4 py-4 md:grid-cols-2 2xl:grid-cols-3">
-        {visibleFields.map((field) =>
+        {section.fields.map((field) =>
           FIELD_COPY[field].kind === "range" ? (
             <RangeField
               key={field}
@@ -804,132 +809,14 @@ function InputSectionCard({
   );
 }
 
-function BioPilotInvestmentScopePanel({
-  inputs,
-  onPatch,
-}: {
-  inputs: BioPilotAssessmentInputs;
-  onPatch: (patch: Partial<BioPilotAssessmentInputs>) => void;
-}) {
-  const investment = calculateBioPilotInvestmentBasis(inputs);
-
-  const handleTierChange = (value: string | null) => {
-    if (!value) {
-      return;
-    }
-
-    const tier = BIOPILOT_TIERS.find((item) => item.id === value);
-
-    if (!tier) {
-      return;
-    }
-
-    const tierId = tier.id as BioPilotTierId;
-
-    if (tierId === "custom") {
-      onPatch({
-        bioPilotTierId: tierId,
-        customMonthlySubscription: investment.monthlySubscription,
-      });
-      return;
-    }
-
-    onPatch({
-      bioPilotTierId: tierId,
-      bioPilotBioreactors: tier.limits.bioreactors,
-      bioPilotRecipesRunning: tier.limits.recipesRunning,
-      bioPilotRecipeStorage: tier.limits.recipeStorage,
-      bioPilotPatEquipment: tier.limits.patEquipment,
-      bioPilotUsers: tier.limits.users,
-      customMonthlySubscription: tier.monthlySubscription,
-    });
-  };
-
+function BioPilotDeploymentScopePanel() {
   return (
-    <div className="grid gap-4 border-b border-[color:var(--border)] bg-[rgba(255,255,255,0.46)] px-4 py-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(260px,0.72fr)_minmax(0,1.28fr)]">
-        <div className={cn(SOFT_CARD, "p-4")}>
-          <label className="text-base font-semibold text-[color:var(--foreground)]">
-            BioPilot Subscription Scope
-          </label>
-          <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
-            Select the scope that best matches the connected workflow expected for this estimate.
-          </p>
-          <Select value={inputs.bioPilotTierId} onValueChange={handleTierChange}>
-            <SelectTrigger className={cn(INPUT_CLASS, "mt-4 w-full justify-between")}>
-              <SelectValue placeholder="Choose BioPilot Scope" />
-            </SelectTrigger>
-            <SelectContent className={SELECT_CONTENT_CLASS}>
-              {CLIENT_BIOPILOT_TIERS.map((tier) => (
-                <SelectItem className={SELECT_ITEM_CLASS} key={tier.id} value={tier.id}>
-                  {tier.label} - {formatCurrency(tier.monthlySubscription)} / month
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <ContextMetric
-            label="Monthly Subscription"
-            value={formatCurrency(investment.monthlySubscription)}
-          />
-          <ContextMetric
-            label="3-Year Subscription"
-            value={formatCurrency(investment.threeYearSubscription)}
-          />
-          <ContextMetric
-            label="3-Year BioPilot Investment"
-            value={formatCurrency(investment.totalThreeYearInvestment)}
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {CLIENT_BIOPILOT_TIERS.map((tier) => (
-          <div
-            key={tier.id}
-            className={cn(
-              SOFT_CARD,
-              "p-4",
-              inputs.bioPilotTierId === tier.id
-                ? "border-[rgba(0,79,155,0.28)] bg-[linear-gradient(180deg,rgba(230,242,255,0.96),rgba(244,249,253,0.98))]"
-                : "",
-            )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-base font-semibold text-[color:var(--foreground)]">{tier.label}</p>
-                <p className="mt-1 text-[1.35rem] font-semibold tracking-[-0.03em] text-[color:var(--brand-blue)]">
-                  {formatCurrency(tier.monthlySubscription)}
-                  <span className="text-sm font-medium tracking-normal text-[color:var(--muted-foreground)]">
-                    {" "}/ mo
-                  </span>
-                </p>
-              </div>
-              {inputs.bioPilotTierId === tier.id ? (
-                <CheckCircle2 className="size-5 shrink-0 text-[color:var(--brand-blue)]" />
-              ) : null}
-            </div>
-            <p className="mt-3 min-h-[48px] text-sm leading-6 text-[color:var(--muted-foreground)]">
-              {tier.summary}
-            </p>
-            <div className="mt-3 grid gap-1 text-sm leading-6 text-[color:var(--foreground)]">
-              <span>{tier.limits.bioreactors} bioreactor{tier.limits.bioreactors === 1 ? "" : "s"} online</span>
-              <span>{tier.limits.recipesRunning} active recipe{tier.limits.recipesRunning === 1 ? "" : "s"}</span>
-              <span>{tier.limits.recipeStorage} stored recipes</span>
-              <span>{tier.limits.patEquipment} PAT equipment</span>
-              <span>{tier.limits.users} users</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
+    <div className="border-b border-[color:var(--border)] bg-[rgba(255,255,255,0.46)] px-4 py-4">
       <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
         <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
-        <AlertTitle>Investment Basis</AlertTitle>
+        <AlertTitle>Scope First</AlertTitle>
         <AlertDescription>
-          The subscription includes basic engineering and maintenance. Customer engineering time models the site-side effort needed to prepare, connect, validate, and adopt the first BioPilot workflow.
+          Enter the connected assets, users, and customer engineering time expected for the first workflow. The final report will infer the commercial scope after the value case is established.
         </AlertDescription>
       </Alert>
     </div>
@@ -1085,6 +972,22 @@ function formatDecimal(value: number) {
 
 function formatPercent(value: number) {
   return `${Math.round(value)}%`;
+}
+
+function formatFieldLimit(value: number, suffix?: string) {
+  if (suffix === "USD") {
+    return formatCurrency(value);
+  }
+
+  if (suffix === "$/hr") {
+    return `${formatCurrency(value)}/hr`;
+  }
+
+  if (suffix === "USD/mo") {
+    return `${formatCurrency(value)}/mo`;
+  }
+
+  return `${formatNumber(value)}${suffix ? ` ${suffix}` : ""}`;
 }
 
 function formatPaybackMonths(value: number) {
@@ -1315,13 +1218,24 @@ function NumberField({
   const copy = FIELD_COPY[field];
   const [draftValue, setDraftValue] = useState(String(value));
   const [rangeError, setRangeError] = useState<string | null>(null);
+  const hasTypicalRange =
+    typeof copy.typicalMin === "number" && typeof copy.typicalMax === "number";
+  const parsedDraftValue = Number(draftValue);
+  const isOutsideTypicalRange =
+    hasTypicalRange &&
+    Number.isFinite(parsedDraftValue) &&
+    parsedDraftValue >= copy.min &&
+    parsedDraftValue <= copy.max &&
+    (parsedDraftValue < copy.typicalMin! || parsedDraftValue > copy.typicalMax!);
 
   const handleValueChange = (rawValue: string) => {
     const normalizedValue = rawValue.replace(/[^\d.]/g, "");
     setDraftValue(normalizedValue);
 
     if (!normalizedValue) {
-      setRangeError(`Enter a value from ${copy.min} to ${copy.max}${copy.suffix ? ` ${copy.suffix}` : ""}.`);
+      setRangeError(
+        `Enter a value from ${formatFieldLimit(copy.min, copy.suffix)} to ${formatFieldLimit(copy.max, copy.suffix)}.`,
+      );
       return;
     }
 
@@ -1332,7 +1246,9 @@ function NumberField({
     }
 
     if (parsedValue < copy.min || parsedValue > copy.max) {
-      setRangeError(`Enter a value from ${copy.min} to ${copy.max}${copy.suffix ? ` ${copy.suffix}` : ""}.`);
+      setRangeError(
+        `System limit: ${formatFieldLimit(copy.min, copy.suffix)} to ${formatFieldLimit(copy.max, copy.suffix)}.`,
+      );
       return;
     }
 
@@ -1376,10 +1292,17 @@ function NumberField({
       </div>
       <div className="mt-3 flex flex-wrap justify-between gap-2 text-[13px] leading-5 text-[color:var(--muted-foreground)]">
         <span>
-          Range: {copy.min}-{copy.max}{copy.suffix ? ` ${copy.suffix}` : ""}
+          {hasTypicalRange
+            ? `Typical planning range: ${formatFieldLimit(copy.typicalMin!, copy.suffix)}-${formatFieldLimit(copy.typicalMax!, copy.suffix)}`
+            : `Range: ${formatFieldLimit(copy.min, copy.suffix)}-${formatFieldLimit(copy.max, copy.suffix)}`}
         </span>
         {rangeError ? (
           <span className="font-semibold text-[color:var(--destructive)]">{rangeError}</span>
+        ) : null}
+        {!rangeError && isOutsideTypicalRange ? (
+          <span className="font-semibold text-[color:var(--brand-blue)]">
+            Outside typical planning range. Confirm before relying on ROI.
+          </span>
         ) : null}
       </div>
     </div>
@@ -2000,7 +1923,7 @@ function InputsStep({
                   <div className={cn(SOFT_CARD, "p-4")}>
                     <p className="text-base leading-6 text-[color:var(--muted-foreground)]">{stage.summary}</p>
                     <p className="mt-2 text-sm font-semibold text-[color:var(--brand-blue)]">
-                      Changing the stage updates stage assumptions and the investment default.
+                      Changing the stage updates the baseline process assumptions used in the estimate.
                     </p>
                   </div>
                 </div>
@@ -2194,7 +2117,8 @@ function InputsStep({
             <AlertTitle>Planning Estimate</AlertTitle>
             <AlertDescription>
               The report estimates value from recoverable time, avoided failed runs, faster decisions,
-              cleaner transfer work, BioPilot subscription scope, and customer engineering effort.
+              cleaner transfer work, and deployment effort. The final report introduces the BioPilot
+              investment basis after the value case is visible.
             </AlertDescription>
           </Alert>
 
@@ -2449,7 +2373,7 @@ function ReportStep({
           BioPilot Investment Basis
         </CardTitle>
         <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-          Subscription scope and customer engineering assumptions used in the ROI estimate.
+          Inferred subscription scope and customer engineering assumptions used in the ROI estimate.
         </CardDescription>
       </CardHeader>
       <CardContent className="mt-5 grid gap-4 p-0">
@@ -3194,18 +3118,28 @@ export function BioPilotFitAssessmentApp() {
     patch: Partial<BioPilotAssessmentInputs>,
     source: AssessmentInputSource = "user",
   ) => {
+    const shouldSyncEngineeringRate =
+      typeof patch.blendedHourlyRate === "number" && !("customerEngineeringHourlyRate" in patch);
+    const derivedPatch =
+      shouldSyncEngineeringRate
+        ? {
+            ...patch,
+            customerEngineeringHourlyRate: patch.blendedHourlyRate,
+          }
+        : patch;
+
     setInputs((current) => {
-      const normalized = normalizeAssessmentInputs({ ...current, ...patch });
+      const normalized = normalizeAssessmentInputs({ ...current, ...derivedPatch });
       const shouldInferTier =
         current.bioPilotTierId !== "custom" &&
-        !("bioPilotTierId" in patch) &&
+        !("bioPilotTierId" in derivedPatch) &&
         ([
           "bioPilotBioreactors",
           "bioPilotRecipesRunning",
           "bioPilotRecipeStorage",
           "bioPilotPatEquipment",
           "bioPilotUsers",
-        ] as const).some((key) => key in patch);
+        ] as const).some((key) => key in derivedPatch);
 
       if (!shouldInferTier) {
         return normalized;
@@ -3220,7 +3154,7 @@ export function BioPilotFitAssessmentApp() {
       const next = { ...current };
 
       for (const key of BIOPILOT_ADJUSTABLE_INPUT_KEYS) {
-        if (key in patch) {
+        if (key in derivedPatch) {
           next[key] = source;
         }
       }

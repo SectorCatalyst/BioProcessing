@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const BIOPILOT_MODEL_VERSION = "2.1.0";
+export const BIOPILOT_MODEL_VERSION = "2.1.1";
 
 export const BIOPLAN_2023_BATCH_FAILURE_BENCHMARK = {
   id: "bioplan-2023-batch-failure",
@@ -193,6 +193,84 @@ export interface BioPilotAssessmentInputs {
   techTransferPackageHours: number;
   onboardingDays: number;
 }
+
+type OperatingFrameInputKey =
+  | "activePrograms"
+  | "runsPerYear"
+  | "sites"
+  | "transferEventsPerYear"
+  | "vendorPlatforms"
+  | "blendedHourlyRate"
+  | "costPerFailedRun"
+  | "valuePerDayAcceleration";
+
+export const BIOPILOT_OPERATING_FRAME_LIMITS: Record<
+  OperatingFrameInputKey,
+  {
+    label: string;
+    min: number;
+    max: number;
+    typicalMin: number;
+    typicalMax: number;
+  }
+> = {
+  activePrograms: {
+    label: "active programs",
+    min: 1,
+    max: 500,
+    typicalMin: 1,
+    typicalMax: 18,
+  },
+  runsPerYear: {
+    label: "runs per year",
+    min: 1,
+    max: 10000,
+    typicalMin: 1,
+    typicalMax: 220,
+  },
+  sites: {
+    label: "sites or partners",
+    min: 1,
+    max: 200,
+    typicalMin: 1,
+    typicalMax: 8,
+  },
+  transferEventsPerYear: {
+    label: "annual transfer events",
+    min: 0,
+    max: 1000,
+    typicalMin: 0,
+    typicalMax: 12,
+  },
+  vendorPlatforms: {
+    label: "data platforms",
+    min: 1,
+    max: 100,
+    typicalMin: 1,
+    typicalMax: 8,
+  },
+  blendedHourlyRate: {
+    label: "loaded labor rate",
+    min: 0,
+    max: 1000,
+    typicalMin: 80,
+    typicalMax: 260,
+  },
+  costPerFailedRun: {
+    label: "failed-run impact",
+    min: 0,
+    max: 10000000,
+    typicalMin: 15000,
+    typicalMax: 250000,
+  },
+  valuePerDayAcceleration: {
+    label: "value of one day faster",
+    min: 0,
+    max: 5000000,
+    typicalMin: 10000,
+    typicalMax: 150000,
+  },
+};
 
 export type BioPilotAdjustableInputKey = Exclude<
   keyof BioPilotAssessmentInputs,
@@ -393,19 +471,8 @@ export function inferBioPilotTierId(
     | "bioPilotUsers"
   >,
 ): BioPilotTierId {
-  const enterprise = BIOPILOT_TIER_MAP.enterprise.limits;
   const professional = BIOPILOT_TIER_MAP.professional.limits;
   const basic = BIOPILOT_TIER_MAP.basic.limits;
-
-  if (
-    inputs.bioPilotBioreactors > enterprise.bioreactors ||
-    inputs.bioPilotRecipesRunning > enterprise.recipesRunning ||
-    inputs.bioPilotRecipeStorage > enterprise.recipeStorage ||
-    inputs.bioPilotPatEquipment > enterprise.patEquipment ||
-    inputs.bioPilotUsers > enterprise.users
-  ) {
-    return "custom";
-  }
 
   if (
     inputs.bioPilotBioreactors > professional.bioreactors ||
@@ -511,14 +578,38 @@ const boundedNumber = (min: number, max: number) =>
 export const bioPilotAssessmentInputsSchema = z.object({
   processProfileId: z.enum(PROCESS_PROFILE_IDS),
   lifecycleStageId: z.enum(LIFECYCLE_STAGE_IDS),
-  activePrograms: boundedNumber(1, 18),
-  runsPerYear: boundedNumber(1, 220),
-  sites: boundedNumber(1, 8),
-  transferEventsPerYear: boundedNumber(0, 12),
-  vendorPlatforms: boundedNumber(1, 8),
-  blendedHourlyRate: boundedNumber(80, 260),
-  costPerFailedRun: boundedNumber(15000, 250000),
-  valuePerDayAcceleration: boundedNumber(10000, 150000),
+  activePrograms: boundedNumber(
+    BIOPILOT_OPERATING_FRAME_LIMITS.activePrograms.min,
+    BIOPILOT_OPERATING_FRAME_LIMITS.activePrograms.max,
+  ),
+  runsPerYear: boundedNumber(
+    BIOPILOT_OPERATING_FRAME_LIMITS.runsPerYear.min,
+    BIOPILOT_OPERATING_FRAME_LIMITS.runsPerYear.max,
+  ),
+  sites: boundedNumber(
+    BIOPILOT_OPERATING_FRAME_LIMITS.sites.min,
+    BIOPILOT_OPERATING_FRAME_LIMITS.sites.max,
+  ),
+  transferEventsPerYear: boundedNumber(
+    BIOPILOT_OPERATING_FRAME_LIMITS.transferEventsPerYear.min,
+    BIOPILOT_OPERATING_FRAME_LIMITS.transferEventsPerYear.max,
+  ),
+  vendorPlatforms: boundedNumber(
+    BIOPILOT_OPERATING_FRAME_LIMITS.vendorPlatforms.min,
+    BIOPILOT_OPERATING_FRAME_LIMITS.vendorPlatforms.max,
+  ),
+  blendedHourlyRate: boundedNumber(
+    BIOPILOT_OPERATING_FRAME_LIMITS.blendedHourlyRate.min,
+    BIOPILOT_OPERATING_FRAME_LIMITS.blendedHourlyRate.max,
+  ),
+  costPerFailedRun: boundedNumber(
+    BIOPILOT_OPERATING_FRAME_LIMITS.costPerFailedRun.min,
+    BIOPILOT_OPERATING_FRAME_LIMITS.costPerFailedRun.max,
+  ),
+  valuePerDayAcceleration: boundedNumber(
+    BIOPILOT_OPERATING_FRAME_LIMITS.valuePerDayAcceleration.min,
+    BIOPILOT_OPERATING_FRAME_LIMITS.valuePerDayAcceleration.max,
+  ),
   bioPilotTierId: z.enum(BIOPILOT_TIER_IDS),
   bioPilotBioreactors: boundedNumber(1, 20),
   bioPilotRecipesRunning: boundedNumber(1, 20),
@@ -1460,7 +1551,20 @@ const buildDigitalPlantMaturity = (
   };
 };
 
+const getOperatingFramePlanningRangeWarnings = (
+  inputs: BioPilotAssessmentInputs,
+) =>
+  (Object.entries(BIOPILOT_OPERATING_FRAME_LIMITS) as Array<
+    [OperatingFrameInputKey, (typeof BIOPILOT_OPERATING_FRAME_LIMITS)[OperatingFrameInputKey]]
+  >)
+    .filter(([key, limits]) => {
+      const value = inputs[key];
+      return value < limits.typicalMin || value > limits.typicalMax;
+    })
+    .map(([, limits]) => limits.label);
+
 const buildEvidenceConfidence = (
+  inputs: BioPilotAssessmentInputs,
   meta?: AssessmentEvidenceMeta | null,
 ): EvidenceConfidenceAssessment => {
   const normalizedMeta = normalizeEvidenceMeta(meta);
@@ -1489,13 +1593,16 @@ const buildEvidenceConfidence = (
     (sampleFields / BIOPILOT_ADJUSTABLE_INPUT_KEYS.length) * 8;
   const samplePenalty = normalizedMeta.usedSampleData && userEnteredFields < 8 ? 12 : 0;
   const defaultPenalty = defaultFields > 8 ? 10 : defaultFields > 3 ? 5 : 0;
+  const operatingFrameRangeWarnings = getOperatingFramePlanningRangeWarnings(inputs);
+  const rangePenalty = Math.min(12, operatingFrameRangeWarnings.length * 2);
   const score = clamp(
     sectionCompletionScore +
       userEvidenceScore +
       surveySupportScore +
       sampleSupportScore -
       samplePenalty -
-      defaultPenalty,
+      defaultPenalty -
+      rangePenalty,
     0,
     100,
   );
@@ -1517,6 +1624,12 @@ const buildEvidenceConfidence = (
 
   if (surveyFields > 0) {
     warnings.push("Survey benchmark assumptions were used; replace them with site-specific operating evidence when available.");
+  }
+
+  if (operatingFrameRangeWarnings.length > 0) {
+    warnings.push(
+      `${operatingFrameRangeWarnings.length} operating-frame assumptions are outside the typical planning range: ${operatingFrameRangeWarnings.join(", ")}. Confirm these values before relying on ROI.`,
+    );
   }
 
   return {
@@ -1575,11 +1688,11 @@ const buildAssumptionTransparency = (
         "This area is most sensitive to actual failure frequency, failure impact, and whether recovery effort is already included in the failed-run impact assumption.",
     },
     {
-      label: "BioPilot Scope And Investment",
+      label: "BioPilot Investment Basis",
       basis: `${investment.tierLabel} scope at ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(investment.monthlySubscription)} per month, billed annually over ${investment.subscriptionTermYears} years, with ${Math.round(investment.customerEngineeringHours).toLocaleString("en-US")} customer engineering hours.`,
       formula:
-        "BioPilot investment = 36 months of subscription cost + customer engineering effort + selected additional services. Basic engineering and maintenance are included in the subscription scope.",
-      sensitivity: `Current 3-year BioPilot investment: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(investment.totalThreeYearInvestment)}. ROI is most sensitive to tier selection, customer engineering hours, hourly rate, and optional services.`
+        "BioPilot investment = 36 months of inferred subscription cost + customer engineering effort + any included additional services. Basic engineering and maintenance are included in the subscription scope.",
+      sensitivity: `Current 3-year BioPilot investment: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(investment.totalThreeYearInvestment)}. ROI is most sensitive to inferred scope, customer engineering hours, hourly rate, and optional services.`
     },
     {
       label: "ROI And Payback",
@@ -2230,7 +2343,7 @@ export function assessBioPilotFit(
   const topPlay = plays[0];
   const topSignal = buyingSignals[0];
   const digitalPlantMaturity = buildDigitalPlantMaturity(inputs);
-  const evidenceConfidence = buildEvidenceConfidence(evidenceMeta);
+  const evidenceConfidence = buildEvidenceConfidence(inputs, evidenceMeta);
   const assumptionTransparency = buildAssumptionTransparency(
     inputs,
     annualRecoveredHours,

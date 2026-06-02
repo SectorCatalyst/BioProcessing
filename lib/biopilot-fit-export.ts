@@ -437,9 +437,9 @@ export async function exportBioPilotAssessmentPdf(params: {
 
   drawTable(autoTable, doc, {
     startY: y,
-    head: [["Assumption", "Submitted Value"]],
+    head: [["Assumption", "Report Value"]],
     body: [
-      ["BioPilot Scope", results.investment.tierLabel],
+      ["Inferred BioPilot Scope", results.investment.tierLabel],
       ["Monthly Subscription", formatCurrency(results.investment.monthlySubscription)],
       ["Annual Subscription", formatCurrency(results.investment.annualSubscription)],
       ["3-Year Subscription", formatCurrency(results.investment.threeYearSubscription)],

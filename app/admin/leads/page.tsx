@@ -173,7 +173,7 @@ const INPUT_LABELS: Record<keyof BioPilotAssessmentInputs, string> = {
   bioPilotRecipeStorage: "Stored recipes",
   bioPilotPatEquipment: "PAT equipment",
   bioPilotUsers: "Users",
-  customMonthlySubscription: "Confirmed monthly subscription",
+  customMonthlySubscription: "Inferred monthly subscription",
   customerEngineeringHours: "Customer engineering time",
   customerEngineeringHourlyRate: "Engineering hourly rate",
   additionalServicesInvestment: "Additional services",

@@ -68,19 +68,13 @@ const continueToInputs = async (page: Page) => {
 
 const confirmAllInputSections = async (page: Page) => {
   await page.getByRole("button", { name: "Confirm And Continue" }).click();
-  await expect(page.locator("#input-question-set").getByText("BioPilot Scope And Investment")).toBeVisible();
-  await expect(
-    page.locator("#input-question-set").getByText("BioPilot Subscription Scope", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.locator("#input-question-set").getByText("3-Year BioPilot Investment", { exact: true }),
-  ).toBeVisible();
-  await page.locator("#input-question-set").getByRole("combobox").click();
-  await expect(page.getByText("Basic - $3,000 / month", { exact: true })).toBeVisible();
-  await expect(page.getByText("Professional - $9,000 / month", { exact: true })).toBeVisible();
-  await expect(page.getByText("Enterprise - $15,000 / month", { exact: true })).toBeVisible();
-  await expect(page.getByText("Custom Scope")).toHaveCount(0);
-  await page.keyboard.press("Escape");
+  await expect(page.locator("#input-question-set").getByText("BioPilot Deployment Scope")).toBeVisible();
+  await expect(page.locator("#input-question-set").getByText("Scope First")).toBeVisible();
+  await expect(page.locator("#input-question-set").getByLabel("Online Bioreactors")).toBeVisible();
+  await expect(page.locator("#input-question-set").getByLabel("Customer Engineering Time")).toBeVisible();
+  await expect(page.locator("#input-question-set").getByText("$3,000")).toHaveCount(0);
+  await expect(page.locator("#input-question-set").getByText("Monthly Subscription")).toHaveCount(0);
+  await expect(page.locator("#input-question-set").getByText("3-Year BioPilot Investment")).toHaveCount(0);
   await expect(page.getByText("Input Progress")).toBeVisible();
 
   await page.getByRole("button", { name: "Confirm And Continue" }).click();
@@ -142,7 +136,7 @@ test.describe("BioPilot assessment flow", () => {
     await page.getByRole("button", { name: "Generate Final Report" }).click();
     await expect(page.locator("section").getByText(/Assessment Report$/)).toBeVisible();
     await expect(page.getByText("Very Strong BioPilot Fit", { exact: true })).toBeVisible();
-    await expect(page.getByText("BioPilot Investment Basis")).toBeVisible();
+    await expect(page.getByText("BioPilot Investment Basis", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("3-Year BioPilot Investment", { exact: true }).first()).toBeVisible();
 
     const [download] = await Promise.all([
@@ -168,6 +162,15 @@ test.describe("BioPilot assessment flow", () => {
     await expect(page.getByLabel("Operator Ramp Days")).toHaveValue("60");
 
     await page.getByRole("tab", { name: "Operating Frame" }).click();
+    await page.getByLabel("Process Runs Per Year").fill("350");
+    await page.getByLabel("Sites Or Partners In Scope").fill("12");
+    await page.getByLabel("Failed-Run Impact").fill("300000");
+    await expect(page.getByLabel("Process Runs Per Year")).toHaveValue("350");
+    await expect(page.getByLabel("Sites Or Partners In Scope")).toHaveValue("12");
+    await expect(page.getByLabel("Failed-Run Impact")).toHaveValue("300000");
+    await expect(
+      page.getByText("Outside typical planning range. Confirm before relying on ROI.").first(),
+    ).toBeVisible();
     await confirmAllInputSections(page);
     await page.getByRole("button", { name: "Generate Final Report" }).click();
     await expect(page.locator("section").getByText(/Assessment Report$/)).toBeVisible();
@@ -181,6 +184,9 @@ test.describe("BioPilot assessment flow", () => {
 
     await page.getByRole("button", { name: "Apply Survey Benchmark" }).click();
     await page.getByLabel("Operator Ramp Days").fill("60");
+    await page.getByRole("tab", { name: "Operating Frame" }).click();
+    await page.getByLabel("Process Runs Per Year").fill("350");
+    await page.getByLabel("Loaded Labor Rate").fill("300");
 
     const persistedLead = await page.evaluate(() => {
       const rawStore = window.localStorage.getItem("bioprocess-roi-calculator");
@@ -202,6 +208,8 @@ test.describe("BioPilot assessment flow", () => {
     });
     expect(Object.keys(persistedInputs).sort()).toEqual(expectedInputKeys);
     expect(persistedInputs).toMatchObject({
+      runsPerYear: 350,
+      blendedHourlyRate: 300,
       bioPilotTierId: expect.any(String),
       bioPilotBioreactors: expect.any(Number),
       bioPilotRecipesRunning: expect.any(Number),
@@ -209,14 +217,13 @@ test.describe("BioPilot assessment flow", () => {
       bioPilotPatEquipment: expect.any(Number),
       bioPilotUsers: expect.any(Number),
       customerEngineeringHours: expect.any(Number),
-      customerEngineeringHourlyRate: expect.any(Number),
+      customerEngineeringHourlyRate: 300,
       additionalServicesInvestment: expect.any(Number),
       weeksSinceLastBatchFailure: 64,
       failureCauseExposureScore: 35,
       onboardingDays: 60,
     });
 
-    await page.getByRole("tab", { name: "Operating Frame" }).click();
     await confirmAllInputSections(page);
 
     const progressRequestPromise = page.waitForRequest((request) =>
@@ -242,10 +249,12 @@ test.describe("BioPilot assessment flow", () => {
         jobTitle: "Bioprocess Strategy Lead",
         countryRegion: "United States",
         consentToContact: true,
-        modelVersion: "2.1.0",
+        modelVersion: "2.1.1",
       });
       expect(Object.keys(payload.inputs).sort()).toEqual(expectedInputKeys);
       expect(payload.inputs).toMatchObject({
+        runsPerYear: 350,
+        blendedHourlyRate: 300,
         bioPilotTierId: expect.any(String),
         bioPilotBioreactors: expect.any(Number),
         bioPilotRecipesRunning: expect.any(Number),
@@ -253,7 +262,7 @@ test.describe("BioPilot assessment flow", () => {
         bioPilotPatEquipment: expect.any(Number),
         bioPilotUsers: expect.any(Number),
         customerEngineeringHours: expect.any(Number),
-        customerEngineeringHourlyRate: expect.any(Number),
+        customerEngineeringHourlyRate: 300,
         additionalServicesInvestment: expect.any(Number),
         weeksSinceLastBatchFailure: 64,
         failureCauseExposureScore: 35,
@@ -283,7 +292,7 @@ test.describe("BioPilot assessment flow", () => {
     await continueToInputs(page);
 
     await page.getByRole("button", { name: "Confirm And Continue" }).click();
-    await expect(page.locator("#input-question-set").getByText("BioPilot Scope And Investment")).toBeVisible();
+    await expect(page.locator("#input-question-set").getByText("BioPilot Deployment Scope")).toBeVisible();
 
     await page.getByRole("button", { name: "Confirm And Continue" }).click();
     await expect(page.locator("#input-question-set").getByText("Connected Bioprocess Stack")).toBeVisible();

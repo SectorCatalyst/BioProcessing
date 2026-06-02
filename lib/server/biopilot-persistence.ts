@@ -188,7 +188,7 @@ export const ensureAssessmentTable = async (pool: Pool) => {
       payback_months DOUBLE PRECISION NOT NULL,
       digital_coverage DOUBLE PRECISION NOT NULL,
       manual_burden_index DOUBLE PRECISION NOT NULL,
-      model_version TEXT NOT NULL DEFAULT '2.1.0',
+      model_version TEXT NOT NULL DEFAULT '2.1.1',
       evidence_meta JSONB NOT NULL DEFAULT '{}'::jsonb,
       submitted_inputs JSONB NOT NULL,
       generated_report JSONB NOT NULL,
@@ -210,7 +210,7 @@ export const ensureAssessmentTable = async (pool: Pool) => {
 
   await pool.query(`
     ALTER TABLE roi_assessment_submissions
-    ADD COLUMN IF NOT EXISTS model_version TEXT NOT NULL DEFAULT '2.1.0';
+    ADD COLUMN IF NOT EXISTS model_version TEXT NOT NULL DEFAULT '2.1.1';
   `);
 
   await pool.query(`
@@ -272,7 +272,7 @@ export const ensureAssessmentProgressTable = async (pool: Pool) => {
       fit_band TEXT NOT NULL,
       fit_score DOUBLE PRECISION NOT NULL,
       annual_value_potential DOUBLE PRECISION NOT NULL,
-      model_version TEXT NOT NULL DEFAULT '2.1.0',
+      model_version TEXT NOT NULL DEFAULT '2.1.1',
       evidence_meta JSONB NOT NULL DEFAULT '{}'::jsonb,
       submitted_inputs JSONB NOT NULL,
       generated_report JSONB NOT NULL,
@@ -289,7 +289,7 @@ export const ensureAssessmentProgressTable = async (pool: Pool) => {
 
   await pool.query(`
     ALTER TABLE roi_assessment_progress
-    ADD COLUMN IF NOT EXISTS model_version TEXT NOT NULL DEFAULT '2.1.0';
+    ADD COLUMN IF NOT EXISTS model_version TEXT NOT NULL DEFAULT '2.1.1';
   `);
 
   await pool.query(`
