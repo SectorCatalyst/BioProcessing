@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const BIOPILOT_MODEL_VERSION = "2.0.0";
+export const BIOPILOT_MODEL_VERSION = "2.1.0";
 
 export const BIOPLAN_2023_BATCH_FAILURE_BENCHMARK = {
   id: "bioplan-2023-batch-failure",
@@ -11,6 +11,93 @@ export const BIOPLAN_2023_BATCH_FAILURE_BENCHMARK = {
   context:
     "BioPlan 2023 reported an industry average of roughly 64 weeks between batch failures and highlighted equipment failure, contamination, operator error, material failure, specification misses, and cross-product contamination as tracked failure causes.",
 } as const;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
+export const BIOPILOT_TIER_IDS = [
+  "basic",
+  "professional",
+  "enterprise",
+  "custom",
+];
+
+export type BioPilotTierId = (typeof BIOPILOT_TIER_IDS)[number];
+
+export const BIOPILOT_SUBSCRIPTION_TERM_YEARS = 3;
+
+export interface BioPilotTier {
+  id: BioPilotTierId;
+  label: string;
+  monthlySubscription: number;
+  summary: string;
+  limits: {
+    bioreactors: number;
+    recipesRunning: number;
+    recipeStorage: number;
+    patEquipment: number;
+    users: number;
+  };
+}
+
+export const BIOPILOT_TIERS: BioPilotTier[] = [
+  {
+    id: "basic",
+    label: "Basic",
+    monthlySubscription: 3000,
+    summary: "Focused first deployment for one online bioreactor and one active recipe.",
+    limits: {
+      bioreactors: 1,
+      recipesRunning: 1,
+      recipeStorage: 5,
+      patEquipment: 5,
+      users: 2,
+    },
+  },
+  {
+    id: "professional",
+    label: "Professional",
+    monthlySubscription: 9000,
+    summary: "Multi-reactor scope for a team standardizing several active recipes.",
+    limits: {
+      bioreactors: 4,
+      recipesRunning: 4,
+      recipeStorage: 20,
+      patEquipment: 10,
+      users: 8,
+    },
+  },
+  {
+    id: "enterprise",
+    label: "Enterprise",
+    monthlySubscription: 15000,
+    summary: "Network-ready scope for larger connected programs and PAT coverage.",
+    limits: {
+      bioreactors: 7,
+      recipesRunning: 7,
+      recipeStorage: 20,
+      patEquipment: 20,
+      users: 8,
+    },
+  },
+  {
+    id: "custom",
+    label: "Custom Scope",
+    monthlySubscription: 9000,
+    summary: "Use a confirmed monthly subscription for a scope outside the standard tiers.",
+    limits: {
+      bioreactors: 20,
+      recipesRunning: 20,
+      recipeStorage: 100,
+      patEquipment: 60,
+      users: 50,
+    },
+  },
+];
+
+export const BIOPILOT_TIER_MAP = Object.fromEntries(
+  BIOPILOT_TIERS.map((tier) => [tier.id, tier]),
+) as Record<BioPilotTierId, BioPilotTier>;
 
 export const PROCESS_PROFILE_IDS = [
   "mab-cho",
@@ -76,6 +163,16 @@ export interface BioPilotAssessmentInputs {
   blendedHourlyRate: number;
   costPerFailedRun: number;
   valuePerDayAcceleration: number;
+  bioPilotTierId: BioPilotTierId;
+  bioPilotBioreactors: number;
+  bioPilotRecipesRunning: number;
+  bioPilotRecipeStorage: number;
+  bioPilotPatEquipment: number;
+  bioPilotUsers: number;
+  customMonthlySubscription: number;
+  customerEngineeringHours: number;
+  customerEngineeringHourlyRate: number;
+  additionalServicesInvestment: number;
   plannedProgramInvestment: number;
   bioreactorConnectivity: number;
   sensorCoverage: number;
@@ -102,8 +199,14 @@ export type BioPilotAdjustableInputKey = Exclude<
   "processProfileId" | "lifecycleStageId"
 >;
 
+export type BioPilotNumericInputKey = Exclude<
+  BioPilotAdjustableInputKey,
+  "bioPilotTierId"
+>;
+
 export const BIOPILOT_INPUT_SECTION_IDS = [
   "operating-frame",
+  "solution-investment",
   "connected-stack",
   "manual-burden",
   "batch-failure",
@@ -213,6 +316,37 @@ export interface SalesFollowUpBrief {
   proposalUse: string;
 }
 
+export interface BioPilotInvestmentBasis {
+  tierId: BioPilotTierId;
+  tierLabel: string;
+  monthlySubscription: number;
+  annualSubscription: number;
+  subscriptionTermYears: number;
+  threeYearSubscription: number;
+  includedEngineeringLabel: string;
+  includedMaintenanceLabel: string;
+  bioreactors: number;
+  recipesRunning: number;
+  recipeStorage: number;
+  patEquipment: number;
+  users: number;
+  customerEngineeringHours: number;
+  customerEngineeringHourlyRate: number;
+  customerEngineeringInvestment: number;
+  additionalServicesInvestment: number;
+  firstYearInvestment: number;
+  totalThreeYearInvestment: number;
+}
+
+export interface BioPilotInvestmentSummary extends BioPilotInvestmentBasis {
+  yearOneValue: number;
+  yearTwoValue: number;
+  yearThreeValue: number;
+  threeYearValue: number;
+  netThreeYearBenefit: number;
+  paybackMonths: number;
+}
+
 export interface BioPilotAssessmentResults {
   modelVersion: string;
   profile: ProcessProfile;
@@ -230,6 +364,7 @@ export interface BioPilotAssessmentResults {
   threeYearNetBenefit: number;
   threeYearRoi: number;
   paybackMonths: number;
+  investment: BioPilotInvestmentSummary;
   annualDecisionDaysRecovered: number;
   laneScores: AssessmentLane[];
   plays: BioPilotPlay[];
@@ -242,6 +377,133 @@ export interface BioPilotAssessmentResults {
   executiveSummary: string;
   nextStep: string;
 }
+
+const normalizeTierId = (tierId: unknown): BioPilotTierId =>
+  BIOPILOT_TIER_IDS.includes(tierId as BioPilotTierId)
+    ? (tierId as BioPilotTierId)
+    : "professional";
+
+export function inferBioPilotTierId(
+  inputs: Pick<
+    BioPilotAssessmentInputs,
+    | "bioPilotBioreactors"
+    | "bioPilotRecipesRunning"
+    | "bioPilotRecipeStorage"
+    | "bioPilotPatEquipment"
+    | "bioPilotUsers"
+  >,
+): BioPilotTierId {
+  const enterprise = BIOPILOT_TIER_MAP.enterprise.limits;
+  const professional = BIOPILOT_TIER_MAP.professional.limits;
+  const basic = BIOPILOT_TIER_MAP.basic.limits;
+
+  if (
+    inputs.bioPilotBioreactors > enterprise.bioreactors ||
+    inputs.bioPilotRecipesRunning > enterprise.recipesRunning ||
+    inputs.bioPilotRecipeStorage > enterprise.recipeStorage ||
+    inputs.bioPilotPatEquipment > enterprise.patEquipment ||
+    inputs.bioPilotUsers > enterprise.users
+  ) {
+    return "custom";
+  }
+
+  if (
+    inputs.bioPilotBioreactors > professional.bioreactors ||
+    inputs.bioPilotRecipesRunning > professional.recipesRunning ||
+    inputs.bioPilotRecipeStorage > professional.recipeStorage ||
+    inputs.bioPilotPatEquipment > professional.patEquipment ||
+    inputs.bioPilotUsers > professional.users
+  ) {
+    return "enterprise";
+  }
+
+  if (
+    inputs.bioPilotBioreactors > basic.bioreactors ||
+    inputs.bioPilotRecipesRunning > basic.recipesRunning ||
+    inputs.bioPilotRecipeStorage > basic.recipeStorage ||
+    inputs.bioPilotPatEquipment > basic.patEquipment ||
+    inputs.bioPilotUsers > basic.users
+  ) {
+    return "professional";
+  }
+
+  return "basic";
+}
+
+export function calculateBioPilotInvestmentBasis(
+  inputs: BioPilotAssessmentInputs,
+): BioPilotInvestmentBasis {
+  const tierId = normalizeTierId(inputs.bioPilotTierId);
+  const tier = BIOPILOT_TIER_MAP[tierId];
+  const monthlySubscription =
+    tierId === "custom"
+      ? clamp(inputs.customMonthlySubscription, 1000, 50000)
+      : tier.monthlySubscription;
+  const annualSubscription = monthlySubscription * 12;
+  const threeYearSubscription = annualSubscription * BIOPILOT_SUBSCRIPTION_TERM_YEARS;
+  const customerEngineeringHours = clamp(inputs.customerEngineeringHours, 0, 1000);
+  const customerEngineeringHourlyRate = clamp(inputs.customerEngineeringHourlyRate, 80, 350);
+  const customerEngineeringInvestment =
+    customerEngineeringHours * customerEngineeringHourlyRate;
+  const additionalServicesInvestment = clamp(inputs.additionalServicesInvestment, 0, 500000);
+
+  return {
+    tierId,
+    tierLabel: tier.label,
+    monthlySubscription,
+    annualSubscription,
+    subscriptionTermYears: BIOPILOT_SUBSCRIPTION_TERM_YEARS,
+    threeYearSubscription,
+    includedEngineeringLabel: "Basic engineering included",
+    includedMaintenanceLabel: "Maintenance included",
+    bioreactors: Math.round(clamp(inputs.bioPilotBioreactors, 1, 20)),
+    recipesRunning: Math.round(clamp(inputs.bioPilotRecipesRunning, 1, 20)),
+    recipeStorage: Math.round(clamp(inputs.bioPilotRecipeStorage, 1, 100)),
+    patEquipment: Math.round(clamp(inputs.bioPilotPatEquipment, 0, 60)),
+    users: Math.round(clamp(inputs.bioPilotUsers, 1, 50)),
+    customerEngineeringHours,
+    customerEngineeringHourlyRate,
+    customerEngineeringInvestment,
+    additionalServicesInvestment,
+    firstYearInvestment:
+      annualSubscription + customerEngineeringInvestment + additionalServicesInvestment,
+    totalThreeYearInvestment:
+      threeYearSubscription + customerEngineeringInvestment + additionalServicesInvestment,
+  };
+}
+
+const calculatePaybackMonths = (
+  annualValuePotential: number,
+  investment: BioPilotInvestmentBasis,
+) => {
+  if (annualValuePotential <= 0) {
+    return 60;
+  }
+
+  let cumulativeCashFlow =
+    -investment.customerEngineeringInvestment - investment.additionalServicesInvestment;
+
+  for (let month = 1; month <= 60; month += 1) {
+    if (month <= 36 && (month - 1) % 12 === 0) {
+      cumulativeCashFlow -= investment.annualSubscription;
+    }
+
+    const year = Math.ceil(month / 12);
+    const ramp =
+      year <= 1
+        ? 0.6
+        : year === 2
+          ? 0.9
+          : 1;
+    cumulativeCashFlow += (annualValuePotential * ramp) / 12;
+
+    if (cumulativeCashFlow >= 0) {
+      return month;
+    }
+  }
+
+  return 60;
+};
 
 const boundedNumber = (min: number, max: number) =>
   z.number().finite().min(min).max(max);
@@ -257,7 +519,17 @@ export const bioPilotAssessmentInputsSchema = z.object({
   blendedHourlyRate: boundedNumber(80, 260),
   costPerFailedRun: boundedNumber(15000, 250000),
   valuePerDayAcceleration: boundedNumber(10000, 150000),
-  plannedProgramInvestment: boundedNumber(100000, 900000),
+  bioPilotTierId: z.enum(BIOPILOT_TIER_IDS),
+  bioPilotBioreactors: boundedNumber(1, 20),
+  bioPilotRecipesRunning: boundedNumber(1, 20),
+  bioPilotRecipeStorage: boundedNumber(1, 100),
+  bioPilotPatEquipment: boundedNumber(0, 60),
+  bioPilotUsers: boundedNumber(1, 50),
+  customMonthlySubscription: boundedNumber(1000, 50000),
+  customerEngineeringHours: boundedNumber(0, 1000),
+  customerEngineeringHourlyRate: boundedNumber(80, 350),
+  additionalServicesInvestment: boundedNumber(0, 500000),
+  plannedProgramInvestment: boundedNumber(0, 2000000),
   bioreactorConnectivity: boundedNumber(0, 100),
   sensorCoverage: boundedNumber(0, 100),
   patCoverage: boundedNumber(0, 100),
@@ -286,9 +558,6 @@ export const assessmentEvidenceMetaSchema = z.object({
   usedSampleData: z.boolean().optional(),
   userConfirmedAt: z.string().datetime().nullable().optional(),
 });
-
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
 
 export const PROCESS_PROFILES: ProcessProfile[] = [
   {
@@ -667,7 +936,17 @@ export const DEFAULT_BIOPILOT_ASSESSMENT_INPUTS: BioPilotAssessmentInputs = {
   blendedHourlyRate: 145,
   costPerFailedRun: 80000,
   valuePerDayAcceleration: 35000,
-  plannedProgramInvestment: 300000,
+  bioPilotTierId: "professional",
+  bioPilotBioreactors: 4,
+  bioPilotRecipesRunning: 4,
+  bioPilotRecipeStorage: 20,
+  bioPilotPatEquipment: 10,
+  bioPilotUsers: 8,
+  customMonthlySubscription: 9000,
+  customerEngineeringHours: 160,
+  customerEngineeringHourlyRate: 145,
+  additionalServicesInvestment: 0,
+  plannedProgramInvestment: 347200,
   bioreactorConnectivity: 45,
   sensorCoverage: 58,
   patCoverage: 34,
@@ -710,7 +989,17 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
       blendedHourlyRate: 135,
       costPerFailedRun: 45000,
       valuePerDayAcceleration: 22000,
-      plannedProgramInvestment: 220000,
+      bioPilotTierId: "basic",
+      bioPilotBioreactors: 1,
+      bioPilotRecipesRunning: 1,
+      bioPilotRecipeStorage: 5,
+      bioPilotPatEquipment: 5,
+      bioPilotUsers: 2,
+      customMonthlySubscription: 3000,
+      customerEngineeringHours: 120,
+      customerEngineeringHourlyRate: 135,
+      additionalServicesInvestment: 0,
+      plannedProgramInvestment: 124200,
       bioreactorConnectivity: 34,
       sensorCoverage: 52,
       patCoverage: 24,
@@ -747,7 +1036,17 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
       blendedHourlyRate: 150,
       costPerFailedRun: 95000,
       valuePerDayAcceleration: 40000,
-      plannedProgramInvestment: 340000,
+      bioPilotTierId: "professional",
+      bioPilotBioreactors: 4,
+      bioPilotRecipesRunning: 4,
+      bioPilotRecipeStorage: 20,
+      bioPilotPatEquipment: 10,
+      bioPilotUsers: 8,
+      customMonthlySubscription: 9000,
+      customerEngineeringHours: 180,
+      customerEngineeringHourlyRate: 150,
+      additionalServicesInvestment: 0,
+      plannedProgramInvestment: 351000,
       bioreactorConnectivity: 48,
       sensorCoverage: 60,
       patCoverage: 36,
@@ -784,7 +1083,17 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
       blendedHourlyRate: 165,
       costPerFailedRun: 150000,
       valuePerDayAcceleration: 55000,
-      plannedProgramInvestment: 480000,
+      bioPilotTierId: "enterprise",
+      bioPilotBioreactors: 7,
+      bioPilotRecipesRunning: 7,
+      bioPilotRecipeStorage: 20,
+      bioPilotPatEquipment: 20,
+      bioPilotUsers: 8,
+      customMonthlySubscription: 15000,
+      customerEngineeringHours: 240,
+      customerEngineeringHourlyRate: 165,
+      additionalServicesInvestment: 0,
+      plannedProgramInvestment: 579600,
       bioreactorConnectivity: 62,
       sensorCoverage: 72,
       patCoverage: 48,
@@ -807,7 +1116,7 @@ export const BIOPILOT_SAMPLE_CONFIGS: Array<{
   },
 ];
 
-export const BIOPILOT_ADJUSTABLE_INPUT_KEYS: BioPilotAdjustableInputKey[] = [
+export const BIOPILOT_NUMERIC_INPUT_KEYS: BioPilotNumericInputKey[] = [
   "activePrograms",
   "runsPerYear",
   "sites",
@@ -816,6 +1125,15 @@ export const BIOPILOT_ADJUSTABLE_INPUT_KEYS: BioPilotAdjustableInputKey[] = [
   "blendedHourlyRate",
   "costPerFailedRun",
   "valuePerDayAcceleration",
+  "bioPilotBioreactors",
+  "bioPilotRecipesRunning",
+  "bioPilotRecipeStorage",
+  "bioPilotPatEquipment",
+  "bioPilotUsers",
+  "customMonthlySubscription",
+  "customerEngineeringHours",
+  "customerEngineeringHourlyRate",
+  "additionalServicesInvestment",
   "plannedProgramInvestment",
   "bioreactorConnectivity",
   "sensorCoverage",
@@ -837,7 +1155,12 @@ export const BIOPILOT_ADJUSTABLE_INPUT_KEYS: BioPilotAdjustableInputKey[] = [
   "onboardingDays",
 ];
 
-const NUMERIC_INPUT_KEYS = BIOPILOT_ADJUSTABLE_INPUT_KEYS;
+export const BIOPILOT_ADJUSTABLE_INPUT_KEYS: BioPilotAdjustableInputKey[] = [
+  ...BIOPILOT_NUMERIC_INPUT_KEYS,
+  "bioPilotTierId",
+];
+
+const NUMERIC_INPUT_KEYS = BIOPILOT_NUMERIC_INPUT_KEYS;
 
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min);
 
@@ -868,12 +1191,16 @@ export function normalizeAssessmentInputs(
     ...inputs,
     processProfileId: profile,
     lifecycleStageId: stage,
+    bioPilotTierId: normalizeTierId(inputs.bioPilotTierId),
   };
 
   for (const key of NUMERIC_INPUT_KEYS) {
     const value = normalized[key];
     normalized[key] = Number.isFinite(value) ? value : DEFAULT_BIOPILOT_ASSESSMENT_INPUTS[key];
   }
+
+  const investmentBasis = calculateBioPilotInvestmentBasis(normalized);
+  normalized.plannedProgramInvestment = investmentBasis.totalThreeYearInvestment;
 
   return normalized;
 }
@@ -884,10 +1211,9 @@ export function buildRandomizedSampleInputs(sampleId: string): BioPilotAssessmen
     DEFAULT_BIOPILOT_ASSESSMENT_INPUTS;
 
   const normalized = normalizeAssessmentInputs(baseline);
-  const stage = LIFECYCLE_STAGE_MAP[normalized.lifecycleStageId];
   const opportunityShift = randomBetween(18, 26);
 
-  return {
+  return normalizeAssessmentInputs({
     ...normalized,
     activePrograms: wholeNumberJitter(normalized.activePrograms + 1.2, 1.5, 1, 14),
     runsPerYear: wholeNumberJitter(
@@ -912,11 +1238,34 @@ export function buildRandomizedSampleInputs(sampleId: string): BioPilotAssessmen
       10000,
       150000,
     ),
-    plannedProgramInvestment: roundedCurrencyJitter(
-      stage.annualProgramInvestment,
-      stage.annualProgramInvestment * 0.18,
-      100000,
-      900000,
+    bioPilotBioreactors: wholeNumberJitter(normalized.bioPilotBioreactors, 1, 1, 20),
+    bioPilotRecipesRunning: wholeNumberJitter(normalized.bioPilotRecipesRunning, 1, 1, 20),
+    bioPilotRecipeStorage: wholeNumberJitter(normalized.bioPilotRecipeStorage, 3, 1, 100),
+    bioPilotPatEquipment: wholeNumberJitter(normalized.bioPilotPatEquipment, 2, 0, 60),
+    bioPilotUsers: wholeNumberJitter(normalized.bioPilotUsers, 1, 1, 50),
+    customMonthlySubscription: roundedCurrencyJitter(
+      normalized.customMonthlySubscription,
+      normalized.customMonthlySubscription * 0.08,
+      1000,
+      50000,
+    ),
+    customerEngineeringHours: wholeNumberJitter(
+      normalized.customerEngineeringHours,
+      24,
+      0,
+      1000,
+    ),
+    customerEngineeringHourlyRate: roundedRateJitter(
+      normalized.customerEngineeringHourlyRate,
+      10,
+      80,
+      350,
+    ),
+    additionalServicesInvestment: roundedCurrencyJitter(
+      normalized.additionalServicesInvestment,
+      Math.max(5000, normalized.additionalServicesInvestment * 0.12),
+      0,
+      500000,
     ),
     bioreactorConnectivity: jitter(normalized.bioreactorConnectivity - opportunityShift, 6, 8, 78),
     sensorCoverage: jitter(normalized.sensorCoverage - opportunityShift * 0.75, 5, 10, 82),
@@ -961,7 +1310,7 @@ export function buildRandomizedSampleInputs(sampleId: string): BioPilotAssessmen
       160,
     ),
     onboardingDays: jitter(normalized.onboardingDays + opportunityShift * 0.35, 3, 3, 120),
-  };
+  });
 }
 
 const percentageInverse = (value: number) => clamp(100 - value, 0, 100);
@@ -1193,6 +1542,7 @@ const buildAssumptionTransparency = (
   inputs: BioPilotAssessmentInputs,
   annualRecoveredHours: number,
   annualValuePotential: number,
+  investment: BioPilotInvestmentSummary,
   threeYearRoi: number,
   paybackMonths: number,
   evidenceMeta?: AssessmentEvidenceMeta | null,
@@ -1225,11 +1575,18 @@ const buildAssumptionTransparency = (
         "This area is most sensitive to actual failure frequency, failure impact, and whether recovery effort is already included in the failed-run impact assumption.",
     },
     {
-      label: "ROI And Payback",
-      basis: `${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(inputs.plannedProgramInvestment)} submitted first-wave investment assumption.`,
+      label: "BioPilot Scope And Investment",
+      basis: `${investment.tierLabel} scope at ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(investment.monthlySubscription)} per month, billed annually over ${investment.subscriptionTermYears} years, with ${Math.round(investment.customerEngineeringHours).toLocaleString("en-US")} customer engineering hours.`,
       formula:
-        "3-year ROI = phased 3-year value minus investment, divided by investment. Payback = investment divided by realized annual value.",
-      sensitivity: `Current estimate: ${Math.round(threeYearRoi)}% 3-year ROI and ${paybackMonths.toFixed(1)} months payback. Replace the investment assumption with proposal pricing before treating ROI as final.`,
+        "BioPilot investment = 36 months of subscription cost + customer engineering effort + selected additional services. Basic engineering and maintenance are included in the subscription scope.",
+      sensitivity: `Current 3-year BioPilot investment: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(investment.totalThreeYearInvestment)}. ROI is most sensitive to tier selection, customer engineering hours, hourly rate, and optional services.`
+    },
+    {
+      label: "ROI And Payback",
+      basis: `${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(investment.threeYearValue)} phased value compared with ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(investment.totalThreeYearInvestment)} 3-year BioPilot investment.`,
+      formula:
+        "3-year ROI = phased 3-year value minus BioPilot investment, divided by BioPilot investment. Payback uses annual subscription billing, customer engineering effort, optional services, and a phased value ramp.",
+      sensitivity: `Current estimate: ${Math.round(threeYearRoi)}% 3-year ROI and ${paybackMonths >= 60 ? "60+" : paybackMonths.toFixed(1)} months payback. Confirm the selected scope and site engineering assumptions before formal budget approval.`,
     },
     {
       label: "DPMM Score",
@@ -1257,7 +1614,7 @@ const buildAssumptionTransparency = (
       "This report estimates current inefficiency and potential improvement from submitted time, maturity, batch-failure, and value assumptions.",
     items,
     planningCaveat:
-      "Use this as a planning and opportunity-development estimate. Final ROI should be revisited with confirmed operating evidence and the actual BioPilot proposal scope.",
+      "Use this as a planning and opportunity-development estimate. Final ROI should be revisited with confirmed operating evidence and confirmed BioPilot commercial scope.",
   };
 };
 
@@ -1543,16 +1900,26 @@ export function assessBioPilotFit(
     (sum, lever) => sum + lever.annualValue,
     0,
   );
-  const threeYearValue = annualValuePotential * (0.6 + 0.9 + 1);
-  const threeYearNetBenefit = threeYearValue - inputs.plannedProgramInvestment;
+  const investmentBasis = calculateBioPilotInvestmentBasis(inputs);
+  const yearOneValue = annualValuePotential * 0.6;
+  const yearTwoValue = annualValuePotential * 0.9;
+  const yearThreeValue = annualValuePotential;
+  const threeYearValue = yearOneValue + yearTwoValue + yearThreeValue;
+  const threeYearNetBenefit = threeYearValue - investmentBasis.totalThreeYearInvestment;
   const threeYearRoi =
-    inputs.plannedProgramInvestment > 0
-      ? (threeYearNetBenefit / inputs.plannedProgramInvestment) * 100
+    investmentBasis.totalThreeYearInvestment > 0
+      ? (threeYearNetBenefit / investmentBasis.totalThreeYearInvestment) * 100
       : 0;
-  const paybackMonths =
-    annualValuePotential > 0
-      ? (inputs.plannedProgramInvestment / (annualValuePotential * 0.72)) * 12
-      : 0;
+  const paybackMonths = calculatePaybackMonths(annualValuePotential, investmentBasis);
+  const investment: BioPilotInvestmentSummary = {
+    ...investmentBasis,
+    yearOneValue,
+    yearTwoValue,
+    yearThreeValue,
+    threeYearValue,
+    netThreeYearBenefit: threeYearNetBenefit,
+    paybackMonths,
+  };
 
   const laneScores: AssessmentLane[] = [
     {
@@ -1868,6 +2235,7 @@ export function assessBioPilotFit(
     inputs,
     annualRecoveredHours,
     annualValuePotential,
+    investment,
     threeYearRoi,
     paybackMonths,
     evidenceMeta,
@@ -1877,14 +2245,14 @@ export function assessBioPilotFit(
     discoveryFocus: [
       "Validate the submitted review, investigation, failure recovery, and transfer effort with one recent run.",
       "Confirm which BioPilot scope maps to the lowest DPMM maturity domain.",
-      "Replace planning-level investment with proposal pricing before calling the model a final ROI.",
+      "Confirm the selected BioPilot scope, customer engineering effort, and optional services before final budget approval.",
     ],
     recommendedAction:
       evidenceConfidence.band === "High"
         ? "Use this report to structure a proposal review and confirm implementation scope."
         : "Use this report to guide discovery, then refresh the estimate after the priority assumptions are confirmed.",
     proposalUse:
-      "This calculator sizes the opportunity and operating shortfall. Proposal pricing should be added later to turn the opportunity case into final ROI.",
+      "This calculator connects the operating opportunity to BioPilot subscription scope and customer engineering assumptions. Confirm final commercial terms before budget approval.",
   };
 
   const formatSentencePhrase = (value: string) =>
@@ -1936,6 +2304,7 @@ export function assessBioPilotFit(
     threeYearNetBenefit,
     threeYearRoi,
     paybackMonths,
+    investment,
     annualDecisionDaysRecovered,
     laneScores,
     plays,

@@ -21,9 +21,12 @@ import {
   BIOPILOT_INPUT_SECTION_IDS,
   BIOPILOT_MODEL_VERSION,
   BIOPILOT_SAMPLE_CONFIGS,
+  BIOPILOT_TIERS,
   BIOPLAN_2023_BATCH_FAILURE_BENCHMARK,
   buildRandomizedSampleInputs,
+  calculateBioPilotInvestmentBasis,
   DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
+  inferBioPilotTierId,
   LIFECYCLE_STAGES,
   LIFECYCLE_STAGE_MAP,
   normalizeAssessmentInputs,
@@ -35,6 +38,8 @@ import {
   type AssessmentInputSource,
   type BioPilotAdjustableInputKey,
   type BioPilotInputSectionId,
+  type BioPilotNumericInputKey,
+  type BioPilotTierId,
   type ProcessProfileId,
 } from "@/lib/biopilot-fit-assessment";
 import {
@@ -64,8 +69,11 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
-const LEGACY_STORAGE_KEY = "biopilot-fit-assessment-state-v1";
-const STORAGE_KEY = "biopilot-fit-assessment-state-v2";
+const LEGACY_STORAGE_KEYS = [
+  "biopilot-fit-assessment-state-v2",
+  "biopilot-fit-assessment-state-v1",
+] as const;
+const STORAGE_KEY = "biopilot-fit-assessment-state-v3";
 
 const SHELL_CARD =
   "glass-edge relative rounded-[40px] border border-[color:var(--border-strong)] bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(245,248,252,0.96))] backdrop-blur-2xl before:pointer-events-none before:absolute before:inset-x-12 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/90 before:to-transparent";
@@ -166,7 +174,8 @@ type AssessmentProgressStatus =
   | "report_generation_failed"
   | "report_generated";
 
-type AdjustableFieldKey = BioPilotAdjustableInputKey;
+type AdjustableFieldKey = BioPilotNumericInputKey;
+type InputSourceFieldKey = BioPilotAdjustableInputKey;
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -262,12 +271,88 @@ const FIELD_COPY: Record<
     suffix: "USD",
     kind: "number",
   },
+  bioPilotBioreactors: {
+    label: "Online Bioreactors",
+    description: "Number of bioreactors expected to be connected in the BioPilot scope.",
+    min: 1,
+    max: 20,
+    step: 1,
+    kind: "number",
+  },
+  bioPilotRecipesRunning: {
+    label: "Active Recipes",
+    description: "Number of recipes expected to be running online in the initial BioPilot scope.",
+    min: 1,
+    max: 20,
+    step: 1,
+    kind: "number",
+  },
+  bioPilotRecipeStorage: {
+    label: "Stored Recipes",
+    description: "Number of stored recipes expected to remain available for reuse and review.",
+    min: 1,
+    max: 100,
+    step: 1,
+    kind: "number",
+  },
+  bioPilotPatEquipment: {
+    label: "PAT Equipment",
+    description: "Number of PAT or analyzer equipment connections included in the BioPilot scope.",
+    min: 0,
+    max: 60,
+    step: 1,
+    kind: "number",
+  },
+  bioPilotUsers: {
+    label: "Users",
+    description: "Number of users expected to access the BioPilot workflow in the selected scope.",
+    min: 1,
+    max: 50,
+    step: 1,
+    kind: "number",
+  },
+  customMonthlySubscription: {
+    label: "Confirmed Monthly Subscription",
+    description: "Use this when the BioPilot subscription is outside the standard scope options.",
+    min: 1000,
+    max: 50000,
+    step: 500,
+    suffix: "USD/mo",
+    kind: "number",
+  },
+  customerEngineeringHours: {
+    label: "Customer Engineering Time",
+    description: "Estimated customer-side engineering hours needed to prepare, connect, validate, and adopt the first workflow.",
+    min: 0,
+    max: 1000,
+    step: 5,
+    suffix: "hrs",
+    kind: "number",
+  },
+  customerEngineeringHourlyRate: {
+    label: "Engineering Hourly Rate",
+    description: "Loaded USD/hr rate for customer engineering, validation, automation, and system-support time.",
+    min: 80,
+    max: 350,
+    step: 5,
+    suffix: "$/hr",
+    kind: "number",
+  },
+  additionalServicesInvestment: {
+    label: "Additional Services",
+    description: "Optional one-time amount for selected templates, consulting, or added launch support.",
+    min: 0,
+    max: 500000,
+    step: 5000,
+    suffix: "USD",
+    kind: "number",
+  },
   plannedProgramInvestment: {
-    label: "First-Wave BioPilot Investment",
+    label: "Calculated 3-Year BioPilot Investment",
     description:
-      "Estimated first-wave BioPilot investment used to convert the opportunity into directional ROI. Refine this once proposal pricing is known.",
-    min: 100000,
-    max: 900000,
+      "Derived compatibility value from subscription scope, customer engineering time, and additional services.",
+    min: 0,
+    max: 2000000,
     step: 10000,
     suffix: "USD",
     kind: "number",
@@ -450,7 +535,22 @@ const INPUT_SECTIONS = [
       "blendedHourlyRate",
       "costPerFailedRun",
       "valuePerDayAcceleration",
-      "plannedProgramInvestment",
+    ] as AdjustableFieldKey[],
+  },
+  {
+    id: "solution-investment",
+    title: "BioPilot Scope And Investment",
+    description: "Confirm the subscription scope, customer engineering time, and selected additional services used for ROI.",
+    fields: [
+      "bioPilotBioreactors",
+      "bioPilotRecipesRunning",
+      "bioPilotRecipeStorage",
+      "bioPilotPatEquipment",
+      "bioPilotUsers",
+      "customMonthlySubscription",
+      "customerEngineeringHours",
+      "customerEngineeringHourlyRate",
+      "additionalServicesInvestment",
     ] as AdjustableFieldKey[],
   },
   {
@@ -542,7 +642,9 @@ const getAssessmentProgressStatus = ({
 
 const INPUT_SECTION_GUIDANCE: Record<InputSectionId, string> = {
   "operating-frame":
-    "These values set the scale of the business case. Annual run count, failed-run cost, and investment assumptions usually move the ROI most.",
+    "These values set the scale of the business case. Annual run count, failed-run cost, labor rate, and acceleration value usually move the opportunity estimate most.",
+  "solution-investment":
+    "These values connect the opportunity estimate to BioPilot scope. Use the closest subscription scope and include customer-side engineering time needed to launch the first workflow.",
   "connected-stack":
     "These 0-100 scores define the digital plant maturity baseline across instruments, PAT, analyzer context, and operating evidence.",
   "manual-burden":
@@ -616,7 +718,9 @@ function loadInitialInputs(): BioPilotAssessmentInputs {
 
   const saved =
     window.localStorage.getItem(STORAGE_KEY) ??
-    window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    LEGACY_STORAGE_KEYS.map((key) => window.localStorage.getItem(key)).find(
+      (value): value is string => Boolean(value),
+    );
   if (!saved) {
     return DEFAULT_BIOPILOT_ASSESSMENT_INPUTS;
   }
@@ -628,7 +732,9 @@ function loadInitialInputs(): BioPilotAssessmentInputs {
     return migrated;
   } catch {
     window.localStorage.removeItem(STORAGE_KEY);
-    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    for (const key of LEGACY_STORAGE_KEYS) {
+      window.localStorage.removeItem(key);
+    }
     return DEFAULT_BIOPILOT_ASSESSMENT_INPUTS;
   }
 }
@@ -636,7 +742,7 @@ function loadInitialInputs(): BioPilotAssessmentInputs {
 function buildInputSources(source: AssessmentInputSource) {
   return Object.fromEntries(
     BIOPILOT_ADJUSTABLE_INPUT_KEYS.map((key) => [key, source]),
-  ) as Partial<Record<AdjustableFieldKey, AssessmentInputSource>>;
+  ) as Partial<Record<InputSourceFieldKey, AssessmentInputSource>>;
 }
 
 function InputSectionCard({
@@ -648,6 +754,10 @@ function InputSectionCard({
   inputs: BioPilotAssessmentInputs;
   onPatch: (patch: Partial<BioPilotAssessmentInputs>) => void;
 }) {
+  const visibleFields = section.fields.filter(
+    (field) => field !== "customMonthlySubscription" || inputs.bioPilotTierId === "custom",
+  );
+
   return (
     <div className={cn(PANEL_CARD, "overflow-hidden p-0")}>
       <div className="border-b border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,250,252,0.96))] px-5 py-4">
@@ -666,8 +776,11 @@ function InputSectionCard({
           <AlertDescription>{INPUT_SECTION_GUIDANCE[section.id]}</AlertDescription>
         </Alert>
       </div>
+      {section.id === "solution-investment" ? (
+        <BioPilotInvestmentScopePanel inputs={inputs} onPatch={onPatch} />
+      ) : null}
       <div className="grid auto-rows-fr gap-3 px-4 py-4 md:grid-cols-2 2xl:grid-cols-3">
-        {section.fields.map((field) =>
+        {visibleFields.map((field) =>
           FIELD_COPY[field].kind === "range" ? (
             <RangeField
               key={field}
@@ -685,6 +798,138 @@ function InputSectionCard({
           ),
         )}
       </div>
+    </div>
+  );
+}
+
+function BioPilotInvestmentScopePanel({
+  inputs,
+  onPatch,
+}: {
+  inputs: BioPilotAssessmentInputs;
+  onPatch: (patch: Partial<BioPilotAssessmentInputs>) => void;
+}) {
+  const investment = calculateBioPilotInvestmentBasis(inputs);
+
+  const handleTierChange = (value: string | null) => {
+    if (!value) {
+      return;
+    }
+
+    const tier = BIOPILOT_TIERS.find((item) => item.id === value);
+
+    if (!tier) {
+      return;
+    }
+
+    const tierId = tier.id as BioPilotTierId;
+
+    if (tierId === "custom") {
+      onPatch({
+        bioPilotTierId: tierId,
+        customMonthlySubscription: investment.monthlySubscription,
+      });
+      return;
+    }
+
+    onPatch({
+      bioPilotTierId: tierId,
+      bioPilotBioreactors: tier.limits.bioreactors,
+      bioPilotRecipesRunning: tier.limits.recipesRunning,
+      bioPilotRecipeStorage: tier.limits.recipeStorage,
+      bioPilotPatEquipment: tier.limits.patEquipment,
+      bioPilotUsers: tier.limits.users,
+      customMonthlySubscription: tier.monthlySubscription,
+    });
+  };
+
+  return (
+    <div className="grid gap-4 border-b border-[color:var(--border)] bg-[rgba(255,255,255,0.46)] px-4 py-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(260px,0.72fr)_minmax(0,1.28fr)]">
+        <div className={cn(SOFT_CARD, "p-4")}>
+          <label className="text-base font-semibold text-[color:var(--foreground)]">
+            BioPilot Subscription Scope
+          </label>
+          <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
+            Select the scope that best matches the connected workflow expected for this estimate.
+          </p>
+          <Select value={inputs.bioPilotTierId} onValueChange={handleTierChange}>
+            <SelectTrigger className={cn(INPUT_CLASS, "mt-4 w-full justify-between")}>
+              <SelectValue placeholder="Choose BioPilot Scope" />
+            </SelectTrigger>
+            <SelectContent className={SELECT_CONTENT_CLASS}>
+              {BIOPILOT_TIERS.map((tier) => (
+                <SelectItem className={SELECT_ITEM_CLASS} key={tier.id} value={tier.id}>
+                  {tier.label} - {formatCurrency(tier.monthlySubscription)} / month
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <ContextMetric
+            label="Monthly Subscription"
+            value={formatCurrency(investment.monthlySubscription)}
+          />
+          <ContextMetric
+            label="3-Year Subscription"
+            value={formatCurrency(investment.threeYearSubscription)}
+          />
+          <ContextMetric
+            label="3-Year BioPilot Investment"
+            value={formatCurrency(investment.totalThreeYearInvestment)}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {BIOPILOT_TIERS.filter((tier) => tier.id !== "custom").map((tier) => (
+          <div
+            key={tier.id}
+            className={cn(
+              SOFT_CARD,
+              "p-4",
+              inputs.bioPilotTierId === tier.id
+                ? "border-[rgba(0,79,155,0.28)] bg-[linear-gradient(180deg,rgba(230,242,255,0.96),rgba(244,249,253,0.98))]"
+                : "",
+            )}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-base font-semibold text-[color:var(--foreground)]">{tier.label}</p>
+                <p className="mt-1 text-[1.35rem] font-semibold tracking-[-0.03em] text-[color:var(--brand-blue)]">
+                  {formatCurrency(tier.monthlySubscription)}
+                  <span className="text-sm font-medium tracking-normal text-[color:var(--muted-foreground)]">
+                    {" "}/ mo
+                  </span>
+                </p>
+              </div>
+              {inputs.bioPilotTierId === tier.id ? (
+                <CheckCircle2 className="size-5 shrink-0 text-[color:var(--brand-blue)]" />
+              ) : null}
+            </div>
+            <p className="mt-3 min-h-[48px] text-sm leading-6 text-[color:var(--muted-foreground)]">
+              {tier.summary}
+            </p>
+            <div className="mt-3 grid gap-1 text-sm leading-6 text-[color:var(--foreground)]">
+              <span>{tier.limits.bioreactors} bioreactor{tier.limits.bioreactors === 1 ? "" : "s"} online</span>
+              <span>{tier.limits.recipesRunning} active recipe{tier.limits.recipesRunning === 1 ? "" : "s"}</span>
+              <span>{tier.limits.recipeStorage} stored recipes</span>
+              <span>{tier.limits.patEquipment} PAT equipment</span>
+              <span>{tier.limits.users} users</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
+        <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
+        <AlertTitle>Investment Basis</AlertTitle>
+        <AlertDescription>
+          The subscription includes basic engineering and maintenance. Customer engineering time models the site-side effort needed to prepare, connect, validate, and adopt the first BioPilot workflow.
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }
@@ -838,6 +1083,10 @@ function formatDecimal(value: number) {
 
 function formatPercent(value: number) {
   return `${Math.round(value)}%`;
+}
+
+function formatPaybackMonths(value: number) {
+  return value >= 60 ? "60+ mo" : `${formatDecimal(value)} mo`;
 }
 
 function StepTracker({
@@ -1729,7 +1978,6 @@ function InputsStep({
 
                       onPatch({
                         lifecycleStageId: nextStage.id,
-                        plannedProgramInvestment: nextStage.annualProgramInvestment,
                       });
                       onInvalidateInputSection("operating-frame");
                     }}
@@ -1844,7 +2092,7 @@ function InputsStep({
                 onValueChange={handleInputSectionChange}
                 className="gap-5"
               >
-                <TabsList className="grid !h-auto w-full grid-cols-1 gap-2 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-2 md:grid-cols-2 2xl:grid-cols-4">
+                <TabsList className="grid !h-auto w-full grid-cols-1 gap-2 rounded-[22px] border border-[color:var(--border)] bg-[color:var(--surface-2)] p-2 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
                   {INPUT_SECTIONS.map((section, index) => {
                     const isComplete = completedSectionSet.has(section.id);
                     const isActiveTab = section.id === activeInputSectionId;
@@ -1944,7 +2192,7 @@ function InputsStep({
             <AlertTitle>Planning Estimate</AlertTitle>
             <AlertDescription>
               The report estimates value from recoverable time, avoided failed runs, faster decisions,
-              and cleaner transfer work. Confirm proposal pricing before treating ROI as final.
+              cleaner transfer work, BioPilot subscription scope, and customer engineering effort.
             </AlertDescription>
           </Alert>
 
@@ -2021,6 +2269,7 @@ function ReportStep({
   const topValueLever = results.valueLevers[0];
   const topPriority = results.plays[0];
   const usesSurveyBenchmark = results.evidenceConfidence.surveyFields > 0;
+  const investment = results.investment;
 
   const formatChangeValue = (
     key: (typeof REPORT_CHANGE_ITEMS)[number]["currentKey"],
@@ -2191,6 +2440,54 @@ function ReportStep({
     </Card>
   );
 
+  const investmentBasisCard = (
+    <Card className={cn(PANEL_CARD, "p-5")}>
+      <CardHeader className="p-0">
+        <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+          BioPilot Investment Basis
+        </CardTitle>
+        <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+          Subscription scope and customer engineering assumptions used in the ROI estimate.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="mt-5 grid gap-4 p-0">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <ContextMetric label="Scope" value={investment.tierLabel} />
+          <ContextMetric label="Monthly Subscription" value={formatCurrency(investment.monthlySubscription)} />
+          <ContextMetric label="Annual Subscription" value={formatCurrency(investment.annualSubscription)} />
+          <ContextMetric label="3-Year Subscription" value={formatCurrency(investment.threeYearSubscription)} />
+          <ContextMetric label="Online Bioreactors" value={formatNumber(investment.bioreactors)} />
+          <ContextMetric label="Active Recipes" value={formatNumber(investment.recipesRunning)} />
+          <ContextMetric label="PAT Equipment" value={formatNumber(investment.patEquipment)} />
+          <ContextMetric label="Users" value={formatNumber(investment.users)} />
+          <ContextMetric
+            label="Customer Engineering"
+            value={`${formatNumber(investment.customerEngineeringHours)} hrs`}
+          />
+          <ContextMetric
+            label="Engineering Investment"
+            value={formatCurrency(investment.customerEngineeringInvestment)}
+          />
+          <ContextMetric
+            label="Additional Services"
+            value={formatCurrency(investment.additionalServicesInvestment)}
+          />
+          <ContextMetric
+            label="3-Year BioPilot Investment"
+            value={formatCurrency(investment.totalThreeYearInvestment)}
+          />
+        </div>
+        <Alert className="border-[color:var(--border)] bg-[color:var(--surface-2)]">
+          <ShieldCheck className="size-4 text-[color:var(--brand-blue)]" />
+          <AlertTitle>{investment.includedEngineeringLabel}</AlertTitle>
+          <AlertDescription>
+            {investment.includedMaintenanceLabel}. Customer engineering time represents the customer-side effort expected to prepare, connect, validate, and adopt the first BioPilot workflow.
+          </AlertDescription>
+        </Alert>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="grid gap-4">
       <section className={cn(DARK_PANEL, "overflow-hidden p-0")}>
@@ -2272,14 +2569,24 @@ function ReportStep({
                 detail="Estimated annual value from the submitted assumptions."
               />
               <ReportMetricCard
+                label="BioPilot Scope"
+                value={investment.tierLabel}
+                detail={`${formatCurrency(investment.monthlySubscription)} monthly subscription scope used in the ROI model.`}
+              />
+              <ReportMetricCard
+                label="3-Year Investment"
+                value={formatCurrency(investment.totalThreeYearInvestment)}
+                detail="Subscription, customer engineering time, and selected additional services."
+              />
+              <ReportMetricCard
                 label="3-Year ROI"
                 value={formatPercent(results.threeYearRoi)}
-                detail="Estimated 3-year return against the submitted investment."
+                detail="Estimated 3-year return against BioPilot scope and customer engineering assumptions."
               />
               <ReportMetricCard
                 label="Payback"
-                value={`${formatDecimal(results.paybackMonths)} mo`}
-                detail="Estimated payback period for the submitted scenario."
+                value={formatPaybackMonths(results.paybackMonths)}
+                detail="Estimated payback using annual subscription billing and a phased value ramp."
               />
             </div>
             <div className={cn(DARK_SOFT, "mt-3 flex-1 p-4")}>
@@ -2317,6 +2624,8 @@ function ReportStep({
       </section>
 
       {submittedProcessProfileCard}
+
+      {investmentBasisCard}
 
       {estimateCalculationCard}
 
@@ -2733,7 +3042,7 @@ export function BioPilotFitAssessmentApp() {
   const [assessmentRecordId, setAssessmentRecordId] = useState<string | null>(null);
   const [completedInputSectionIds, setCompletedInputSectionIds] = useState<InputSectionId[]>([]);
   const [inputSources, setInputSources] = useState<
-    Partial<Record<AdjustableFieldKey, AssessmentInputSource>>
+    Partial<Record<InputSourceFieldKey, AssessmentInputSource>>
   >(() => buildInputSources("default"));
   const [usedSampleData, setUsedSampleData] = useState(false);
 
@@ -2883,7 +3192,28 @@ export function BioPilotFitAssessmentApp() {
     patch: Partial<BioPilotAssessmentInputs>,
     source: AssessmentInputSource = "user",
   ) => {
-    setInputs((current) => normalizeAssessmentInputs({ ...current, ...patch }));
+    setInputs((current) => {
+      const normalized = normalizeAssessmentInputs({ ...current, ...patch });
+      const shouldInferTier =
+        current.bioPilotTierId !== "custom" &&
+        !("bioPilotTierId" in patch) &&
+        ([
+          "bioPilotBioreactors",
+          "bioPilotRecipesRunning",
+          "bioPilotRecipeStorage",
+          "bioPilotPatEquipment",
+          "bioPilotUsers",
+        ] as const).some((key) => key in patch);
+
+      if (!shouldInferTier) {
+        return normalized;
+      }
+
+      return normalizeAssessmentInputs({
+        ...normalized,
+        bioPilotTierId: inferBioPilotTierId(normalized),
+      });
+    });
     setInputSources((current) => {
       const next = { ...current };
 
@@ -2909,16 +3239,13 @@ export function BioPilotFitAssessmentApp() {
   };
 
   const handleResetInputs = () => {
-    setInputs((current) => {
-      const currentStage = LIFECYCLE_STAGE_MAP[current.lifecycleStageId];
-
-      return normalizeAssessmentInputs({
+    setInputs((current) =>
+      normalizeAssessmentInputs({
         ...DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
         processProfileId: current.processProfileId,
         lifecycleStageId: current.lifecycleStageId,
-        plannedProgramInvestment: currentStage.annualProgramInvestment,
-      });
-    });
+      }),
+    );
     setInputSources(buildInputSources("default"));
     setCompletedInputSectionIds([]);
     setUsedSampleData(false);

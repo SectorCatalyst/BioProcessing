@@ -21,6 +21,16 @@ const expectedInputKeys = [
   "blendedHourlyRate",
   "costPerFailedRun",
   "valuePerDayAcceleration",
+  "bioPilotTierId",
+  "bioPilotBioreactors",
+  "bioPilotRecipesRunning",
+  "bioPilotRecipeStorage",
+  "bioPilotPatEquipment",
+  "bioPilotUsers",
+  "customMonthlySubscription",
+  "customerEngineeringHours",
+  "customerEngineeringHourlyRate",
+  "additionalServicesInvestment",
   "plannedProgramInvestment",
   "bioreactorConnectivity",
   "sensorCoverage",
@@ -57,6 +67,16 @@ const continueToInputs = async (page: Page) => {
 };
 
 const confirmAllInputSections = async (page: Page) => {
+  await page.getByRole("button", { name: "Confirm And Continue" }).click();
+  await expect(page.locator("#input-question-set").getByText("BioPilot Scope And Investment")).toBeVisible();
+  await expect(
+    page.locator("#input-question-set").getByText("BioPilot Subscription Scope", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator("#input-question-set").getByText("3-Year BioPilot Investment", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Input Progress")).toBeVisible();
+
   await page.getByRole("button", { name: "Confirm And Continue" }).click();
   await expect(page.getByText("Bioreactor Connectivity")).toBeVisible();
   await expect(page.getByText("Input Progress")).toBeVisible();
@@ -116,6 +136,8 @@ test.describe("BioPilot assessment flow", () => {
     await page.getByRole("button", { name: "Generate Final Report" }).click();
     await expect(page.locator("section").getByText(/Assessment Report$/)).toBeVisible();
     await expect(page.getByText("Very Strong BioPilot Fit", { exact: true })).toBeVisible();
+    await expect(page.getByText("BioPilot Investment Basis")).toBeVisible();
+    await expect(page.getByText("3-Year BioPilot Investment", { exact: true }).first()).toBeVisible();
 
     const [download] = await Promise.all([
       page.waitForEvent("download"),
@@ -169,11 +191,20 @@ test.describe("BioPilot assessment flow", () => {
     });
 
     const persistedInputs = await page.evaluate(() => {
-      const rawInputs = window.localStorage.getItem("biopilot-fit-assessment-state-v2");
+      const rawInputs = window.localStorage.getItem("biopilot-fit-assessment-state-v3");
       return rawInputs ? JSON.parse(rawInputs) : null;
     });
     expect(Object.keys(persistedInputs).sort()).toEqual(expectedInputKeys);
     expect(persistedInputs).toMatchObject({
+      bioPilotTierId: expect.any(String),
+      bioPilotBioreactors: expect.any(Number),
+      bioPilotRecipesRunning: expect.any(Number),
+      bioPilotRecipeStorage: expect.any(Number),
+      bioPilotPatEquipment: expect.any(Number),
+      bioPilotUsers: expect.any(Number),
+      customerEngineeringHours: expect.any(Number),
+      customerEngineeringHourlyRate: expect.any(Number),
+      additionalServicesInvestment: expect.any(Number),
       weeksSinceLastBatchFailure: 64,
       failureCauseExposureScore: 35,
       onboardingDays: 60,
@@ -205,10 +236,19 @@ test.describe("BioPilot assessment flow", () => {
         jobTitle: "Bioprocess Strategy Lead",
         countryRegion: "United States",
         consentToContact: true,
-        modelVersion: "2.0.0",
+        modelVersion: "2.1.0",
       });
       expect(Object.keys(payload.inputs).sort()).toEqual(expectedInputKeys);
       expect(payload.inputs).toMatchObject({
+        bioPilotTierId: expect.any(String),
+        bioPilotBioreactors: expect.any(Number),
+        bioPilotRecipesRunning: expect.any(Number),
+        bioPilotRecipeStorage: expect.any(Number),
+        bioPilotPatEquipment: expect.any(Number),
+        bioPilotUsers: expect.any(Number),
+        customerEngineeringHours: expect.any(Number),
+        customerEngineeringHourlyRate: expect.any(Number),
+        additionalServicesInvestment: expect.any(Number),
         weeksSinceLastBatchFailure: 64,
         failureCauseExposureScore: 35,
         onboardingDays: 60,
@@ -220,12 +260,14 @@ test.describe("BioPilot assessment flow", () => {
       "connected-stack",
       "manual-burden",
       "operating-frame",
+      "solution-investment",
     ]);
     expect(submissionPayload.evidenceMeta.completedSectionIds.sort()).toEqual([
       "batch-failure",
       "connected-stack",
       "manual-burden",
       "operating-frame",
+      "solution-investment",
     ]);
     await expect(page.locator("section").getByText(/Assessment Report$/)).toBeVisible();
   });
@@ -233,6 +275,9 @@ test.describe("BioPilot assessment flow", () => {
   test("jumps back to the first skipped input section when a later section is confirmed", async ({ page }) => {
     await launchExampleSession(page);
     await continueToInputs(page);
+
+    await page.getByRole("button", { name: "Confirm And Continue" }).click();
+    await expect(page.locator("#input-question-set").getByText("BioPilot Scope And Investment")).toBeVisible();
 
     await page.getByRole("button", { name: "Confirm And Continue" }).click();
     await expect(page.locator("#input-question-set").getByText("Connected Bioprocess Stack")).toBeVisible();

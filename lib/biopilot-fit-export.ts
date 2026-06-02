@@ -28,6 +28,8 @@ const formatCurrency = (value: number) => currencyFormatter.format(value);
 const formatPercent = (value: number) => `${Math.round(value)}%`;
 const formatDecimal = (value: number) => decimalFormatter.format(value);
 const formatNumber = (value: number) => numberFormatter.format(Math.round(value));
+const formatPaybackMonths = (value: number) =>
+  value >= 60 ? "60+ mo" : `${formatDecimal(value)} mo`;
 
 type PdfColor = [number, number, number];
 
@@ -355,7 +357,7 @@ export async function exportBioPilotAssessmentPdf(params: {
     87,
     "3-Year ROI",
     formatPercent(results.threeYearRoi),
-    "Directional return against the submitted BioPilot investment.",
+    "Return against BioPilot scope and customer engineering assumptions.",
     COLORS.cyan,
   );
   y += 33;
@@ -375,8 +377,8 @@ export async function exportBioPilotAssessmentPdf(params: {
     y,
     87,
     "Payback",
-    `${formatDecimal(results.paybackMonths)} mo`,
-    "Estimated payback period for the submitted scenario.",
+    formatPaybackMonths(results.paybackMonths),
+    "Payback using annual subscription billing and a phased value ramp.",
     COLORS.blue,
   );
   y += 39;
@@ -422,11 +424,45 @@ export async function exportBioPilotAssessmentPdf(params: {
       ["Weeks Since Last Batch Failure", `${formatNumber(inputs.weeksSinceLastBatchFailure)} weeks`],
       ["Failure-Cause Exposure", formatPercent(inputs.failureCauseExposureScore)],
       ["Failed-Run Recovery Hours", `${formatNumber(inputs.failedRunRecoveryHours)} hrs`],
-      ["Planned BioPilot Investment", formatCurrency(inputs.plannedProgramInvestment)],
     ],
     columnStyles: {
       0: { cellWidth: 48, fontStyle: "bold" },
       1: { cellWidth: 126 },
+    },
+  });
+
+  y = getLastAutoTableY(doc, y) + 8;
+  y = ensureSpace(doc, y, 88);
+  y = drawSectionHeading(doc, "BioPilot Investment Basis", y);
+
+  drawTable(autoTable, doc, {
+    startY: y,
+    head: [["Assumption", "Submitted Value"]],
+    body: [
+      ["BioPilot Scope", results.investment.tierLabel],
+      ["Monthly Subscription", formatCurrency(results.investment.monthlySubscription)],
+      ["Annual Subscription", formatCurrency(results.investment.annualSubscription)],
+      ["3-Year Subscription", formatCurrency(results.investment.threeYearSubscription)],
+      ["Online Bioreactors", formatNumber(results.investment.bioreactors)],
+      ["Active Recipes", formatNumber(results.investment.recipesRunning)],
+      ["Stored Recipes", formatNumber(results.investment.recipeStorage)],
+      ["PAT Equipment", formatNumber(results.investment.patEquipment)],
+      ["Users", formatNumber(results.investment.users)],
+      [
+        "Customer Engineering",
+        `${formatNumber(results.investment.customerEngineeringHours)} hrs at ${formatCurrency(results.investment.customerEngineeringHourlyRate)} / hr`,
+      ],
+      ["Engineering Investment", formatCurrency(results.investment.customerEngineeringInvestment)],
+      ["Additional Services", formatCurrency(results.investment.additionalServicesInvestment)],
+      ["3-Year BioPilot Investment", formatCurrency(results.investment.totalThreeYearInvestment)],
+      [
+        "Included",
+        `${results.investment.includedEngineeringLabel}; ${results.investment.includedMaintenanceLabel}`,
+      ],
+    ],
+    columnStyles: {
+      0: { cellWidth: 54, fontStyle: "bold" },
+      1: { cellWidth: 120 },
     },
   });
 
@@ -566,7 +602,7 @@ export async function exportBioPilotAssessmentPdf(params: {
   y = ensurePage(doc, y + 2);
   y = drawParagraph(
     doc,
-    "This estimate reflects the submitted inputs. Confirm the most important operating numbers before relying on it for formal planning.",
+    "This estimate reflects the submitted inputs and BioPilot scope assumptions. Confirm the most important operating numbers and final commercial scope before relying on it for formal planning.",
     y,
   );
 

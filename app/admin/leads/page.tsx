@@ -4,11 +4,13 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 import { Download, Eye, RefreshCw, Search, Shield, Trash2, X } from "lucide-react";
 
 import {
+  BIOPILOT_TIER_MAP,
   LIFECYCLE_STAGE_MAP,
   PROCESS_PROFILE_MAP,
   type AssessmentEvidenceMeta,
   type BioPilotAssessmentInputs,
   type BioPilotAssessmentResults,
+  type BioPilotTierId,
   type ProcessProfileId,
   type LifecycleStageId,
 } from "@/lib/biopilot-fit-assessment";
@@ -151,6 +153,9 @@ const formatDateTime = (value: string) =>
     timeStyle: "short",
   }).format(new Date(value));
 
+const formatPayback = (value: number) =>
+  value >= 60 ? "60+ months" : `${numberFormatter.format(value)} months`;
+
 const INPUT_LABELS: Record<keyof BioPilotAssessmentInputs, string> = {
   processProfileId: "Process family",
   lifecycleStageId: "Lifecycle stage",
@@ -162,7 +167,17 @@ const INPUT_LABELS: Record<keyof BioPilotAssessmentInputs, string> = {
   blendedHourlyRate: "Blended hourly rate",
   costPerFailedRun: "Cost per failed run",
   valuePerDayAcceleration: "Value per day accelerated",
-  plannedProgramInvestment: "Planned program investment",
+  bioPilotTierId: "BioPilot scope",
+  bioPilotBioreactors: "Online bioreactors",
+  bioPilotRecipesRunning: "Active recipes",
+  bioPilotRecipeStorage: "Stored recipes",
+  bioPilotPatEquipment: "PAT equipment",
+  bioPilotUsers: "Users",
+  customMonthlySubscription: "Confirmed monthly subscription",
+  customerEngineeringHours: "Customer engineering time",
+  customerEngineeringHourlyRate: "Engineering hourly rate",
+  additionalServicesInvestment: "Additional services",
+  plannedProgramInvestment: "Calculated 3-year BioPilot investment",
   bioreactorConnectivity: "Bioreactor connectivity",
   sensorCoverage: "Sensor coverage",
   patCoverage: "PAT coverage",
@@ -205,6 +220,21 @@ const INPUT_GROUPS: Array<{
       "blendedHourlyRate",
       "costPerFailedRun",
       "valuePerDayAcceleration",
+    ],
+  },
+  {
+    title: "BioPilot scope and investment",
+    keys: [
+      "bioPilotTierId",
+      "bioPilotBioreactors",
+      "bioPilotRecipesRunning",
+      "bioPilotRecipeStorage",
+      "bioPilotPatEquipment",
+      "bioPilotUsers",
+      "customMonthlySubscription",
+      "customerEngineeringHours",
+      "customerEngineeringHourlyRate",
+      "additionalServicesInvestment",
       "plannedProgramInvestment",
     ],
   },
@@ -247,6 +277,9 @@ const CURRENCY_INPUT_KEYS = new Set<keyof BioPilotAssessmentInputs>([
   "blendedHourlyRate",
   "costPerFailedRun",
   "valuePerDayAcceleration",
+  "customMonthlySubscription",
+  "customerEngineeringHourlyRate",
+  "additionalServicesInvestment",
   "plannedProgramInvestment",
 ]);
 
@@ -270,6 +303,7 @@ const HOUR_INPUT_KEYS = new Set<keyof BioPilotAssessmentInputs>([
   "deviationInvestigationHours",
   "failedRunRecoveryHours",
   "techTransferPackageHours",
+  "customerEngineeringHours",
 ]);
 
 const humanizeToken = (value: string) =>
@@ -291,11 +325,15 @@ const formatInputValue = (
     return LIFECYCLE_STAGE_MAP[value as LifecycleStageId]?.label ?? String(value);
   }
 
+  if (key === "bioPilotTierId") {
+    return BIOPILOT_TIER_MAP[value as BioPilotTierId]?.label ?? String(value);
+  }
+
   if (typeof value !== "number") {
     return String(value ?? "Not captured");
   }
 
-  if (key === "blendedHourlyRate") {
+  if (key === "blendedHourlyRate" || key === "customerEngineeringHourlyRate") {
     return `${currencyFormatter.format(value)}/hr`;
   }
 
@@ -610,6 +648,23 @@ function ReportResultDetails({ results }: { results: BioPilotAssessmentResults }
         <DetailTextBlock>{results.executiveSummary || "No executive summary captured."}</DetailTextBlock>
       </DetailSection>
 
+      {results.investment ? (
+        <DetailSection title="BioPilot investment basis">
+          <DetailGrid
+            items={[
+              ["Scope", results.investment.tierLabel],
+              ["Monthly subscription", currencyFormatter.format(results.investment.monthlySubscription)],
+              ["Annual subscription", currencyFormatter.format(results.investment.annualSubscription)],
+              ["3-year subscription", currencyFormatter.format(results.investment.threeYearSubscription)],
+              ["Customer engineering", `${numberFormatter.format(results.investment.customerEngineeringHours)} hours`],
+              ["Engineering investment", currencyFormatter.format(results.investment.customerEngineeringInvestment)],
+              ["Additional services", currencyFormatter.format(results.investment.additionalServicesInvestment)],
+              ["3-year investment", currencyFormatter.format(results.investment.totalThreeYearInvestment)],
+            ].map(([label, value]) => ({ label, value }))}
+          />
+        </DetailSection>
+      ) : null}
+
       <DetailSection title="Recommended follow-up">
         <DetailGrid
           items={[
@@ -764,7 +819,7 @@ function AdminRecordDetailPanel({
                   ["Fit", `${detail.entry.fitBand} (${percentFormatter.format(detail.entry.fitScore)}%)`],
                   ["Annual value", currencyFormatter.format(detail.entry.annualValuePotential)],
                   ["Three-year ROI", `${percentFormatter.format(detail.entry.threeYearRoi)}%`],
-                  ["Payback", `${numberFormatter.format(detail.entry.paybackMonths)} months`],
+                  ["Payback", formatPayback(detail.entry.paybackMonths)],
                   [
                     "DPMM",
                     detail.entry.digitalPlantMaturityLevel
@@ -1740,7 +1795,7 @@ export default function LeadAdminPage() {
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">
                             {percentFormatter.format(entry.threeYearRoi)}%
                             <div className="text-[color:var(--muted-foreground)]">
-                              {entry.paybackMonths.toFixed(1)} mo payback
+                              {entry.paybackMonths >= 60 ? "60+ mo" : `${entry.paybackMonths.toFixed(1)} mo`} payback
                             </div>
                           </td>
                           <td className="px-4 py-4 align-top text-sm leading-6 text-[color:var(--foreground)]">

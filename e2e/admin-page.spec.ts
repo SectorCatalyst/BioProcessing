@@ -11,7 +11,17 @@ const submittedInputs = {
   blendedHourlyRate: 145,
   costPerFailedRun: 80000,
   valuePerDayAcceleration: 35000,
-  plannedProgramInvestment: 300000,
+  bioPilotTierId: "professional",
+  bioPilotBioreactors: 4,
+  bioPilotRecipesRunning: 4,
+  bioPilotRecipeStorage: 20,
+  bioPilotPatEquipment: 10,
+  bioPilotUsers: 8,
+  customMonthlySubscription: 9000,
+  customerEngineeringHours: 160,
+  customerEngineeringHourlyRate: 145,
+  additionalServicesInvestment: 0,
+  plannedProgramInvestment: 347200,
   bioreactorConnectivity: 45,
   sensorCoverage: 58,
   patCoverage: 34,
@@ -33,7 +43,7 @@ const submittedInputs = {
 };
 
 const generatedReport = {
-  modelVersion: "2.0.0",
+  modelVersion: "2.1.0",
   executiveSummary:
     "The submitted assessment shows material review drag and a strong opportunity to connect the operating stack.",
   salesFollowUp: {
@@ -41,6 +51,33 @@ const generatedReport = {
     discoveryFocus: ["Review handoff", "Analyzer context", "Batch-failure recovery"],
     recommendedAction: "Schedule a technical discovery session.",
     proposalUse: "Use as planning evidence for BioPilot scoping.",
+  },
+  investment: {
+    tierId: "professional",
+    tierLabel: "Professional",
+    monthlySubscription: 9000,
+    annualSubscription: 108000,
+    subscriptionTermYears: 3,
+    threeYearSubscription: 324000,
+    includedEngineeringLabel: "Basic engineering included",
+    includedMaintenanceLabel: "Maintenance included",
+    bioreactors: 4,
+    recipesRunning: 4,
+    recipeStorage: 20,
+    patEquipment: 10,
+    users: 8,
+    customerEngineeringHours: 160,
+    customerEngineeringHourlyRate: 145,
+    customerEngineeringInvestment: 23200,
+    additionalServicesInvestment: 0,
+    firstYearInvestment: 131200,
+    totalThreeYearInvestment: 347200,
+    yearOneValue: 252000,
+    yearTwoValue: 378000,
+    yearThreeValue: 420000,
+    threeYearValue: 1050000,
+    netThreeYearBenefit: 702800,
+    paybackMonths: 8.2,
   },
   valueLevers: [
     {
@@ -113,7 +150,7 @@ const installAdminApiMocks = async (page: Page) => {
             paybackMonths: 8.2,
             digitalCoverage: 44,
             manualBurdenIndex: 72,
-            modelVersion: "2.0.0",
+            modelVersion: "2.1.0",
             digitalPlantMaturityScore: 48,
             digitalPlantMaturityLevel: 2,
             evidenceConfidenceScore: 91,
@@ -124,6 +161,7 @@ const installAdminApiMocks = async (page: Page) => {
             evidenceMeta: {
               completedSectionIds: [
                 "operating-frame",
+                "solution-investment",
                 "connected-stack",
                 "manual-burden",
                 "batch-failure",
@@ -164,7 +202,7 @@ const installAdminApiMocks = async (page: Page) => {
             fitBand: "Strong BioPilot Fit",
             fitScore: 78,
             annualValuePotential: 330000,
-            modelVersion: "2.0.0",
+            modelVersion: "2.1.0",
             evidenceConfidenceScore: 62,
             evidenceConfidenceBand: "Directional",
             topPriority: "Complete manual burden review",
@@ -222,6 +260,9 @@ test("admin rows open clear full-detail views for leads, assessments, progress, 
 
   await page.getByRole("button", { name: "View assessment details for maya.chen@example-bioprocess.com" }).click();
   await expect(page.locator("#record-detail-panel")).toContainText("Submitted inputs");
+  await expect(page.locator("#record-detail-panel")).toContainText("BioPilot investment basis");
+  await expect(page.locator("#record-detail-panel")).toContainText("Professional");
+  await expect(page.locator("#record-detail-panel")).toContainText("Calculated 3-year BioPilot investment");
   await expect(page.locator("#record-detail-panel")).toContainText("Operator ramp days");
   await expect(page.locator("#record-detail-panel")).toContainText("60 days");
   await expect(page.locator("#record-detail-panel")).toContainText("Recommended follow-up");
