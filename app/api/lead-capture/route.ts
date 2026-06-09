@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 
 import { leadCaptureSchema } from "@/lib/model";
 import {
+  buildLeadCapturedEmailNotification,
+  sendDedupedBioPilotEmailNotification,
+} from "@/lib/server/biopilot-notifications";
+import {
   ensureLeadCaptureTable,
   getPool,
   isAuthorizedAdmin,
@@ -154,7 +158,22 @@ export async function POST(request: Request) {
   try {
     await ensureLeadCaptureTable(pool);
 
-    await upsertLeadCapture(pool, parsed.data);
+    const leadCaptureId = await upsertLeadCapture(pool, parsed.data);
+
+    try {
+      await sendDedupedBioPilotEmailNotification({
+        pool,
+        eventKey: `lead_captured:${leadCaptureId ?? parsed.data.workEmail.toLowerCase()}`,
+        eventType: "lead_captured",
+        referenceId: leadCaptureId ?? parsed.data.workEmail.toLowerCase(),
+        notification: buildLeadCapturedEmailNotification({
+          lead: parsed.data,
+          leadCaptureId,
+        }),
+      });
+    } catch (error) {
+      console.error("Lead capture notification failed", error);
+    }
 
     return NextResponse.json(
       {

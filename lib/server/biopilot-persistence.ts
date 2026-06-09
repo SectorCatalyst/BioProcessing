@@ -92,6 +92,19 @@ export interface AssessmentProgressRecord {
   createdAt: string;
 }
 
+export interface NotificationEventRecord {
+  id: string;
+  eventKey: string;
+  eventType: string;
+  referenceId: string;
+  deliveryStatus: string;
+  attempts: number;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deliveredAt: string | null;
+}
+
 export const getPool = () => {
   const databaseUrl = process.env.DATABASE_URL;
 
@@ -300,6 +313,34 @@ export const ensureAssessmentProgressTable = async (pool: Pool) => {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS roi_assessment_progress_status_idx
       ON roi_assessment_progress (status);
+  `);
+};
+
+export const ensureNotificationEventsTable = async (pool: Pool) => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS roi_notification_events (
+      id BIGSERIAL PRIMARY KEY,
+      event_key TEXT NOT NULL UNIQUE,
+      event_type TEXT NOT NULL,
+      reference_id TEXT NOT NULL DEFAULT '',
+      delivery_status TEXT NOT NULL DEFAULT 'pending',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      delivered_at TIMESTAMPTZ
+    );
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS roi_notification_events_type_status_idx
+      ON roi_notification_events (event_type, delivery_status);
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS roi_notification_events_updated_at_idx
+      ON roi_notification_events (updated_at DESC, id DESC);
   `);
 };
 
@@ -667,6 +708,169 @@ export const mapAssessmentProgressAdminRow = (row: {
   updatedAt: row.updated_at,
   createdAt: row.created_at,
 });
+
+export const claimNotificationEvent = async ({
+  pool,
+  eventKey,
+  eventType,
+  referenceId,
+  payload,
+  retryAfterMinutes = 10,
+}: {
+  pool: Pool;
+  eventKey: string;
+  eventType: string;
+  referenceId: string;
+  payload: unknown;
+  retryAfterMinutes?: number;
+}) => {
+  const result = await pool.query<{ id: string }>(
+    `
+      INSERT INTO roi_notification_events (
+        event_key,
+        event_type,
+        reference_id,
+        payload,
+        delivery_status
+      )
+      VALUES ($1, $2, $3, $4::jsonb, 'pending')
+      ON CONFLICT (event_key)
+      DO UPDATE SET
+        payload = EXCLUDED.payload,
+        delivery_status = 'pending',
+        last_error = NULL,
+        updated_at = NOW()
+      WHERE roi_notification_events.delivery_status = 'failed'
+        AND roi_notification_events.attempts < 3
+        AND roi_notification_events.updated_at <= NOW() - ($5::int * INTERVAL '1 minute')
+      RETURNING id
+    `,
+    [
+      eventKey,
+      eventType,
+      referenceId,
+      JSON.stringify(payload ?? {}),
+      Math.max(1, Math.round(retryAfterMinutes)),
+    ],
+  );
+
+  return result.rows[0]?.id ?? null;
+};
+
+export const recordNotificationDelivery = async ({
+  pool,
+  notificationEventId,
+  deliveryStatus,
+  lastError,
+}: {
+  pool: Pool;
+  notificationEventId: string;
+  deliveryStatus: "sent" | "failed";
+  lastError?: string | null;
+}) => {
+  await pool.query(
+    `
+      UPDATE roi_notification_events
+      SET
+        delivery_status = $2,
+        attempts = attempts + 1,
+        last_error = $3,
+        updated_at = NOW(),
+        delivered_at = CASE WHEN $2 = 'sent' THEN NOW() ELSE delivered_at END
+      WHERE id = $1
+    `,
+    [notificationEventId, deliveryStatus, lastError ?? null],
+  );
+};
+
+export const findAbandonedAssessmentProgress = async ({
+  pool,
+  abandonmentMinutes,
+  limit = 25,
+}: {
+  pool: Pool;
+  abandonmentMinutes: number;
+  limit?: number;
+}) => {
+  const result = await pool.query<{
+    id: string;
+    session_id: string;
+    session_mode: string;
+    lead_capture_id: string | null;
+    first_name: string;
+    last_name: string;
+    work_email: string;
+    company: string;
+    job_title: string;
+    country_region: string;
+    current_step: string;
+    status: string;
+    completed_sections: string[] | unknown;
+    process_profile_id: string;
+    lifecycle_stage_id: string;
+    fit_band: string;
+    fit_score: number;
+    annual_value_potential: number;
+    model_version?: string | null;
+    evidence_meta: AssessmentEvidenceMeta;
+    submitted_inputs: BioPilotAssessmentInputs;
+    generated_report: BioPilotAssessmentResults;
+    updated_at: string;
+    created_at: string;
+    stale_minutes: number;
+  }>(
+    `
+      SELECT
+        p.id,
+        p.session_id,
+        p.session_mode,
+        p.lead_capture_id,
+        p.first_name,
+        p.last_name,
+        p.work_email,
+        p.company,
+        p.job_title,
+        p.country_region,
+        p.current_step,
+        p.status,
+        p.completed_sections,
+        p.process_profile_id,
+        p.lifecycle_stage_id,
+        p.fit_band,
+        p.fit_score,
+        p.annual_value_potential,
+        p.model_version,
+        p.evidence_meta,
+        p.submitted_inputs,
+        p.generated_report,
+        p.updated_at,
+        p.created_at,
+        EXTRACT(EPOCH FROM (NOW() - p.updated_at)) / 60 AS stale_minutes
+      FROM roi_assessment_progress p
+      WHERE p.session_mode = 'actual'
+        AND p.current_step <> 'report'
+        AND p.status <> 'report_generated'
+        AND p.updated_at <= NOW() - ($1::int * INTERVAL '1 minute')
+        AND NOT EXISTS (
+          SELECT 1
+          FROM roi_assessment_submissions s
+          WHERE LOWER(s.work_email) = LOWER(p.work_email)
+            AND s.created_at >= p.created_at
+        )
+      ORDER BY p.updated_at ASC, p.id ASC
+      LIMIT $2
+    `,
+    [
+      Math.max(15, Math.round(abandonmentMinutes)),
+      Math.min(100, Math.max(1, Math.round(limit))),
+    ],
+  );
+
+  return result.rows.map((row) => ({
+    ...mapAssessmentProgressAdminRow(row),
+    staleMinutes: Number(row.stale_minutes) || 0,
+  }));
+};
 
 export const insertFeedbackEntry = async ({
   pool,

@@ -44,10 +44,10 @@ These commands cover linting, production build/type checking, and Playwright cov
 - Lifecycle metadata, local persistence, change log, review metadata, and override logging.
 - Front-door lead capture gate that hides the calculator until contact details are submitted.
 - Built-in lead-capture API route with local fallback behavior and Postgres persistence when `DATABASE_URL` is configured.
-- Built-in assessment-submission API route with server-side calculation, persisted report storage, and Postgres-backed admin retrieval when `DATABASE_URL` is configured.
+- Built-in assessment-submission API route with server-side calculation, persisted report storage, email-webhook notification support, and Postgres-backed admin retrieval when `DATABASE_URL` is configured.
 - Demo/test-data controls that can load illustrative governed datasets and restore the previous working model.
 - JSON, CSV, and PDF export flows with the required top-level ordering rules applied in code.
-- BioPilot model version `2.0.0` with batch-failure occurrence, failure-cause exposure, failed-run recovery effort, neutral BioPlan 2023 survey benchmark application, and persisted model-version metadata across progress, submissions, admin exports, and PDF reports.
+- BioPilot model version `2.1.2` with batch-failure occurrence, failure-cause exposure, failed-run recovery effort, neutral BioPlan 2023 survey benchmark application, BioPilot investment ROI context, and persisted model-version metadata across progress, submissions, admin exports, and PDF reports.
 
 ## Project Structure
 
@@ -71,16 +71,17 @@ The blueprint uses:
 - `npm start`, which binds Next.js to `0.0.0.0` and Render's `PORT`.
 - `/api/health` as the public Render health-check path.
 - `NODE_VERSION=22`.
-- `autoDeployTrigger: commit` on the `codex/bioprocess-simulator-rework` branch.
+- `autoDeployTrigger: commit` on the `codex/biopilot-survey-data-enhancements` branch.
 
 To persist lead capture and assessment reports into Render-hosted Postgres, configure:
 
 1. A Render Postgres instance in the same region as the web service.
 2. A `DATABASE_URL` environment variable on the web service, using the database's internal connection string.
 3. A `LEAD_CAPTURE_ADMIN_KEY` environment variable on the web service for protected lead-management access.
-4. Optionally, a `SALES_NOTIFICATION_WEBHOOK_URL` environment variable for internal assessment-submission notifications.
-5. Optionally, a `NEXT_PUBLIC_SITE_URL` environment variable with the final Render or custom-domain URL for share-card metadata.
-6. A redeploy of the web service after the env vars are present.
+4. Optionally, a `BIOPILOT_EMAIL_WEBHOOK_URL` environment variable for lead, abandoned-session, and report-submission email notifications. `SALES_NOTIFICATION_WEBHOOK_URL` remains as a legacy fallback for report notifications.
+5. Optionally, `BIOPILOT_NOTIFICATION_RECIPIENTS`, `BIOPILOT_EMAIL_WEBHOOK_SECRET`, `BIOPILOT_ABANDONMENT_MINUTES`, `BIOPILOT_NOTIFICATION_CRON_KEY`, and `BIOPILOT_PUBLIC_BASE_URL` for the notification payload, provider verification, abandoned-session window, cron authorization, and production base URL.
+6. Optionally, a `NEXT_PUBLIC_SITE_URL` environment variable with the final Render or custom-domain URL for share-card metadata.
+7. A redeploy of the web service after the env vars are present.
 
 Before sharing the hosted URL with clients, verify:
 
@@ -105,6 +106,45 @@ The built-in [`/api/assessment-submissions`](/Users/troysullivan/Documents/BioPr
 - create the `roi_assessment_submissions` table automatically if it does not exist
 - insert each generated assessment as a durable report snapshot tied back to the lead capture
 - expose guarded read/delete access for assessment management when `LEAD_CAPTURE_ADMIN_KEY` is configured
+
+## Email Webhook Notifications
+
+The production app can send internal email-webhook payloads without exposing notification secrets to the browser. Configure `BIOPILOT_EMAIL_WEBHOOK_URL` on Render with a webhook URL from the email automation service you choose. Zapier, Make, Pipedream, Power Automate, or a lightweight internal webhook can receive the JSON payload and send an email to the configured recipients.
+
+Notification events:
+
+- `lead_captured`: sent after a real user submits contact details and the lead is saved.
+- `report_submitted`: sent after a real user generates and saves a final report.
+- `assessment_abandoned`: sent by a scheduled abandoned-session check when a real user has contact details and saved progress, but no final report after the configured inactivity window.
+
+The payload includes:
+
+- `subject`, `title`, `summary`, and `text` fields that can map directly into an email.
+- `lead` fields for name, work email, company, title, and region.
+- `report` fields for fit score, fit band, annual value potential, ROI, payback, and recommended action when a report is submitted.
+- `progress` fields for last step, last status, completed sections, and inactivity age when a session is abandoned.
+- `adminUrl` linking back to the protected admin page.
+
+Recommended Render env vars:
+
+```bash
+BIOPILOT_EMAIL_WEBHOOK_URL=https://your-email-automation-webhook-url
+BIOPILOT_EMAIL_WEBHOOK_SECRET=optional-provider-validation-secret
+BIOPILOT_NOTIFICATION_RECIPIENTS=you@example.com,team@example.com
+BIOPILOT_ABANDONMENT_MINUTES=60
+BIOPILOT_NOTIFICATION_CRON_KEY=replace-with-a-long-random-secret
+BIOPILOT_PUBLIC_BASE_URL=https://bioprocessing-roi.onrender.com
+```
+
+Notification delivery is intentionally non-blocking: if the email webhook fails, lead capture and report generation still complete. Delivery attempts are tracked in `roi_notification_events` so repeated abandoned-session checks do not send duplicate abandonment emails for the same session.
+
+To check abandoned sessions, create a Render Cron Job using the same repository and branch and run:
+
+```bash
+npm run notify:abandoned
+```
+
+Run it every 30-60 minutes. The script calls the protected [`/api/admin/notifications/abandoned-sessions`](/Users/troysullivan/Documents/BioProcessing ROI Calculator/app/api/admin/notifications/abandoned-sessions/route.ts) endpoint with `BIOPILOT_NOTIFICATION_CRON_KEY` or `LEAD_CAPTURE_ADMIN_KEY`.
 
 If `DATABASE_URL` is missing or the insert fails, the gate still unlocks using local-only capture and the report still renders, so the app remains usable during setup.
 

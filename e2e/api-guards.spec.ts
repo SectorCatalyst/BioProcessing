@@ -73,4 +73,15 @@ test.describe("public API abuse controls", () => {
     });
     expect(spamResponse.status()).toBe(400);
   });
+
+  test("requires server-side authorization for abandoned-session notification checks", async ({
+    request,
+  }) => {
+    const response = await request.post("/api/admin/notifications/abandoned-sessions");
+
+    expect(response.status()).toBe(401);
+    expect(await response.json()).toEqual({
+      message: "Notification authorization is required.",
+    });
+  });
 });

@@ -1,6 +1,6 @@
 {
   "name": "bioprocess-development-roi-calculator",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": true,
   "engines": {
     "node": ">=22.0.0"
@@ -10,6 +10,7 @@
     "build": "next build --webpack",
     "postbuild": "node scripts/ensure-next-app-manifests.mjs",
     "start": "next start --hostname 0.0.0.0 --port ${PORT:-3000}",
+    "notify:abandoned": "node scripts/check-abandoned-sessions.mjs",
     "lint": "eslint app components lib store --max-warnings=0",
     "test:e2e": "npm run build && playwright test",
     "ui:add": "npx shadcn@latest add"
