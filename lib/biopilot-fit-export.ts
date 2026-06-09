@@ -37,8 +37,8 @@ const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
 const PAGE_MARGIN_X = 14;
 const PAGE_BOTTOM_Y = 252;
-const YFA_LOGO_URL = "/yfa-logo-new-alpha.png";
-const YFA_LOGO_ASPECT_RATIO = 1988 / 498;
+const REPORT_LOGO_URL = "/yokogawa-logo.png";
+const REPORT_LOGO_ASPECT_RATIO = 576 / 87;
 
 const COLORS = {
   background: [247, 250, 252] as PdfColor,
@@ -134,11 +134,11 @@ const addLogo = (
     setTextColor(doc, COLORS.ink);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
-    doc.text("Yokogawa Fluence Analytics", x, y + 7);
+    doc.text("Yokogawa", x, y + 7);
     return;
   }
 
-  doc.addImage(logoDataUrl, "PNG", x, y, width, width / YFA_LOGO_ASPECT_RATIO);
+  doc.addImage(logoDataUrl, "PNG", x, y, width, width / REPORT_LOGO_ASPECT_RATIO);
 };
 
 const drawLabel = (doc: JsPdfType, label: string, x: number, y: number, color = COLORS.muted) => {
@@ -320,7 +320,7 @@ export async function exportBioPilotAssessmentPdf(params: {
     doc: JsPdfType,
     options: Record<string, unknown>,
   ) => void;
-  const logoDataUrl = await loadImageDataUrl(YFA_LOGO_URL);
+  const logoDataUrl = await loadImageDataUrl(REPORT_LOGO_URL);
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
   seedPage(doc);
@@ -408,6 +408,32 @@ export async function exportBioPilotAssessmentPdf(params: {
   y = drawSectionHeading(doc, "Executive Summary", y);
   y = drawParagraph(doc, results.executiveSummary, y);
 
+  y = ensureSpace(doc, y + 2, 78);
+  y = drawSectionHeading(doc, "Fit Score Method", y);
+  y = drawParagraph(
+    doc,
+    "The fit score is a weighted operating-fit score, separate from ROI. It combines the digital coverage gap, manual burden, operating complexity, review-by-exception gap, and SOP automation gap.",
+    y,
+  );
+
+  drawTable(autoTable, doc, {
+    startY: y,
+    head: [["Driver", "Score", "Weight", "Contribution"]],
+    body: results.fitScoreDrivers.map((driver) => [
+      driver.label,
+      formatPercent(driver.score),
+      `${Math.round(driver.weight * 100)}%`,
+      formatDecimal(driver.contribution),
+    ]),
+    columnStyles: {
+      0: { cellWidth: 76, fontStyle: "bold" },
+      1: { cellWidth: 32 },
+      2: { cellWidth: 28 },
+      3: { cellWidth: 38 },
+    },
+  });
+
+  y = getLastAutoTableY(doc, y) + 10;
   y = ensureSpace(doc, y + 2, 72);
   y = drawSectionHeading(doc, "Submitted Process Context", y);
 

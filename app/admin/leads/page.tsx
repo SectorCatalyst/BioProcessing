@@ -642,10 +642,32 @@ function SubmittedInputsView({ inputs }: { inputs: BioPilotAssessmentInputs }) {
 }
 
 function ReportResultDetails({ results }: { results: BioPilotAssessmentResults }) {
+  const fitScoreDrivers = results.fitScoreDrivers ?? [];
+
   return (
     <div className="grid gap-5">
       <DetailSection title="Executive summary">
         <DetailTextBlock>{results.executiveSummary || "No executive summary captured."}</DetailTextBlock>
+      </DetailSection>
+
+      <DetailSection
+        title="Fit score method"
+        description="Weighted operating-fit score, separate from ROI."
+      >
+        <DetailGrid
+          items={[
+            ["Fit band", results.fitBand],
+            ["Fit score", `${percentFormatter.format(results.fitScore)}%`],
+            [
+              "Formula",
+              "Digital coverage gap x 38%; manual burden x 28%; operating complexity x 18%; review-by-exception gap x 8%; SOP automation gap x 8%.",
+            ],
+            ...fitScoreDrivers.map((driver) => [
+              driver.label,
+              `${percentFormatter.format(driver.score)}% driver x ${Math.round(driver.weight * 100)}% weight = ${numberFormatter.format(driver.contribution)} points`,
+            ]),
+          ].map(([label, value]) => ({ label, value }))}
+        />
       </DetailSection>
 
       {results.investment ? (

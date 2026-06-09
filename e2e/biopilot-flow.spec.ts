@@ -52,8 +52,25 @@ const expectedInputKeys = [
   "onboardingDays",
 ].sort();
 
+const internalAssessmentPath = "/internal/biopilot-assessment-7f6d2c";
+
+const unlockInternalMode = async (page: Page) => {
+  await page.route("**/api/admin/authorize", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ authorized: true, message: "Internal mode authorized." }),
+    });
+  });
+  await page.goto(internalAssessmentPath);
+  await expect(page.getByText("Internal Review Tools Locked")).toBeVisible();
+  await page.getByLabel("Internal mode admin key").fill("test-admin-key");
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(page.getByRole("button", { name: "Launch Example Session" })).toBeVisible();
+};
+
 const launchExampleSession = async (page: Page) => {
-  await page.goto("/");
+  await unlockInternalMode(page);
   await page.getByRole("button", { name: "Launch Example Session" }).click();
   await expect(page.getByText("Choose The Bioprocess Type")).toBeVisible();
   await expect(page.getByText("Sample Reviewer")).toBeVisible();
@@ -98,6 +115,8 @@ test.describe("BioPilot assessment flow", () => {
     await page.goto("/");
 
     await expect(page.getByText("Actual Session Selected")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Launch Example Session" })).toHaveCount(0);
+    await expect(page.getByText("Internal Review Tools Locked")).toHaveCount(0);
     await expect(page.locator('input[name="firstName"]')).toHaveValue("");
     await expect(page.locator('input[name="lastName"]')).toHaveValue("");
     await expect(page.locator('input[name="workEmail"]')).toHaveValue("");
@@ -121,6 +140,11 @@ test.describe("BioPilot assessment flow", () => {
       return rawStore ? JSON.parse(rawStore).state?.leadCapture : null;
     });
     expect(persistedLead).toMatchObject(actualLead);
+
+    await continueToInputs(page);
+    await expect(page.getByText("Sample Scenario")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Apply Sample Data" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Apply Survey Benchmark" })).toHaveCount(0);
   });
 
   test("example session seeds sample contact data and starts the example flow", async ({ page }) => {
@@ -136,6 +160,8 @@ test.describe("BioPilot assessment flow", () => {
     await page.getByRole("button", { name: "Generate Final Report" }).click();
     await expect(page.locator("section").getByText(/Assessment Report$/)).toBeVisible();
     await expect(page.getByText("Very Strong BioPilot Fit", { exact: true })).toBeVisible();
+    await expect(page.getByText("How The Fit Score Was Calculated")).toBeVisible();
+    await expect(page.getByText("Digital coverage gap x 38%").first()).toBeVisible();
     await expect(page.getByText("BioPilot Investment Basis", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("3-Year BioPilot Investment", { exact: true }).first()).toBeVisible();
 
@@ -249,7 +275,7 @@ test.describe("BioPilot assessment flow", () => {
         jobTitle: "Bioprocess Strategy Lead",
         countryRegion: "United States",
         consentToContact: true,
-        modelVersion: "2.1.1",
+        modelVersion: "2.1.2",
       });
       expect(Object.keys(payload.inputs).sort()).toEqual(expectedInputKeys);
       expect(payload.inputs).toMatchObject({

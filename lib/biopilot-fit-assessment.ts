@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const BIOPILOT_MODEL_VERSION = "2.1.1";
+export const BIOPILOT_MODEL_VERSION = "2.1.2";
 
 export const BIOPLAN_2023_BATCH_FAILURE_BENCHMARK = {
   id: "bioplan-2023-batch-failure",
@@ -425,6 +425,15 @@ export interface BioPilotInvestmentSummary extends BioPilotInvestmentBasis {
   paybackMonths: number;
 }
 
+export interface FitScoreDriver {
+  id: string;
+  label: string;
+  score: number;
+  weight: number;
+  contribution: number;
+  explanation: string;
+}
+
 export interface BioPilotAssessmentResults {
   modelVersion: string;
   profile: ProcessProfile;
@@ -434,6 +443,7 @@ export interface BioPilotAssessmentResults {
   complexityScore: number;
   fitScore: number;
   fitBand: string;
+  fitScoreDrivers: FitScoreDriver[];
   currentState: AssessmentStateSnapshot;
   bioPilotState: AssessmentStateSnapshot;
   annualRecoveredHours: number;
@@ -1409,6 +1419,64 @@ const percentageInverse = (value: number) => clamp(100 - value, 0, 100);
 const average = (values: number[]) =>
   values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 
+const buildFitScoreDrivers = ({
+  digitalCoverage,
+  manualBurdenIndex,
+  complexityScore,
+  reviewByException,
+  sopAutomation,
+}: {
+  digitalCoverage: number;
+  manualBurdenIndex: number;
+  complexityScore: number;
+  reviewByException: number;
+  sopAutomation: number;
+}): FitScoreDriver[] => {
+  const drivers = [
+    {
+      id: "digital-coverage-gap",
+      label: "Digital Coverage Gap",
+      score: percentageInverse(digitalCoverage),
+      weight: 0.38,
+      explanation: "Lower connected coverage increases fit because BioPilot can unify fragmented process evidence.",
+    },
+    {
+      id: "manual-burden",
+      label: "Manual Burden",
+      score: manualBurdenIndex,
+      weight: 0.28,
+      explanation: "Manual transcription, review assembly, investigation effort, and transfer work increase fit.",
+    },
+    {
+      id: "operating-complexity",
+      label: "Operating Complexity",
+      score: complexityScore,
+      weight: 0.18,
+      explanation: "More systems, sites, transfers, programs, and annual runs increase the value of a connected workflow.",
+    },
+    {
+      id: "review-by-exception-gap",
+      label: "Review-By-Exception Gap",
+      score: percentageInverse(reviewByException),
+      weight: 0.08,
+      explanation: "Lower review-by-exception maturity increases fit because evidence is harder to assemble and act on.",
+    },
+    {
+      id: "sop-automation-gap",
+      label: "SOP Automation Gap",
+      score: percentageInverse(sopAutomation),
+      weight: 0.08,
+      explanation: "Lower guided execution maturity increases fit because operators still rely on manual steps and local practice.",
+    },
+  ];
+
+  return drivers.map((driver) => ({
+    ...driver,
+    score: clamp(driver.score, 0, 100),
+    contribution: clamp(driver.score, 0, 100) * driver.weight,
+  }));
+};
+
 export function normalizeEvidenceMeta(
   meta?: AssessmentEvidenceMeta | null,
 ): AssessmentEvidenceMeta {
@@ -1653,6 +1721,7 @@ const buildEvidenceConfidence = (
 
 const buildAssumptionTransparency = (
   inputs: BioPilotAssessmentInputs,
+  fitScoreDrivers: FitScoreDriver[],
   annualRecoveredHours: number,
   annualValuePotential: number,
   investment: BioPilotInvestmentSummary,
@@ -1664,7 +1733,21 @@ const buildAssumptionTransparency = (
   const surveyBackedFields = BIOPILOT_ADJUSTABLE_INPUT_KEYS.filter(
     (key) => normalizedMeta.inputSources?.[key] === "survey",
   );
+  const fitDriverSummary = fitScoreDrivers
+    .map(
+      (driver) =>
+        `${driver.label}: ${Math.round(driver.score)} x ${Math.round(driver.weight * 100)}%`,
+    )
+    .join("; ");
   const items: AssumptionTransparencyItem[] = [
+    {
+      label: "Fit Score",
+      basis:
+        "The fit score measures how strongly the current operating state matches BioPilot value patterns. It is separate from ROI and investment.",
+      formula:
+        "Fit score = digital coverage gap x 38% + manual burden x 28% + operating complexity x 18% + review-by-exception gap x 8% + SOP automation gap x 8%, clamped from 8% to 98%.",
+      sensitivity: `Current score drivers: ${fitDriverSummary}. Digital coverage and manual burden have the largest weight in the fit score.`,
+    },
     {
       label: "Annual Recovered Hours",
       basis: `${Math.round(inputs.runsPerYear)} annual runs plus transfer, deviation, and onboarding effort.`,
@@ -1785,12 +1868,15 @@ export function assessBioPilotFit(
     100,
   );
 
+  const fitScoreDrivers = buildFitScoreDrivers({
+    digitalCoverage,
+    manualBurdenIndex,
+    complexityScore,
+    reviewByException: inputs.reviewByException,
+    sopAutomation: inputs.sopAutomation,
+  });
   const fitScore = clamp(
-    percentageInverse(digitalCoverage) * 0.38 +
-      manualBurdenIndex * 0.28 +
-      complexityScore * 0.18 +
-      percentageInverse(inputs.reviewByException) * 0.08 +
-      percentageInverse(inputs.sopAutomation) * 0.08,
+    fitScoreDrivers.reduce((sum, driver) => sum + driver.contribution, 0),
     8,
     98,
   );
@@ -2346,6 +2432,7 @@ export function assessBioPilotFit(
   const evidenceConfidence = buildEvidenceConfidence(inputs, evidenceMeta);
   const assumptionTransparency = buildAssumptionTransparency(
     inputs,
+    fitScoreDrivers,
     annualRecoveredHours,
     annualValuePotential,
     investment,
@@ -2393,6 +2480,7 @@ export function assessBioPilotFit(
     complexityScore,
     fitScore,
     fitBand,
+    fitScoreDrivers,
     currentState: {
       manualHoursPerRun: currentManualHoursPerRun,
       reviewHours: currentReviewHours,

@@ -1313,10 +1313,16 @@ function IntroStep({
   onSubmitLead,
   onUseSample,
   onGoHome,
+  internalModeRequested,
+  internalModeUnlocked,
+  onUnlockInternalMode,
 }: {
   onSubmitLead: (record: LeadCaptureRecord) => void;
   onUseSample: () => void;
   onGoHome: () => void;
+  internalModeRequested: boolean;
+  internalModeUnlocked: boolean;
+  onUnlockInternalMode: (adminKey: string) => Promise<void>;
 }) {
   const form = useForm<LeadCaptureFormInput>({
     resolver: zodResolver(leadCaptureSchema),
@@ -1325,6 +1331,10 @@ function IntroStep({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isActualSessionOpen, setIsActualSessionOpen] = useState(true);
+  const [internalAdminKey, setInternalAdminKey] = useState("");
+  const [isUnlockingInternalMode, setIsUnlockingInternalMode] = useState(false);
+  const [internalUnlockError, setInternalUnlockError] = useState<string | null>(null);
+  const showInternalControls = internalModeRequested && internalModeUnlocked;
 
   useEffect(() => {
     form.reset(defaultLeadCaptureInput);
@@ -1364,6 +1374,29 @@ function IntroStep({
       storageMessage,
     });
   });
+
+  const handleUnlockInternalMode = async () => {
+    const trimmedKey = internalAdminKey.trim();
+
+    if (!trimmedKey) {
+      setInternalUnlockError("Enter the admin key to unlock internal review tools.");
+      return;
+    }
+
+    setIsUnlockingInternalMode(true);
+    setInternalUnlockError(null);
+
+    try {
+      await onUnlockInternalMode(trimmedKey);
+      setInternalAdminKey("");
+    } catch (error) {
+      setInternalUnlockError(
+        error instanceof Error ? error.message : "Internal mode could not be unlocked.",
+      );
+    } finally {
+      setIsUnlockingInternalMode(false);
+    }
+  };
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(420px,0.98fr)] xl:items-stretch">
@@ -1423,30 +1456,77 @@ function IntroStep({
       <Card className={cn(PANEL_CARD, "p-0")}>
         <CardHeader className="border-b border-[color:var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(247,250,252,0.94))] px-5 py-3.5">
           <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em] text-[color:var(--foreground)]">
-            Choose Your Assessment Path
+            {showInternalControls ? "Choose Your Assessment Path" : "Start Your Assessment"}
           </CardTitle>
           <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
-            Use an example session for a fast walkthrough, or select an actual session to assess a real process.
+            {showInternalControls
+              ? "Use an example session for internal review, or select an actual session to assess a real process."
+              : "Enter your contact details to assess a real process and generate a directional BioPilot fit report."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2.5 px-5 py-3.5">
-          <div className="grid gap-3 sm:grid-cols-2">
+          {internalModeRequested && !internalModeUnlocked ? (
             <div className={cn(SOFT_CARD, "grid gap-3 p-4")}>
               <div className="flex items-start gap-3">
-                <FlaskConical className="mt-1 size-5 text-[color:var(--brand-yellow)]" />
+                <ShieldCheck className="mt-1 size-5 text-[color:var(--brand-blue)]" />
                 <div>
                   <p className="text-base font-semibold text-[color:var(--foreground)]">
-                    Example Session
+                    Internal Review Tools Locked
                   </p>
                   <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
-                    Walk through BioPilot fit using realistic sample data. Best for a quick demo or internal review.
+                    Admin authorization is required before internal sample sessions and benchmark-loading controls are available.
                   </p>
                 </div>
               </div>
-              <Button type="button" className={ACCENT_BUTTON} onClick={onUseSample}>
-                Launch Example Session
-              </Button>
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <Input
+                  className={cn(INPUT_CLASS, "h-11 text-base")}
+                  type="password"
+                  value={internalAdminKey}
+                  placeholder="Enter admin key"
+                  onChange={(event) => setInternalAdminKey(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void handleUnlockInternalMode();
+                    }
+                  }}
+                  aria-label="Internal mode admin key"
+                />
+                <Button
+                  type="button"
+                  className={PRIMARY_BUTTON}
+                  onClick={() => void handleUnlockInternalMode()}
+                  disabled={isUnlockingInternalMode}
+                >
+                  {isUnlockingInternalMode ? "Unlocking..." : "Unlock"}
+                </Button>
+              </div>
+              {internalUnlockError ? (
+                <p className="text-base text-[color:var(--destructive)]">{internalUnlockError}</p>
+              ) : null}
             </div>
+          ) : null}
+
+          <div className={cn("grid gap-3", showInternalControls ? "sm:grid-cols-2" : "")}>
+            {showInternalControls ? (
+              <div className={cn(SOFT_CARD, "grid gap-3 p-4")}>
+                <div className="flex items-start gap-3">
+                  <FlaskConical className="mt-1 size-5 text-[color:var(--brand-yellow)]" />
+                  <div>
+                    <p className="text-base font-semibold text-[color:var(--foreground)]">
+                      Example Session
+                    </p>
+                    <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
+                      Walk through BioPilot fit using realistic sample data. Best for a quick demo or internal review.
+                    </p>
+                  </div>
+                </div>
+                <Button type="button" className={ACCENT_BUTTON} onClick={onUseSample}>
+                  Launch Example Session
+                </Button>
+              </div>
+            ) : null}
             <div className={cn(SOFT_CARD, "grid gap-3 p-4")}>
               <div>
                 <p className="text-base font-semibold text-[color:var(--foreground)]">
@@ -1675,6 +1755,7 @@ function InputsStep({
   onPatch,
   onLoadSample,
   onReset,
+  showInternalControls,
   completedInputSectionIds,
   onCompleteInputSection,
   onInvalidateInputSection,
@@ -1690,6 +1771,7 @@ function InputsStep({
   ) => void;
   onLoadSample: (sampleId: string) => void;
   onReset: () => void;
+  showInternalControls: boolean;
   completedInputSectionIds: InputSectionId[];
   onCompleteInputSection: (sectionId: InputSectionId) => void;
   onInvalidateInputSection: (sectionId: InputSectionId) => void;
@@ -1885,10 +1967,17 @@ function InputsStep({
                   Scenario Setup
                 </CardTitle>
                 <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
-                  Set the lifecycle stage, apply a sample scenario, or use a neutral survey benchmark for batch-failure fields.
+                  {showInternalControls
+                    ? "Set the lifecycle stage, apply a sample scenario, or use a neutral survey benchmark for batch-failure fields."
+                    : "Set the lifecycle stage for the process being assessed."}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="mt-4 grid gap-4 p-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+              <CardContent
+                className={cn(
+                  "mt-4 grid gap-4 p-0",
+                  showInternalControls ? "lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]" : "",
+                )}
+              >
                 <div className="grid gap-2">
                   <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
                     Lifecycle Stage
@@ -1928,59 +2017,63 @@ function InputsStep({
                   </div>
                 </div>
 
-                <div className="grid gap-2">
-                  <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                    Sample Scenario
-                  </p>
-                  <Select
-                    value={selectedSampleId || undefined}
-                    onValueChange={(value) => setSelectedSampleId(value ?? "")}
-                  >
-                    <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
-                      <SelectValue placeholder="Select A Sample Scenario" />
-                    </SelectTrigger>
-                    <SelectContent className={SELECT_CONTENT_CLASS}>
-                      {BIOPILOT_SAMPLE_CONFIGS.map((sample) => (
-                        <SelectItem className={SELECT_ITEM_CLASS} key={sample.id} value={sample.id}>
-                          {sample.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className={cn(SOFT_CARD, "p-4")}>
-                    <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
-                      {selectedSample
-                        ? `${selectedSample.description} Apply it to populate the fields, then confirm each section before generating the report.`
-                        : "Choose a sample to preview it. The fields below will not change until you click Apply Sample Data."}
-                    </p>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Button
-                      type="button"
-                      className={ACCENT_BUTTON}
-                      onClick={handleLoadSelectedSample}
-                      disabled={!selectedSampleId}
-                    >
-                      Apply Sample Data
-                    </Button>
-                    <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={handleResetInputs}>
-                      Reset Inputs
-                    </Button>
-                  </div>
-                </div>
-                <div className={cn(SOFT_CARD, "grid gap-3 p-4 lg:col-span-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center")}>
-                  <div>
-                    <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-                      Neutral Batch-Failure Benchmark
-                    </p>
-                    <p className="mt-2 text-base leading-6 text-[color:var(--muted-foreground)]">
-                      Apply {BIOPLAN_2023_BATCH_FAILURE_BENCHMARK.shortLabel} values for weeks since last batch failure and failure-cause exposure when site records are not available. Recovery hours remain user-entered because they vary by process.
-                    </p>
-                  </div>
-                  <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={handleApplySurveyBenchmark}>
-                    Apply Survey Benchmark
-                  </Button>
-                </div>
+                {showInternalControls ? (
+                  <>
+                    <div className="grid gap-2">
+                      <p className="text-[12px] uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                        Sample Scenario
+                      </p>
+                      <Select
+                        value={selectedSampleId || undefined}
+                        onValueChange={(value) => setSelectedSampleId(value ?? "")}
+                      >
+                        <SelectTrigger className={cn(INPUT_CLASS, "w-full justify-between")}>
+                          <SelectValue placeholder="Select A Sample Scenario" />
+                        </SelectTrigger>
+                        <SelectContent className={SELECT_CONTENT_CLASS}>
+                          {BIOPILOT_SAMPLE_CONFIGS.map((sample) => (
+                            <SelectItem className={SELECT_ITEM_CLASS} key={sample.id} value={sample.id}>
+                              {sample.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className={cn(SOFT_CARD, "p-4")}>
+                        <p className="text-base leading-6 text-[color:var(--muted-foreground)]">
+                          {selectedSample
+                            ? `${selectedSample.description} Apply it to populate the fields, then confirm each section before generating the report.`
+                            : "Choose a sample to preview it. The fields below will not change until you click Apply Sample Data."}
+                        </p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Button
+                          type="button"
+                          className={ACCENT_BUTTON}
+                          onClick={handleLoadSelectedSample}
+                          disabled={!selectedSampleId}
+                        >
+                          Apply Sample Data
+                        </Button>
+                        <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={handleResetInputs}>
+                          Reset Inputs
+                        </Button>
+                      </div>
+                    </div>
+                    <div className={cn(SOFT_CARD, "grid gap-3 p-4 lg:col-span-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center")}>
+                      <div>
+                        <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+                          Neutral Batch-Failure Benchmark
+                        </p>
+                        <p className="mt-2 text-base leading-6 text-[color:var(--muted-foreground)]">
+                          Apply {BIOPLAN_2023_BATCH_FAILURE_BENCHMARK.shortLabel} values for weeks since last batch failure and failure-cause exposure when site records are not available. Recovery hours remain user-entered because they vary by process.
+                        </p>
+                      </div>
+                      <Button type="button" variant="outline" className={SECONDARY_BUTTON} onClick={handleApplySurveyBenchmark}>
+                        Apply Survey Benchmark
+                      </Button>
+                    </div>
+                  </>
+                ) : null}
               </CardContent>
             </Card>
           </div>
@@ -2366,6 +2459,50 @@ function ReportStep({
     </Card>
   );
 
+  const fitScoreExplanationCard = (
+    <Card className={cn(PANEL_CARD, "p-5")}>
+      <CardHeader className="p-0">
+        <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
+          How The Fit Score Was Calculated
+        </CardTitle>
+        <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
+          The fit score is a weighted operating-fit score, separate from ROI. It measures how strongly the submitted current state matches BioPilot value patterns.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="mt-5 grid gap-4 p-0">
+        <div className={cn(SOFT_CARD, "p-4")}>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--brand-blue)]">
+            Formula
+          </p>
+          <p className="mt-2 text-base leading-7 text-[color:var(--foreground)]">
+            Digital coverage gap x 38% + manual burden x 28% + operating complexity x 18% + review-by-exception gap x 8% + SOP automation gap x 8%.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
+            The final score is clamped from 8% to 98% so it remains directional rather than absolute.
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {results.fitScoreDrivers.map((driver) => (
+            <div key={driver.id} className={cn(SOFT_CARD, "p-4")}>
+              <p className="text-sm font-semibold leading-5 text-[color:var(--foreground)]">
+                {driver.label}
+              </p>
+              <p className="mt-2 font-heading text-[1.55rem] leading-none tracking-[-0.045em] text-[color:var(--brand-blue)]">
+                {formatDecimal(driver.contribution)}
+              </p>
+              <p className="mt-2 text-[13px] leading-5 text-[color:var(--muted-foreground)]">
+                {formatPercent(driver.score)} driver x {Math.round(driver.weight * 100)}% weight
+              </p>
+              <p className="mt-3 text-sm leading-5 text-[color:var(--muted-foreground)]">
+                {driver.explanation}
+              </p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const investmentBasisCard = (
     <Card className={cn(PANEL_CARD, "p-5")}>
       <CardHeader className="p-0">
@@ -2420,14 +2557,26 @@ function ReportStep({
         <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_minmax(460px,520px)]">
           <div className="p-6">
             <CardHeader className="relative z-10 p-0">
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge className="rounded-full bg-white/10 px-3 py-1 text-white">Final Report</Badge>
-                <Badge className="rounded-full border border-white/12 bg-white/6 px-3 py-1 text-white/86">
-                  {results.fitBand}
-                </Badge>
-                <Badge className="rounded-full border border-white/12 bg-white/6 px-3 py-1 text-white/86">
-                  {results.stage.label}
-                </Badge>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <Badge className="rounded-full bg-white/10 px-3 py-1 text-white">Final Report</Badge>
+                  <Badge className="rounded-full border border-white/12 bg-white/6 px-3 py-1 text-white/86">
+                    {results.fitBand}
+                  </Badge>
+                  <Badge className="rounded-full border border-white/12 bg-white/6 px-3 py-1 text-white/86">
+                    {results.stage.label}
+                  </Badge>
+                </div>
+                <div className="rounded-[16px] bg-white px-3 py-2 shadow-[0_18px_40px_rgba(5,20,39,0.16)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/yokogawa-logo.png"
+                    alt="Yokogawa"
+                    width={180}
+                    height={27}
+                    className="h-auto w-[150px] sm:w-[180px]"
+                  />
+                </div>
               </div>
               <CardTitle className="mt-4 font-heading text-[2.55rem] tracking-[-0.05em] text-white">
                 {results.profile.label} Assessment Report
@@ -2550,6 +2699,8 @@ function ReportStep({
       </section>
 
       {submittedProcessProfileCard}
+
+      {fitScoreExplanationCard}
 
       {investmentBasisCard}
 
@@ -2946,7 +3097,11 @@ function ReportStep({
   );
 }
 
-export function BioPilotFitAssessmentApp() {
+export function BioPilotFitAssessmentApp({
+  internalModeRequested = false,
+}: {
+  internalModeRequested?: boolean;
+} = {}) {
   const { hasHydrated, leadCapture, completeLeadCapture, clearLeadCapture } = useCalculatorStore(
     useShallow((state) => ({
       hasHydrated: state.hasHydrated,
@@ -2971,8 +3126,16 @@ export function BioPilotFitAssessmentApp() {
     Partial<Record<InputSourceFieldKey, AssessmentInputSource>>
   >(() => buildInputSources("default"));
   const [usedSampleData, setUsedSampleData] = useState(false);
+  const [isInternalModeUnlocked, setIsInternalModeUnlocked] = useState(false);
+  const showInternalControls = internalModeRequested && isInternalModeUnlocked;
 
   useEffect(() => schedulePageTopScroll(), [currentStep]);
+
+  useEffect(() => {
+    if (!internalModeRequested) {
+      setIsInternalModeUnlocked(false);
+    }
+  }, [internalModeRequested]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -3164,6 +3327,10 @@ export function BioPilotFitAssessmentApp() {
   };
 
   const handleLoadSample = (sampleId: string) => {
+    if (!showInternalControls) {
+      return;
+    }
+
     setInputs(buildRandomizedSampleInputs(sampleId));
     setInputSources(buildInputSources("sample"));
     setCompletedInputSectionIds([]);
@@ -3175,6 +3342,10 @@ export function BioPilotFitAssessmentApp() {
   };
 
   const handleResetInputs = () => {
+    if (!showInternalControls) {
+      return;
+    }
+
     setInputs((current) =>
       normalizeAssessmentInputs({
         ...DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
@@ -3331,6 +3502,10 @@ export function BioPilotFitAssessmentApp() {
   };
 
   const handleUseSampleContact = () => {
+    if (!showInternalControls) {
+      return;
+    }
+
     setSessionId(createAssessmentSessionId());
     setSessionMode("example");
     completeLeadCapture({
@@ -3349,6 +3524,21 @@ export function BioPilotFitAssessmentApp() {
     setAssessmentStorageMessage(null);
     setAssessmentRecordId(null);
     setCurrentStep("profile");
+  };
+
+  const handleUnlockInternalMode = async (adminKey: string) => {
+    const response = await fetch("/api/admin/authorize", {
+      headers: {
+        "x-admin-key": adminKey,
+      },
+    });
+    const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+
+    if (!response.ok) {
+      throw new Error(payload?.message ?? "Admin authorization failed.");
+    }
+
+    setIsInternalModeUnlocked(true);
   };
 
   const handleStepSelect = (step: AssessmentStep) => {
@@ -3387,6 +3577,9 @@ export function BioPilotFitAssessmentApp() {
               onSubmitLead={handleSubmitLead}
               onUseSample={handleUseSampleContact}
               onGoHome={handleGoHome}
+              internalModeRequested={internalModeRequested}
+              internalModeUnlocked={isInternalModeUnlocked}
+              onUnlockInternalMode={handleUnlockInternalMode}
             />
           </div>
         ) : (
@@ -3416,6 +3609,7 @@ export function BioPilotFitAssessmentApp() {
                     onPatch={patchInputs}
                     onLoadSample={handleLoadSample}
                     onReset={handleResetInputs}
+                    showInternalControls={showInternalControls}
                     completedInputSectionIds={completedInputSectionIds}
                     onCompleteInputSection={handleCompleteInputSection}
                     onInvalidateInputSection={handleInvalidateInputSection}
