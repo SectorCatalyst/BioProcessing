@@ -68,10 +68,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
 const LEGACY_STORAGE_KEYS = [
+  "biopilot-fit-assessment-state-v3",
   "biopilot-fit-assessment-state-v2",
   "biopilot-fit-assessment-state-v1",
 ] as const;
-const STORAGE_KEY = "biopilot-fit-assessment-state-v3";
+const STORAGE_KEY = "biopilot-fit-assessment-state-v4";
 
 const SHELL_CARD =
   "glass-edge relative rounded-[40px] border border-[color:var(--border-strong)] bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(245,248,252,0.96))] backdrop-blur-2xl before:pointer-events-none before:absolute before:inset-x-12 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/90 before:to-transparent";
@@ -729,11 +730,11 @@ function loadInitialInputs(): BioPilotAssessmentInputs {
     return DEFAULT_BIOPILOT_ASSESSMENT_INPUTS;
   }
 
-  const saved =
-    window.localStorage.getItem(STORAGE_KEY) ??
-    LEGACY_STORAGE_KEYS.map((key) => window.localStorage.getItem(key)).find(
-      (value): value is string => Boolean(value),
-    );
+  for (const key of LEGACY_STORAGE_KEYS) {
+    window.localStorage.removeItem(key);
+  }
+
+  const saved = window.localStorage.getItem(STORAGE_KEY);
   if (!saved) {
     return DEFAULT_BIOPILOT_ASSESSMENT_INPUTS;
   }
@@ -1460,7 +1461,7 @@ function IntroStep({
           </CardTitle>
           <CardDescription className="text-base leading-7 text-[color:var(--muted-foreground)]">
             {showInternalControls
-              ? "Use an example session for internal review, or select an actual session to assess a real process."
+              ? "Use an example session for internal review, or enter contact details to assess a real process."
               : "Enter your contact details to assess a real process and generate a directional BioPilot fit report."}
           </CardDescription>
         </CardHeader>
@@ -1530,7 +1531,7 @@ function IntroStep({
             <div className={cn(SOFT_CARD, "grid gap-3 p-4")}>
               <div>
                 <p className="text-base font-semibold text-[color:var(--foreground)]">
-                  Actual Session
+                  Contact Details
                 </p>
                 <p className="mt-1 text-base leading-6 text-[color:var(--muted-foreground)]">
                   Use your own operating data to create a directional value estimate and BioPilot fit report.
@@ -1542,7 +1543,7 @@ function IntroStep({
                   role="status"
                 >
                   <CheckCircle2 className="size-4" aria-hidden="true" />
-                  Actual Session Selected
+                  Ready For Your Details
                 </div>
               ) : (
                 <Button
@@ -1552,7 +1553,7 @@ function IntroStep({
                   className={PRIMARY_BUTTON}
                   onClick={() => setIsActualSessionOpen(true)}
                 >
-                  Select Actual Session
+                  Enter Contact Details
                 </Button>
               )}
             </div>
@@ -1649,7 +1650,7 @@ function IntroStep({
               </div>
 
               <Button type="submit" className={cn(PRIMARY_BUTTON, "w-full")} disabled={isSubmitting}>
-                {isSubmitting ? "Saving Details..." : "Start Actual Assessment"}
+                {isSubmitting ? "Saving Details..." : "Start Assessment"}
               </Button>
             </form>
           ) : null}

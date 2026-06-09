@@ -112,9 +112,21 @@ const confirmAllInputSections = async (page: Page) => {
 
 test.describe("BioPilot assessment flow", () => {
   test("actual session starts selected with blank contact fields", async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        "biopilot-fit-assessment-state-v3",
+        JSON.stringify({
+          activePrograms: 99,
+          runsPerYear: 777,
+          sites: 42,
+        }),
+      );
+    });
+
     await page.goto("/");
 
-    await expect(page.getByText("Actual Session Selected")).toBeVisible();
+    await expect(page.getByText("Ready For Your Details")).toBeVisible();
+    await expect(page.getByText("Actual Session")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Launch Example Session" })).toHaveCount(0);
     await expect(page.getByText("Internal Review Tools Locked")).toHaveCount(0);
     await expect(page.locator('input[name="firstName"]')).toHaveValue("");
@@ -129,7 +141,7 @@ test.describe("BioPilot assessment flow", () => {
     await page.locator('input[name="jobTitle"]').fill(actualLead.jobTitle);
     await page.locator('input[name="countryRegion"]').fill(actualLead.countryRegion);
     await page.locator('[role="checkbox"]').click();
-    await page.getByRole("button", { name: "Start Actual Assessment" }).click();
+    await page.getByRole("button", { name: "Start Assessment" }).click();
 
     await expect(page.getByText("Choose The Bioprocess Type")).toBeVisible();
     await expect(page.getByText(`${actualLead.firstName} ${actualLead.lastName}`)).toBeVisible();
@@ -145,6 +157,12 @@ test.describe("BioPilot assessment flow", () => {
     await expect(page.getByText("Sample Scenario")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Apply Sample Data" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Apply Survey Benchmark" })).toHaveCount(0);
+    await expect(page.getByLabel("Process Runs Per Year")).not.toHaveValue("777");
+
+    const legacyInputs = await page.evaluate(() =>
+      window.localStorage.getItem("biopilot-fit-assessment-state-v3"),
+    );
+    expect(legacyInputs).toBeNull();
   });
 
   test("example session seeds sample contact data and starts the example flow", async ({ page }) => {
@@ -229,7 +247,7 @@ test.describe("BioPilot assessment flow", () => {
     });
 
     const persistedInputs = await page.evaluate(() => {
-      const rawInputs = window.localStorage.getItem("biopilot-fit-assessment-state-v3");
+      const rawInputs = window.localStorage.getItem("biopilot-fit-assessment-state-v4");
       return rawInputs ? JSON.parse(rawInputs) : null;
     });
     expect(Object.keys(persistedInputs).sort()).toEqual(expectedInputKeys);
