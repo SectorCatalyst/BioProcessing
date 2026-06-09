@@ -99,9 +99,31 @@ export const getBioPilotEmailWebhookUrl = (eventType?: BioPilotEmailNotification
     : "") ||
   "";
 
+const isInternalEmailWebhookUrl = (url: string) =>
+  /\/api\/internal\/email-webhook(?:$|\?)/.test(url);
+
+export const isInternalPostmarkEmailConfigured = () =>
+  Boolean(
+    process.env.POSTMARK_SERVER_TOKEN?.trim() &&
+      process.env.POSTMARK_FROM_EMAIL?.trim() &&
+      getBioPilotNotificationRecipients().length,
+  );
+
 export const isBioPilotEmailNotificationConfigured = (
   eventType?: BioPilotEmailNotificationEvent,
-) => Boolean(getBioPilotEmailWebhookUrl(eventType));
+) => {
+  const webhookUrl = getBioPilotEmailWebhookUrl(eventType);
+
+  if (!webhookUrl) {
+    return false;
+  }
+
+  if (isInternalEmailWebhookUrl(webhookUrl)) {
+    return isInternalPostmarkEmailConfigured();
+  }
+
+  return true;
+};
 
 export const getBioPilotNotificationRecipients = () =>
   (process.env.BIOPILOT_NOTIFICATION_RECIPIENTS ?? "")

@@ -109,7 +109,7 @@ The built-in [`/api/assessment-submissions`](/Users/troysullivan/Documents/BioPr
 
 ## Email Webhook Notifications
 
-The production app can send internal email-webhook payloads without exposing notification secrets to the browser. Configure `BIOPILOT_EMAIL_WEBHOOK_URL` on Render with a webhook URL from the email automation service you choose. Zapier, Make, Pipedream, Power Automate, or a lightweight internal webhook can receive the JSON payload and send an email to the configured recipients.
+The production app can send internal email-webhook payloads without exposing notification secrets to the browser. The preferred setup is the first-party Render webhook at `/api/internal/email-webhook`, protected by `BIOPILOT_EMAIL_WEBHOOK_SECRET`, with email delivery handled by Postmark.
 
 Notification events:
 
@@ -128,15 +128,27 @@ The payload includes:
 Recommended Render env vars:
 
 ```bash
-BIOPILOT_EMAIL_WEBHOOK_URL=https://your-email-automation-webhook-url
-BIOPILOT_EMAIL_WEBHOOK_SECRET=optional-provider-validation-secret
+BIOPILOT_EMAIL_WEBHOOK_URL=https://bioprocessing-roi.onrender.com/api/internal/email-webhook
+BIOPILOT_EMAIL_WEBHOOK_SECRET=replace-with-a-long-random-secret
 BIOPILOT_NOTIFICATION_RECIPIENTS=you@example.com,team@example.com
+POSTMARK_SERVER_TOKEN=postmark-server-token
+POSTMARK_FROM_EMAIL=verified-sender@example.com
+POSTMARK_MESSAGE_STREAM=outbound
+POSTMARK_REPLY_TO=optional-reply-address@example.com
 BIOPILOT_ABANDONMENT_MINUTES=60
 BIOPILOT_NOTIFICATION_CRON_KEY=replace-with-a-long-random-secret
 BIOPILOT_PUBLIC_BASE_URL=https://bioprocessing-roi.onrender.com
 ```
 
-Notification delivery is intentionally non-blocking: if the email webhook fails, lead capture and report generation still complete. Delivery attempts are tracked in `roi_notification_events` so repeated abandoned-session checks do not send duplicate abandonment emails for the same session.
+Notification delivery is intentionally non-blocking: if the internal webhook or Postmark fails, lead capture and report generation still complete. Delivery attempts are tracked in `roi_notification_events` so repeated abandoned-session checks do not send duplicate abandonment emails for the same session.
+
+Postmark requirements:
+
+- Use the Postmark Server API Token, not the Account API Token.
+- `POSTMARK_FROM_EMAIL` must be a verified sender signature or a sender on a verified domain in Postmark.
+- `POSTMARK_MESSAGE_STREAM` should usually be `outbound` unless a specific stream was created for BioPilot ROI notifications.
+- The internal webhook will not be considered configured until `BIOPILOT_EMAIL_WEBHOOK_URL`, `BIOPILOT_EMAIL_WEBHOOK_SECRET`, `BIOPILOT_NOTIFICATION_RECIPIENTS`, `POSTMARK_SERVER_TOKEN`, and `POSTMARK_FROM_EMAIL` are all present.
+- The Postmark Server API Token is found by opening the Postmark server, or by using Account → API Tokens → Server API tokens and selecting the specific server. Do not use an Account API Token for sending BioPilot notification email.
 
 To check abandoned sessions, create a Render Cron Job using the same repository and branch and run:
 

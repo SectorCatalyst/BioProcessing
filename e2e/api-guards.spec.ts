@@ -84,4 +84,22 @@ test.describe("public API abuse controls", () => {
       message: "Notification authorization is required.",
     });
   });
+
+  test("requires server-side authorization for the internal email webhook", async ({
+    request,
+  }) => {
+    const response = await request.post("/api/internal/email-webhook", {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      data: {
+        event: "lead_captured",
+      },
+    });
+
+    expect(response.status()).toBe(401);
+    expect(await response.json()).toEqual({
+      message: "Email webhook authorization is required.",
+    });
+  });
 });

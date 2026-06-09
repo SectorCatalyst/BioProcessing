@@ -9,7 +9,9 @@ import {
   buildReportSubmittedEmailNotification,
   getBioPilotAbandonmentMinutes,
   getBioPilotEmailWebhookUrl,
+  isBioPilotEmailNotificationConfigured,
 } from "../lib/server/biopilot-notifications";
+import { renderPostmarkHtml } from "../lib/server/postmark-email";
 
 const lead = {
   firstName: "Avery",
@@ -84,5 +86,31 @@ test.describe("BioPilot email notification payloads", () => {
     );
     expect(getBioPilotEmailWebhookUrl("lead_captured")).toBe("");
     expect(getBioPilotEmailWebhookUrl("assessment_abandoned")).toBe("");
+  });
+
+  test("requires Postmark settings before treating the internal webhook as configured", () => {
+    process.env.BIOPILOT_EMAIL_WEBHOOK_URL =
+      "https://bioprocessing-roi.onrender.com/api/internal/email-webhook";
+    process.env.BIOPILOT_NOTIFICATION_RECIPIENTS = "owner@example.com";
+    process.env.POSTMARK_SERVER_TOKEN = "";
+    process.env.POSTMARK_FROM_EMAIL = "verified@example.com";
+    expect(isBioPilotEmailNotificationConfigured("lead_captured")).toBe(false);
+
+    process.env.POSTMARK_SERVER_TOKEN = "POSTMARK_API_TEST";
+    expect(isBioPilotEmailNotificationConfigured("lead_captured")).toBe(true);
+  });
+
+  test("escapes notification values in Postmark HTML", () => {
+    const notification = buildLeadCapturedEmailNotification({
+      lead: {
+        ...lead,
+        company: "<script>alert('bad')</script>",
+      },
+      leadCaptureId: "lead-escape",
+    });
+    const html = renderPostmarkHtml(notification);
+
+    expect(html).toContain("&lt;script&gt;alert(&#39;bad&#39;)&lt;/script&gt;");
+    expect(html).not.toContain("<script>alert");
   });
 });

@@ -23,6 +23,14 @@ services:
         sync: false
       - key: BIOPILOT_NOTIFICATION_RECIPIENTS
         sync: false
+      - key: POSTMARK_SERVER_TOKEN
+        sync: false
+      - key: POSTMARK_FROM_EMAIL
+        sync: false
+      - key: POSTMARK_MESSAGE_STREAM
+        value: outbound
+      - key: POSTMARK_REPLY_TO
+        sync: false
       - key: BIOPILOT_ABANDONMENT_MINUTES
         value: "60"
       - key: BIOPILOT_NOTIFICATION_CRON_KEY
