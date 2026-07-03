@@ -394,7 +394,10 @@ export async function exportBioPilotAssessmentPdf(params: {
       ["Process Family", results.profile.label],
       ["Lifecycle Stage", results.stage.label],
       ["Model Version", results.modelVersion ?? BIOPILOT_MODEL_VERSION],
-      ["Digital Plant Maturity", `Level ${results.digitalPlantMaturity.level}: ${results.digitalPlantMaturity.label}`],
+      [
+        "DPMM-Aligned Maturity",
+        `Level ${results.digitalPlantMaturity.level}: ${results.digitalPlantMaturity.label}`,
+      ],
       ["Decision Days", `${formatDecimal(results.annualDecisionDaysRecovered)} days / year`],
     ],
     columnStyles: {
@@ -513,20 +516,27 @@ export async function exportBioPilotAssessmentPdf(params: {
 
   y = getLastAutoTableY(doc, y) + 8;
   y = ensureSpace(doc, y, 70);
-  y = drawSectionHeading(doc, "Digital Plant Maturity", y);
+  y = drawSectionHeading(doc, "DPMM-Aligned Maturity Heatmap", y);
+  y = drawParagraph(
+    doc,
+    `${results.digitalPlantMaturity.sourceLabel}. ${results.digitalPlantMaturity.caveat}`,
+    y,
+  );
 
   drawTable(autoTable, doc, {
     startY: y,
-    head: [["Domain", "Score", "Why It Matters"]],
+    head: [["Domain", "Level", "Score", "Largest Gap / Value Link"]],
     body: results.digitalPlantMaturity.domains.map((domain) => [
       domain.label,
+      `Level ${domain.level}: ${domain.levelLabel}`,
       formatPercent(domain.score),
-      domain.rationale,
+      `${domain.gapSummary} Value link: ${domain.linkedValueLevers.slice(0, 2).join(", ")}.`,
     ]),
     columnStyles: {
       0: { cellWidth: 44 },
-      1: { cellWidth: 24 },
-      2: { cellWidth: 112 },
+      1: { cellWidth: 42 },
+      2: { cellWidth: 24 },
+      3: { cellWidth: 68 },
     },
   });
 

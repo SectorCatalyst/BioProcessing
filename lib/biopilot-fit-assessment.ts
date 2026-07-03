@@ -1,6 +1,14 @@
 import { z } from "zod";
 
-export const BIOPILOT_MODEL_VERSION = "2.1.2";
+export const BIOPILOT_MODEL_VERSION = "2.2.0";
+
+export const BIOPHORUM_DPMM_REFERENCE = {
+  label: "BioPhorum DPMM 3.0 / 3.1 aligned",
+  caveat:
+    "This is a DPMM-aligned planning calibration, not a completed BioPhorum workbook assessment.",
+  method:
+    "The calculator maps submitted BioPilot operating inputs to the DPMM level structure and the most relevant business and enabling capability dimensions.",
+} as const;
 
 export const BIOPLAN_2023_BATCH_FAILURE_BENCHMARK = {
   id: "bioplan-2023-batch-failure",
@@ -346,7 +354,17 @@ export interface AssessmentStateSnapshot {
 export interface DigitalPlantMaturityDomain {
   id: string;
   label: string;
+  sourceDimension: string;
+  group: "Business capability" | "Enabling dimension";
   score: number;
+  level: number;
+  levelLabel: string;
+  targetLevel: number;
+  targetLabel: string;
+  gapScore: number;
+  gapSummary: string;
+  criteria: string[];
+  linkedValueLevers: string[];
   currentState: string;
   targetState: string;
   rationale: string;
@@ -356,8 +374,12 @@ export interface DigitalPlantMaturityAssessment {
   score: number;
   level: number;
   label: string;
+  sourceLabel: string;
+  method: string;
+  caveat: string;
   summary: string;
   domains: DigitalPlantMaturityDomain[];
+  topGaps: DigitalPlantMaturityDomain[];
   nextStep: string;
 }
 
@@ -1507,114 +1529,357 @@ export function normalizeEvidenceMeta(
   };
 }
 
+const DPMM_MATURITY_LEVELS = [
+  {
+    level: 1,
+    label: "Pre-digital plant",
+    minScore: 0,
+    targetScore: 25,
+    summary: "Manual or paper-heavy operating evidence.",
+  },
+  {
+    level: 2,
+    label: "Digital islands",
+    minScore: 25,
+    targetScore: 45,
+    summary: "Local automation and semi-electronic records with limited integration.",
+  },
+  {
+    level: 3,
+    label: "Connected plant",
+    minScore: 45,
+    targetScore: 70,
+    summary: "Integrated systems that support digitized business processes and review by exception.",
+  },
+  {
+    level: 4,
+    label: "Predictive plant",
+    minScore: 70,
+    targetScore: 90,
+    summary: "Enterprise integration with real-time predictive analytics and guided intervention.",
+  },
+  {
+    level: 5,
+    label: "Adaptive plant",
+    minScore: 90,
+    targetScore: 100,
+    summary: "Aspirational adaptive operation with autonomous optimization across the value chain.",
+  },
+] as const;
+
 const getMaturityLevel = (score: number) => {
-  if (score >= 85) {
-    return { level: 5, label: "Adaptive Digital Plant" };
-  }
-  if (score >= 65) {
-    return { level: 4, label: "Guided Digital Plant" };
-  }
-  if (score >= 45) {
-    return { level: 3, label: "Contextualized Operations" };
-  }
-  if (score >= 25) {
-    return { level: 2, label: "Connected Islands" };
-  }
-  return { level: 1, label: "Manual And Local Records" };
+  const level = [...DPMM_MATURITY_LEVELS]
+    .reverse()
+    .find((candidate) => score >= candidate.minScore);
+
+  return level ?? DPMM_MATURITY_LEVELS[0];
+};
+
+const getTargetMaturityLevel = (score: number) => {
+  const current = getMaturityLevel(score);
+  const targetLevel =
+    current.level < 3
+      ? 3
+      : current.level < 4
+        ? 4
+        : current.level;
+
+  return (
+    DPMM_MATURITY_LEVELS.find((candidate) => candidate.level === targetLevel) ??
+    current
+  );
+};
+
+const inverseScaled = (value: number, maxValue: number) =>
+  percentageInverse((value / maxValue) * 100);
+
+const buildDpmmDomain = ({
+  id,
+  label,
+  sourceDimension,
+  group,
+  score,
+  criteria,
+  linkedValueLevers,
+  currentState,
+  targetState,
+  rationale,
+}: Omit<
+  DigitalPlantMaturityDomain,
+  "score" | "level" | "levelLabel" | "targetLevel" | "targetLabel" | "gapScore" | "gapSummary"
+> & {
+  score: number;
+}): DigitalPlantMaturityDomain => {
+  const normalizedScore = clamp(score, 0, 100);
+  const currentLevel = getMaturityLevel(normalizedScore);
+  const targetLevel = getTargetMaturityLevel(normalizedScore);
+  const gapScore = clamp(targetLevel.minScore - normalizedScore, 0, 100);
+
+  return {
+    id,
+    label,
+    sourceDimension,
+    group,
+    score: normalizedScore,
+    level: currentLevel.level,
+    levelLabel: currentLevel.label,
+    targetLevel: targetLevel.level,
+    targetLabel: targetLevel.label,
+    gapScore,
+    gapSummary:
+      gapScore > 0
+        ? `${Math.round(gapScore).toLocaleString("en-US")} points to reach ${targetLevel.label}.`
+        : `At or above the current ${targetLevel.label} target band.`,
+    criteria,
+    linkedValueLevers,
+    currentState,
+    targetState,
+    rationale,
+  };
 };
 
 const buildDigitalPlantMaturity = (
   inputs: BioPilotAssessmentInputs,
 ): DigitalPlantMaturityAssessment => {
-  const domainInputs = [
-    {
-      id: "data-foundation",
-      label: "Data Foundation",
-      score: average([
-        inputs.bioreactorConnectivity,
-        inputs.sensorCoverage,
-        inputs.analyzerConnectivity,
-      ]),
-      currentState: "Instrument and analyzer signals are available, but may still be distributed across local systems.",
-      targetState: "Core process and analyzer signals are consistently available in one operating context.",
-      rationale: "BioPilot value depends on whether reactor, sensor, and analyzer data can be trusted as a unified source.",
-    },
-    {
-      id: "process-visibility",
-      label: "Process Visibility",
-      score: average([
-        inputs.patCoverage,
-        inputs.downstreamVisibility,
-        inputs.dataContextualization,
-      ]),
-      currentState: "Process signals and downstream evidence are partly visible but not always decision-ready.",
-      targetState: "Upstream, downstream, and analytical context can be interpreted as one process story.",
-      rationale: "Visibility maturity shows how quickly the team can understand what happened and why.",
-    },
-    {
-      id: "guided-execution",
-      label: "Guided Execution",
-      score: average([
-        inputs.sopAutomation,
-        percentageInverse(inputs.manualTranscriptionShare),
-        percentageInverse(inputs.onboardingDays * 2.5),
-      ]),
-      currentState: "Operator execution still depends on manual transcription, local practices, or tribal knowledge.",
-      targetState: "Execution steps, evidence capture, and operator guidance are embedded into the workflow.",
-      rationale: "Guided execution maturity is the clearest indicator of recoverable manual effort.",
-    },
-    {
-      id: "review-readiness",
-      label: "Review Readiness",
-      score: average([
-        inputs.reviewByException,
-        percentageInverse(inputs.batchReviewHours * 2.1),
-        percentageInverse(inputs.deviationInvestigationHours * 2.4),
-        percentageInverse(inputs.failedRunRecoveryHours * 0.55),
-      ]),
-      currentState: "Evidence is still being assembled after the run instead of being review-ready during execution.",
-      targetState: "Review packages are assembled continuously, with exceptions surfaced while the run is active.",
-      rationale: "Review readiness connects digital maturity to quality, investigation, and release-time value.",
-    },
-    {
-      id: "network-scale",
-      label: "Network Scale Readiness",
-      score: average([
-        inputs.crossSiteCollaboration,
-        percentageInverse(inputs.techTransferPackageHours * 0.65),
-        percentageInverse(inputs.vendorPlatforms * 9),
-        percentageInverse(inputs.sites * 12),
-      ]),
-      currentState: "The process story becomes harder to reuse as vendor platforms, sites, or partners increase.",
-      targetState: "Process context can move across programs, sites, and partners with less reconstruction.",
-      rationale: "Network maturity shows whether the operating model can scale beyond one lab or one reactor train.",
-    },
+  const domains = [
+    buildDpmmDomain({
+      id: "manufacturing-execution",
+      label: "Manufacturing Execution And Process Automation",
+      sourceDimension: "Manufacturing execution and process automation",
+      group: "Business capability",
+      score:
+        inputs.bioreactorConnectivity * 0.22 +
+        inputs.sensorCoverage * 0.16 +
+        inputs.patCoverage * 0.18 +
+        inputs.sopAutomation * 0.18 +
+        inputs.reviewByException * 0.1 +
+        inputs.dataContextualization * 0.16,
+      criteria: [
+        "recipe and batch-record execution",
+        "process automation",
+        "historian and PAT context",
+        "review-by-exception readiness",
+      ],
+      linkedValueLevers: ["Run coordination", "Batch review", "Avoided failure"],
+      currentState:
+        "Execution signals may be available, but recipe, historian, PAT, and review context are not yet one operating layer.",
+      targetState:
+        "Reactor execution, process evidence, and batch-review context are integrated enough to support connected-plant workflows.",
+      rationale:
+        "This is the primary BioPilot operating layer: bioreactors, sensors, PAT, SOP execution, and review context have to act as one process record.",
+    }),
+    buildDpmmDomain({
+      id: "process-development",
+      label: "Process Development And Tech Transfer",
+      sourceDimension: "Process development",
+      group: "Business capability",
+      score:
+        inputs.dataContextualization * 0.18 +
+        inputs.analyzerConnectivity * 0.14 +
+        inputs.patCoverage * 0.12 +
+        inverseScaled(inputs.techTransferPackageHours, 160) * 0.22 +
+        inputs.crossSiteCollaboration * 0.12 +
+        inputs.sopAutomation * 0.1 +
+        inverseScaled(inputs.offlineDataDelayHours, 36) * 0.12,
+      criteria: [
+        "study design and execution",
+        "equipment data management",
+        "process control strategy",
+        "sample management",
+        "tech transfer",
+        "regulatory data management",
+      ],
+      linkedValueLevers: ["Tech transfer", "Decision acceleration", "Review effort"],
+      currentState:
+        "Development, analytical, and transfer evidence still requires reconstruction before it can support scale-up decisions.",
+      targetState:
+        "Development and manufacturing runs are comparable through shared process context, connected analytical evidence, and reusable transfer packages.",
+      rationale:
+        "The DPMM process-development dimension is the closest direct match to BioPilot's value in development-to-manufacturing handoff.",
+    }),
+    buildDpmmDomain({
+      id: "qc-lab-analytical-evidence",
+      label: "QC Lab And Analytical Evidence",
+      sourceDimension: "Quality control labs",
+      group: "Business capability",
+      score:
+        inputs.analyzerConnectivity * 0.28 +
+        inputs.patCoverage * 0.18 +
+        inverseScaled(inputs.offlineDataDelayHours, 36) * 0.24 +
+        inputs.dataContextualization * 0.2 +
+        inputs.reviewByException * 0.1,
+      criteria: [
+        "analytical testing",
+        "instrument integration",
+        "sample execution",
+        "data archiving",
+        "review-ready evidence",
+      ],
+      linkedValueLevers: ["Decision acceleration", "Batch review"],
+      currentState:
+        "Analyzer and PAT evidence may arrive late or outside the process context that created it.",
+      targetState:
+        "At-line, off-line, and PAT evidence is connected to the run record quickly enough to support decisions and review.",
+      rationale:
+        "BioPilot value increases when lab and analyzer evidence becomes part of the same decision flow as process execution.",
+    }),
+    buildDpmmDomain({
+      id: "quality-management",
+      label: "Quality Management And Review Readiness",
+      sourceDimension: "Quality management systems",
+      group: "Business capability",
+      score:
+        inputs.reviewByException * 0.28 +
+        inverseScaled(inputs.batchReviewHours, 48) * 0.25 +
+        inverseScaled(inputs.deviationInvestigationHours, 48) * 0.22 +
+        inverseScaled(inputs.failedRunRecoveryHours, 240) * 0.15 +
+        percentageInverse(inputs.failureCauseExposureScore) * 0.1,
+      criteria: [
+        "deviation management",
+        "CAPA and quality processes",
+        "batch release",
+        "periodic trending",
+        "quality risk management",
+      ],
+      linkedValueLevers: ["Batch review", "Avoided failure"],
+      currentState:
+        "Quality evidence is still being assembled and interpreted after the run instead of being continuously review-ready.",
+      targetState:
+        "Exceptions, investigations, and release evidence are linked to the operating record while the run is active.",
+      rationale:
+        "This dimension anchors the ROI model's review, deviation, failed-run recovery, and release-readiness value.",
+    }),
+    buildDpmmDomain({
+      id: "manufacturing-support",
+      label: "Manufacturing Support And Reliability",
+      sourceDimension: "Manufacturing support",
+      group: "Business capability",
+      score:
+        inputs.sensorCoverage * 0.18 +
+        inputs.bioreactorConnectivity * 0.16 +
+        inverseScaled(inputs.failedRunRecoveryHours, 240) * 0.24 +
+        percentageInverse(inputs.failureCauseExposureScore) * 0.18 +
+        inverseScaled(inputs.vendorPlatforms, 10) * 0.12 +
+        inputs.dataContextualization * 0.12,
+      criteria: [
+        "maintenance and calibration context",
+        "building and equipment automation",
+        "system architecture",
+        "reliability evidence",
+      ],
+      linkedValueLevers: ["Avoided failure", "Run coordination"],
+      currentState:
+        "Reliability and equipment context may not be connected early enough to prevent repeat investigation or recovery effort.",
+      targetState:
+        "Equipment, calibration, and operating context support condition-aware review and faster recovery from abnormal events.",
+      rationale:
+        "Failed-run recovery value is more credible when the model can show whether equipment and reliability context is connected.",
+    }),
+    buildDpmmDomain({
+      id: "supply-chain-transfer-network",
+      label: "Supply Chain And Partner Integration",
+      sourceDimension: "Supply chain",
+      group: "Business capability",
+      score:
+        inputs.crossSiteCollaboration * 0.24 +
+        inverseScaled(inputs.techTransferPackageHours, 160) * 0.3 +
+        inverseScaled(inputs.vendorPlatforms, 10) * 0.16 +
+        inverseScaled(inputs.sites, 12) * 0.12 +
+        inverseScaled(inputs.transferEventsPerYear, 16) * 0.18,
+      criteria: [
+        "production planning and scheduling",
+        "material and partner handoff",
+        "supplier and CMO integration",
+        "network visibility",
+      ],
+      linkedValueLevers: ["Tech transfer", "Decision acceleration"],
+      currentState:
+        "The operating story becomes harder to reuse as sites, partners, platforms, and transfers increase.",
+      targetState:
+        "Reusable process context moves across sites and partners with less manual translation.",
+      rationale:
+        "BioPilot does not replace supply-chain systems, but the DPMM supply-chain lens clarifies how much network friction affects transfer value.",
+    }),
+    buildDpmmDomain({
+      id: "people-culture",
+      label: "People And Culture",
+      sourceDimension: "People and culture",
+      group: "Enabling dimension",
+      score:
+        inputs.sopAutomation * 0.28 +
+        percentageInverse(inputs.manualTranscriptionShare) * 0.24 +
+        inverseScaled(inputs.onboardingDays, 120) * 0.32 +
+        inputs.crossSiteCollaboration * 0.16,
+      criteria: [
+        "digital workforce",
+        "training",
+        "culture",
+        "operator adoption",
+      ],
+      linkedValueLevers: ["Run coordination", "Onboarding"],
+      currentState:
+        "Operator ramp, manual transcription, and local workarounds still carry too much of the process knowledge.",
+      targetState:
+        "Guided execution, role-based learning, and consistent digital work practices reduce reliance on local knowledge.",
+      rationale:
+        "A strong ROI estimate needs adoption maturity, because recovered hours only become real when teams change how they work.",
+    }),
+    buildDpmmDomain({
+      id: "cybersecurity-operations-data-governance",
+      label: "Cybersecurity, Operations, And Data Governance",
+      sourceDimension: "Cybersecurity and operations",
+      group: "Enabling dimension",
+      score:
+        inputs.dataContextualization * 0.3 +
+        inverseScaled(inputs.vendorPlatforms, 10) * 0.2 +
+        inputs.crossSiteCollaboration * 0.18 +
+        inputs.analyzerConnectivity * 0.1 +
+        inputs.bioreactorConnectivity * 0.1 +
+        inverseScaled(inputs.sites, 12) * 0.12,
+      criteria: [
+        "data governance",
+        "IT/OT integration",
+        "asset and user management",
+        "partner data exchange",
+      ],
+      linkedValueLevers: ["Tech transfer", "Decision acceleration", "Review effort"],
+      currentState:
+        "Data standards and governance may still be aligned to individual systems instead of process use cases.",
+      targetState:
+        "Integrated data governance lets process evidence move securely across internal and partner workflows.",
+      rationale:
+        "This enabling dimension keeps the maturity score honest when a connected workflow depends on governed data across systems.",
+    }),
   ];
-
-  const domains = domainInputs.map((domain) => ({
-    ...domain,
-    score: clamp(domain.score, 0, 100),
-  }));
-  const score = clamp(
-    domains.find((domain) => domain.id === "data-foundation")!.score * 0.22 +
-      domains.find((domain) => domain.id === "process-visibility")!.score * 0.22 +
-      domains.find((domain) => domain.id === "guided-execution")!.score * 0.22 +
-      domains.find((domain) => domain.id === "review-readiness")!.score * 0.18 +
-      domains.find((domain) => domain.id === "network-scale")!.score * 0.16,
-    0,
-    100,
+  const businessScore = average(
+    domains
+      .filter((domain) => domain.group === "Business capability")
+      .map((domain) => domain.score),
   );
+  const enablingScore = average(
+    domains
+      .filter((domain) => domain.group === "Enabling dimension")
+      .map((domain) => domain.score),
+  );
+  const score = clamp(average([businessScore, enablingScore]), 0, 100);
   const maturityLevel = getMaturityLevel(score);
-  const lowestDomain = [...domains].sort((left, right) => left.score - right.score)[0];
+  const topGaps = [...domains]
+    .sort((left, right) => right.gapScore - left.gapScore || left.score - right.score)
+    .slice(0, 3);
+  const lowestDomain = topGaps[0] ?? [...domains].sort((left, right) => left.score - right.score)[0];
 
   return {
     score,
     level: maturityLevel.level,
     label: maturityLevel.label,
+    sourceLabel: BIOPHORUM_DPMM_REFERENCE.label,
+    method: BIOPHORUM_DPMM_REFERENCE.method,
+    caveat: BIOPHORUM_DPMM_REFERENCE.caveat,
     domains,
-    summary: `The submitted operating model maps to DPMM level ${maturityLevel.level}: ${maturityLevel.label.toLowerCase()}.`,
+    topGaps,
+    summary: `The submitted operating model maps to a DPMM-aligned level ${maturityLevel.level}: ${maturityLevel.label.toLowerCase()}.`,
     nextStep: lowestDomain
-      ? `Start by improving ${lowestDomain.label.toLowerCase()} because it is the lowest maturity domain in this assessment.`
+      ? `Start by improving ${lowestDomain.label.toLowerCase()} because it is the largest DPMM-aligned maturity gap in this assessment.`
       : "Confirm the maturity baseline with a short operating review.",
   };
 };
@@ -1785,12 +2050,13 @@ const buildAssumptionTransparency = (
       sensitivity: `Current estimate: ${Math.round(threeYearRoi)}% 3-year ROI and ${paybackMonths >= 60 ? "60+" : paybackMonths.toFixed(1)} months payback. Confirm the selected scope and site engineering assumptions before formal budget approval.`,
     },
     {
-      label: "DPMM Score",
-      basis: "Weighted maturity across data foundation, process visibility, guided execution, review readiness, and network scale readiness.",
+      label: "DPMM-Aligned Maturity",
+      basis:
+        "DPMM-aligned calibration across business capability domains and enabling dimensions most relevant to BioPilot value.",
       formula:
-        "DPMM = weighted score from 0-100, then mapped to a five-level digital plant maturity scale.",
+        "DPMM-aligned score = average business capability maturity and enabling-dimension maturity, then mapped to the five DPMM levels.",
       sensitivity:
-        "The DPMM score is most sensitive to connectivity, data contextualization, SOP automation, and review-by-exception inputs.",
+        "The maturity result is most sensitive to process-development context, manufacturing execution connectivity, analytical evidence timing, review readiness, people adoption, and data governance.",
     },
   ];
 
@@ -2444,7 +2710,7 @@ export function assessBioPilotFit(
     priority: topSignal?.title ?? topPlay?.title ?? "Confirm the top operating friction",
     discoveryFocus: [
       "Validate the submitted review, investigation, failure recovery, and transfer effort with one recent run.",
-      "Confirm which BioPilot scope maps to the lowest DPMM maturity domain.",
+      "Confirm which BioPilot scope maps to the largest DPMM-aligned maturity gap.",
       "Confirm the selected BioPilot scope, customer engineering effort, and optional services before final budget approval.",
     ],
     recommendedAction:

@@ -643,6 +643,11 @@ function SubmittedInputsView({ inputs }: { inputs: BioPilotAssessmentInputs }) {
 
 function ReportResultDetails({ results }: { results: BioPilotAssessmentResults }) {
   const fitScoreDrivers = results.fitScoreDrivers ?? [];
+  const maturity = results.digitalPlantMaturity;
+  const maturityTopGaps =
+    maturity?.topGaps?.length
+      ? maturity.topGaps
+      : [...(maturity?.domains ?? [])].sort((left, right) => left.score - right.score).slice(0, 3);
 
   return (
     <div className="grid gap-5">
@@ -669,6 +674,60 @@ function ReportResultDetails({ results }: { results: BioPilotAssessmentResults }
           ].map(([label, value]) => ({ label, value }))}
         />
       </DetailSection>
+
+      {maturity ? (
+        <DetailSection
+          title="DPMM-aligned maturity"
+          description={maturity.caveat ?? "DPMM-aligned planning calibration."}
+        >
+          <DetailGrid
+            items={[
+              ["Maturity level", `Level ${maturity.level}: ${maturity.label}`],
+              ["Maturity score", `${percentFormatter.format(maturity.score)}%`],
+              ["Calibration basis", maturity.sourceLabel ?? "DPMM-aligned"],
+              ["Method", maturity.method ?? "Business capability and enabling-dimension maturity calibration."],
+              [
+                "Largest gaps",
+                maturityTopGaps.length
+                  ? maturityTopGaps
+                      .map((domain) => `${domain.label}: ${domain.gapSummary}`)
+                      .join("; ")
+                  : "Not captured",
+              ],
+            ].map(([label, value]) => ({ label, value }))}
+          />
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            {maturity.domains?.length ? (
+              maturity.domains.map((domain) => (
+                <div
+                  key={domain.id}
+                  className="rounded-[18px] border border-[color:var(--border)] bg-[color:var(--surface-3)] px-4 py-3"
+                >
+                  <p className="text-sm font-semibold text-[color:var(--foreground)]">
+                    {domain.label}
+                  </p>
+                  <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                    {domain.group ?? "DPMM dimension"}
+                  </p>
+                  <p className="mt-2 font-heading text-[1.35rem] tracking-[-0.035em] text-[color:var(--foreground)]">
+                    Level {domain.level ?? "N/A"} · {percentFormatter.format(domain.score ?? 0)}%
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
+                    {domain.gapSummary ?? domain.rationale}
+                  </p>
+                  {domain.linkedValueLevers?.length ? (
+                    <p className="mt-2 text-sm font-semibold text-[color:var(--brand-blue)]">
+                      Value link: {domain.linkedValueLevers.slice(0, 2).join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+              ))
+            ) : (
+              <DetailTextBlock>No DPMM-aligned maturity details captured.</DetailTextBlock>
+            )}
+          </div>
+        </DetailSection>
+      ) : null}
 
       {results.investment ? (
         <DetailSection title="BioPilot investment basis">

@@ -2290,6 +2290,12 @@ function ReportStep({
   const topPriority = results.plays[0];
   const usesSurveyBenchmark = results.evidenceConfidence.surveyFields > 0;
   const investment = results.investment;
+  const maturityTopGaps =
+    results.digitalPlantMaturity.topGaps?.length
+      ? results.digitalPlantMaturity.topGaps
+      : [...results.digitalPlantMaturity.domains]
+          .sort((left, right) => left.score - right.score)
+          .slice(0, 3);
 
   const formatChangeValue = (
     key: (typeof REPORT_CHANGE_ITEMS)[number]["currentKey"],
@@ -2713,7 +2719,7 @@ function ReportStep({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <CardTitle className="font-heading text-[1.7rem] tracking-[-0.03em]">
-                  Digital Plant Maturity
+                  DPMM-Aligned Maturity Heatmap
                 </CardTitle>
                 <CardDescription className="text-lg leading-7 text-[color:var(--muted-foreground)]">
                   {results.digitalPlantMaturity.summary}
@@ -2726,38 +2732,110 @@ function ReportStep({
           </CardHeader>
           <CardContent className="mt-5 grid gap-4 p-0">
             <div className={cn(SOFT_CARD, "p-4")}>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-base font-semibold text-[color:var(--foreground)]">
-                  {results.digitalPlantMaturity.label}
-                </p>
-                <p className="font-heading text-[1.75rem] leading-none tracking-[-0.05em] text-[color:var(--brand-blue)]">
-                  {formatPercent(results.digitalPlantMaturity.score)}
-                </p>
-              </div>
-              <div className="mt-3 h-2 rounded-full bg-[rgba(0,79,155,0.12)]">
-                <div
-                  className="h-2 rounded-full bg-[linear-gradient(90deg,#004f9b,#18b8c7)]"
-                  style={{ width: `${Math.round(results.digitalPlantMaturity.score)}%` }}
-                />
-              </div>
-              <p className="mt-3 text-base leading-6 text-[color:var(--muted-foreground)]">
-                {results.digitalPlantMaturity.nextStep}
-              </p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {results.digitalPlantMaturity.domains.map((domain) => (
-                <div key={domain.id} className={cn(SOFT_CARD, "p-4")}>
-                  <div className="flex items-center justify-between gap-3">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,0.82fr)_minmax(260px,0.38fr)] xl:items-start">
+                <div>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-base font-semibold text-[color:var(--foreground)]">
+                      {results.digitalPlantMaturity.label}
+                    </p>
+                    <p className="font-heading text-[1.75rem] leading-none tracking-[-0.05em] text-[color:var(--brand-blue)]">
+                      {formatPercent(results.digitalPlantMaturity.score)}
+                    </p>
+                  </div>
+                  <div className="mt-3 h-2 rounded-full bg-[rgba(0,79,155,0.12)]">
+                    <div
+                      className="h-2 rounded-full bg-[linear-gradient(90deg,#004f9b,#18b8c7)]"
+                      style={{ width: `${Math.round(results.digitalPlantMaturity.score)}%` }}
+                    />
+                  </div>
+                  <p className="mt-3 text-base leading-6 text-[color:var(--muted-foreground)]">
+                    {results.digitalPlantMaturity.nextStep}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
+                    {results.digitalPlantMaturity.caveat}
+                  </p>
+                </div>
+                <div className="rounded-[18px] border border-[rgba(0,79,155,0.12)] bg-white/78 p-3">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--brand-blue)]">
+                    Calibration Basis
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--foreground)]">
+                    {results.digitalPlantMaturity.sourceLabel}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--muted-foreground)]">
+                    {results.digitalPlantMaturity.method}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={cn(SOFT_CARD, "p-4")}>
+              <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--brand-blue)]">
+                Largest Maturity Gaps
+              </p>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                {maturityTopGaps.map((domain) => (
+                  <div
+                    key={domain.id}
+                    className="rounded-[18px] border border-[rgba(0,79,155,0.12)] bg-white px-3 py-3"
+                  >
+                    <p className="text-sm font-semibold leading-5 text-[color:var(--foreground)]">
                       {domain.label}
                     </p>
-                    <span className="rounded-full bg-[rgba(0,79,155,0.08)] px-3 py-1 text-sm font-semibold text-[color:var(--brand-blue)]">
-                      {formatPercent(domain.score)}
-                    </span>
+                    <p className="mt-2 text-[13px] leading-5 text-[color:var(--muted-foreground)]">
+                      {domain.gapSummary}
+                    </p>
+                    <p className="mt-2 text-[13px] font-semibold leading-5 text-[color:var(--brand-blue)]">
+                      Value link: {domain.linkedValueLevers.slice(0, 2).join(", ")}
+                    </p>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              {results.digitalPlantMaturity.domains.map((domain) => (
+                <div key={domain.id} className={cn(SOFT_CARD, "p-4")}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-base font-semibold leading-6 text-[color:var(--foreground)]">
+                        {domain.label}
+                      </p>
+                      <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.14em] text-[color:var(--muted-foreground)]">
+                        {domain.group}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="rounded-full bg-[rgba(0,79,155,0.08)] px-3 py-1 text-sm font-semibold text-[color:var(--brand-blue)]">
+                        {formatPercent(domain.score)}
+                      </span>
+                      <p className="mt-2 text-[13px] font-semibold text-[color:var(--foreground)]">
+                        Level {domain.level}: {domain.levelLabel}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 h-2 rounded-full bg-[rgba(0,79,155,0.1)]">
+                    <div
+                      className="h-2 rounded-full bg-[color:var(--brand-blue)]"
+                      style={{ width: `${Math.round(domain.score)}%` }}
+                    />
+                  </div>
+                  <p className="mt-3 text-sm font-semibold leading-5 text-[color:var(--brand-blue)]">
+                    Source dimension: {domain.sourceDimension}
+                  </p>
                   <p className="mt-2 text-sm leading-5 text-[color:var(--muted-foreground)]">
                     {domain.rationale}
                   </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {domain.criteria.slice(0, 3).map((criterion) => (
+                      <span
+                        key={criterion}
+                        className="rounded-full border border-[rgba(0,79,155,0.12)] bg-white px-2.5 py-1 text-[12px] font-semibold text-[color:var(--brand-indigo)]"
+                      >
+                        {criterion}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

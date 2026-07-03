@@ -180,6 +180,9 @@ test.describe("BioPilot assessment flow", () => {
     await expect(page.getByText("Very Strong BioPilot Fit", { exact: true })).toBeVisible();
     await expect(page.getByText("How The Fit Score Was Calculated")).toBeVisible();
     await expect(page.getByText("Digital coverage gap x 38%").first()).toBeVisible();
+    await expect(page.getByText("DPMM-Aligned Maturity Heatmap")).toBeVisible();
+    await expect(page.getByText("Largest Maturity Gaps")).toBeVisible();
+    await expect(page.getByText("BioPhorum DPMM 3.0 / 3.1 aligned")).toBeVisible();
     await expect(page.getByText("BioPilot Investment Basis", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("3-Year BioPilot Investment", { exact: true }).first()).toBeVisible();
 
@@ -293,7 +296,7 @@ test.describe("BioPilot assessment flow", () => {
         jobTitle: "Bioprocess Strategy Lead",
         countryRegion: "United States",
         consentToContact: true,
-        modelVersion: "2.1.2",
+        modelVersion: "2.2.0",
       });
       expect(Object.keys(payload.inputs).sort()).toEqual(expectedInputKeys);
       expect(payload.inputs).toMatchObject({
