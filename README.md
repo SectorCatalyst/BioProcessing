@@ -47,7 +47,7 @@ These commands cover linting, production build/type checking, and Playwright cov
 - Built-in assessment-submission API route with server-side calculation, persisted report storage, email-webhook notification support, and Postgres-backed admin retrieval when `DATABASE_URL` is configured.
 - Demo/test-data controls that can load illustrative governed datasets and restore the previous working model.
 - JSON, CSV, and PDF export flows with the required top-level ordering rules applied in code.
-- BioPilot model version `2.2.0` with batch-failure occurrence, failure-cause exposure, failed-run recovery effort, neutral BioPlan 2023 survey benchmark application, BioPilot investment ROI context, DPMM-aligned maturity calibration, and persisted model-version metadata across progress, submissions, admin exports, and PDF reports.
+- BioPilot model version `2.2.1` with batch-failure occurrence, failure-cause exposure, failed-run recovery effort, neutral BioPlan 2023 survey benchmark application, BioPilot investment ROI context, DPMM-aligned maturity calibration, Cell Therapy process-family support, and persisted model-version metadata across progress, submissions, admin exports, and PDF reports.
 
 ## Project Structure
 

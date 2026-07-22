@@ -43,7 +43,7 @@ const submittedInputs = {
 };
 
 const generatedReport = {
-  modelVersion: "2.2.0",
+  modelVersion: "2.2.1",
   executiveSummary:
     "The submitted assessment shows material review drag and a strong opportunity to connect the operating stack.",
   salesFollowUp: {
@@ -150,7 +150,7 @@ const installAdminApiMocks = async (page: Page) => {
             paybackMonths: 8.2,
             digitalCoverage: 44,
             manualBurdenIndex: 72,
-            modelVersion: "2.2.0",
+            modelVersion: "2.2.1",
             digitalPlantMaturityScore: 48,
             digitalPlantMaturityLevel: 2,
             evidenceConfidenceScore: 91,
@@ -202,7 +202,7 @@ const installAdminApiMocks = async (page: Page) => {
             fitBand: "Strong BioPilot Fit",
             fitScore: 78,
             annualValuePotential: 330000,
-            modelVersion: "2.2.0",
+            modelVersion: "2.2.1",
             evidenceConfidenceScore: 62,
             evidenceConfidenceBand: "Directional",
             topPriority: "Complete manual burden review",

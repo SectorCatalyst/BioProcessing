@@ -170,6 +170,118 @@ test.describe("BioPilot assessment flow", () => {
     await expect(page.getByRole("button", { name: /Step 2 Process Type/i })).toBeVisible();
   });
 
+  test("places Cell Therapy in the advanced therapy cluster and selects it normally", async ({ page }) => {
+    await launchExampleSession(page);
+
+    const processCards = page.locator("button[aria-pressed]");
+    await expect(processCards.nth(5)).toContainText("Viral Vector");
+    await expect(processCards.nth(6)).toContainText("Cell Therapy");
+    await expect(processCards.nth(7)).toContainText("Plasmid DNA");
+
+    await processCards.nth(6).click();
+    await expect(processCards.nth(6)).toHaveAttribute("aria-pressed", "true");
+
+    await continueToInputs(page);
+    await expect(page.getByText("Cell Therapy").first()).toBeVisible();
+    await expect(page.getByText("Guided Execution And SOP Adherence")).toBeVisible();
+  });
+
+  test("keeps process-family cards spaced without overlap on desktop and mobile", async ({ page }) => {
+    const assertProcessCardLayout = async () => {
+      const processCards = page.locator("button[aria-pressed]");
+      await expect(processCards).toHaveCount(9);
+
+      const boxes = await processCards.evaluateAll((elements) =>
+        elements.map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            text: element.textContent?.replace(/\s+/g, " ").trim() ?? "",
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
+            width: rect.width,
+            height: rect.height,
+          };
+        }),
+      );
+
+      for (const box of boxes) {
+        expect(box.width, `${box.text} card should have stable width`).toBeGreaterThan(150);
+        expect(box.height, `${box.text} card should have stable height`).toBeGreaterThan(170);
+      }
+
+      for (let leftIndex = 0; leftIndex < boxes.length; leftIndex += 1) {
+        for (let rightIndex = leftIndex + 1; rightIndex < boxes.length; rightIndex += 1) {
+          const left = boxes[leftIndex];
+          const right = boxes[rightIndex];
+          const overlapX = Math.min(left.right, right.right) - Math.max(left.left, right.left);
+          const overlapY = Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top);
+
+          expect(
+            overlapX > 1 && overlapY > 1,
+            `${left.text} should not overlap ${right.text}`,
+          ).toBe(false);
+        }
+      }
+    };
+
+    await launchExampleSession(page);
+    await assertProcessCardLayout();
+
+    await page.setViewportSize({ width: 390, height: 900 });
+    await expect(page.getByRole("button", { name: /Cell Therapy/i })).toBeVisible();
+    await assertProcessCardLayout();
+  });
+
+  test("generates valid final report outputs for Cell Therapy", async ({ page }) => {
+    await launchExampleSession(page);
+
+    const processCards = page.locator("button[aria-pressed]");
+    await processCards.nth(6).click();
+    await continueToInputs(page);
+    await confirmAllInputSections(page);
+
+    const progressRequestPromise = page.waitForRequest((request) =>
+      request.url().includes("/api/assessment-progress") &&
+      request.method() === "POST" &&
+      Boolean(request.postData()?.includes('"status":"report_ready"')) &&
+      Boolean(request.postData()?.includes('"processProfileId":"cell-therapy"')),
+    );
+    const submissionRequestPromise = page.waitForRequest((request) =>
+      request.url().includes("/api/assessment-submissions") &&
+      request.method() === "POST" &&
+      Boolean(request.postData()?.includes('"processProfileId":"cell-therapy"')),
+    );
+
+    await page.getByRole("button", { name: "Generate Final Report" }).click();
+
+    const progressPayload = (await progressRequestPromise).postDataJSON();
+    const submissionPayload = (await submissionRequestPromise).postDataJSON();
+
+    await expect(page.locator("section").getByText("Cell Therapy Assessment Report")).toBeVisible();
+    await expect(page.getByText("Cell Therapy in process development shows")).toBeVisible();
+    await expect(page.getByText("How The Estimate Was Calculated")).toBeVisible();
+    await expect(page.getByText("DPMM-Aligned Maturity Heatmap")).toBeVisible();
+    await expect(page.getByText("BioPilot Investment Basis", { exact: true }).first()).toBeVisible();
+    expect(progressPayload.inputs.processProfileId).toBe("cell-therapy");
+    expect(submissionPayload.inputs.processProfileId).toBe("cell-therapy");
+    expect(progressPayload.modelVersion).toBe("2.2.1");
+    expect(submissionPayload.modelVersion).toBe("2.2.1");
+    expect(submissionPayload.inputs.runsPerYear).toBeGreaterThan(0);
+    expect(submissionPayload.inputs.costPerFailedRun).toBeGreaterThan(0);
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "Export PDF" }).click(),
+    ]);
+    const pdfPath = await download.path();
+
+    expect(pdfPath).toBeTruthy();
+    expect(statSync(pdfPath as string).size).toBeGreaterThan(100_000);
+    expect(readFileSync(pdfPath as string).subarray(0, 4).toString()).toBe("%PDF");
+  });
+
   test("generates final report and exports a PDF from an example session", async ({ page }) => {
     await launchExampleSession(page);
     await continueToInputs(page);
@@ -296,7 +408,7 @@ test.describe("BioPilot assessment flow", () => {
         jobTitle: "Bioprocess Strategy Lead",
         countryRegion: "United States",
         consentToContact: true,
-        modelVersion: "2.2.0",
+        modelVersion: "2.2.1",
       });
       expect(Object.keys(payload.inputs).sort()).toEqual(expectedInputKeys);
       expect(payload.inputs).toMatchObject({

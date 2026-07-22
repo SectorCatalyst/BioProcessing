@@ -19,6 +19,7 @@ const PROCESS_VISUAL_META: Record<
   "microbial-fermentation": { accent: "#00A04C", secondary: "#0B4F9B", badge: "FERM" },
   vaccines: { accent: "#1CA7C8", secondary: "#0B4F9B", badge: "VAC" },
   "viral-vector": { accent: "#2BB3CF", secondary: "#00316C", badge: "AAV" },
+  "cell-therapy": { accent: "#14B4B1", secondary: "#00316C", badge: "CELL" },
   "plasmid-dna": { accent: "#12B4C7", secondary: "#00316C", badge: "DNA" },
   "mrna-rna": { accent: "#2FC6C7", secondary: "#0B4F9B", badge: "RNA" },
 };
@@ -230,6 +231,51 @@ function Plasmid({ x, y, accent, secondary }: { x: number; y: number; accent: st
   );
 }
 
+function BioBag({ x, y, accent, secondary }: { x: number; y: number; accent: string; secondary: string }) {
+  return (
+    <g>
+      <path d={`M${x + 14} ${y} H${x + 36}`} stroke="#c7d8e8" strokeWidth="5" strokeLinecap="round" />
+      <path d={`M${x + 18} ${y} V${y + 10}`} stroke="#c7d8e8" strokeWidth="3" />
+      <path d={`M${x + 32} ${y} V${y + 10}`} stroke="#c7d8e8" strokeWidth="3" />
+      <path
+        d={`M${x + 12} ${y + 10} H${x + 38} L${x + 42} ${y + 22} V${y + 70} Q${x + 26} ${y + 86} ${x + 8} ${y + 70} V${y + 22} Z`}
+        fill="none"
+        stroke={secondary}
+        strokeWidth="3"
+      />
+      <path
+        d={`M${x + 12} ${y + 52} Q${x + 26} ${y + 46} ${x + 42} ${y + 52} V${y + 68} Q${x + 26} ${y + 78} ${x + 12} ${y + 68} Z`}
+        fill={`${accent}18`}
+        stroke={accent}
+        strokeWidth="1.8"
+      />
+      <circle cx={x + 22} cy={y + 40} r="5" fill={`${accent}18`} stroke={accent} strokeWidth="1.8" />
+      <circle cx={x + 32} cy={y + 33} r="4" fill={`${secondary}14`} stroke={secondary} strokeWidth="1.6" />
+    </g>
+  );
+}
+
+function Cells({ x, y, accent, secondary }: { x: number; y: number; accent: string; secondary: string }) {
+  const cells = [
+    [0, 0, 12, accent],
+    [20, -8, 9, secondary],
+    [24, 18, 11, accent],
+    [-18, 14, 10, secondary],
+    [4, 28, 8, accent],
+  ] as const;
+
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      {cells.map(([dx, dy, radius, color], index) => (
+        <g key={index}>
+          <circle cx={dx} cy={dy} r={radius} fill={`${color}18`} stroke={color} strokeWidth="2.2" />
+          <circle cx={dx} cy={dy} r={radius / 2.5} fill={color} opacity="0.55" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
 function VaccineVial({ x, y, accent, secondary }: { x: number; y: number; accent: string; secondary: string }) {
   return (
     <g>
@@ -344,6 +390,15 @@ function renderGraphic(profileId: ProcessProfileId, accent: string, secondary: s
           })}
           <circle cx="154" cy="74" r="8" fill={`${secondary}14`} stroke={secondary} strokeWidth="1.8" />
           {!compact ? <Chip x={134} y={124} width={84} label="VECTOR" value="CLEAN VIEW" accent={accent} /> : null}
+        </>
+      );
+    case "cell-therapy":
+      return (
+        <>
+          <BioBag x={82} y={42} accent={accent} secondary={secondary} />
+          <Cells x={164} y={78} accent={accent} secondary={secondary} />
+          {!compact ? <Chip x={34} y={124} width={82} label="CHAIN" value="CUSTODY" accent={secondary} /> : null}
+          {!compact ? <Chip x={136} y={124} width={78} label="CELLS" value="VIABILITY" accent={accent} /> : null}
         </>
       );
     case "plasmid-dna":

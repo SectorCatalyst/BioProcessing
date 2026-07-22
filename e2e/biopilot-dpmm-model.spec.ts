@@ -4,6 +4,8 @@ import {
   assessBioPilotFit,
   BIOPHORUM_DPMM_REFERENCE,
   DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
+  PROCESS_PROFILE_MAP,
+  PROCESS_PROFILES,
   type BioPilotAssessmentInputs,
 } from "../lib/biopilot-fit-assessment";
 
@@ -62,7 +64,7 @@ test.describe("DPMM-aligned maturity calibration", () => {
     const results = assessBioPilotFit(DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
     const maturity = results.digitalPlantMaturity;
 
-    expect(results.modelVersion).toBe("2.2.0");
+    expect(results.modelVersion).toBe("2.2.1");
     expect(maturity.sourceLabel).toBe(BIOPHORUM_DPMM_REFERENCE.label);
     expect(maturity.caveat).toContain("not a completed BioPhorum workbook assessment");
     expect(maturity.domains).toHaveLength(8);
@@ -95,5 +97,67 @@ test.describe("DPMM-aligned maturity calibration", () => {
     expect(high.score).toBeGreaterThan(low.score);
     expect(high.level).toBeGreaterThanOrEqual(low.level);
     expect(low.topGaps[0].gapScore).toBeGreaterThanOrEqual(high.topGaps[0].gapScore);
+  });
+
+  test("places Cell Therapy in the advanced-therapy cluster and applies its profile assumptions", () => {
+    const processProfileIds = PROCESS_PROFILES.map((profile) => profile.id);
+
+    expect(processProfileIds.indexOf("cell-therapy")).toBeGreaterThan(
+      processProfileIds.indexOf("viral-vector"),
+    );
+    expect(processProfileIds.indexOf("cell-therapy")).toBeLessThan(
+      processProfileIds.indexOf("plasmid-dna"),
+    );
+    expect(PROCESS_PROFILE_MAP["cell-therapy"]).toMatchObject({
+      label: "Cell Therapy",
+      base: {
+        manualHoursPerRun: 28,
+        reviewHours: 22,
+        runSuccessRate: 84,
+        deviationRate: 0.13,
+      },
+    });
+
+    const results = assessBioPilotFit({
+      ...DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
+      processProfileId: "cell-therapy",
+    });
+    const defaultResults = assessBioPilotFit(DEFAULT_BIOPILOT_ASSESSMENT_INPUTS);
+
+    expect(results.profile.label).toBe("Cell Therapy");
+    expect(results.currentState.manualHoursPerRun).toBeGreaterThan(
+      defaultResults.currentState.manualHoursPerRun,
+    );
+    expect(results.executiveSummary).toContain("Cell Therapy");
+  });
+
+  test("produces valid ROI outputs for every supported process family", () => {
+    for (const profile of PROCESS_PROFILES) {
+      const results = assessBioPilotFit({
+        ...DEFAULT_BIOPILOT_ASSESSMENT_INPUTS,
+        processProfileId: profile.id,
+      });
+
+      expect(results.profile.id).toBe(profile.id);
+      expect(results.executiveSummary).toContain(profile.label);
+      expect(Number.isFinite(results.fitScore)).toBe(true);
+      expect(results.fitScore).toBeGreaterThanOrEqual(8);
+      expect(results.fitScore).toBeLessThanOrEqual(98);
+      expect(Number.isFinite(results.annualRecoveredHours)).toBe(true);
+      expect(results.annualRecoveredHours).toBeGreaterThan(0);
+      expect(Number.isFinite(results.annualValuePotential)).toBe(true);
+      expect(results.annualValuePotential).toBeGreaterThan(0);
+      expect(Number.isFinite(results.threeYearRoi)).toBe(true);
+      expect(Number.isFinite(results.paybackMonths)).toBe(true);
+      expect(results.investment.totalThreeYearInvestment).toBeGreaterThan(0);
+      expect(results.valueLevers.length).toBeGreaterThanOrEqual(4);
+      expect(results.buyingSignals.length).toBeGreaterThan(0);
+      expect(results.digitalPlantMaturity.domains).toHaveLength(8);
+      expect(results.digitalPlantMaturity.topGaps).toHaveLength(3);
+      expect(results.currentState.manualHoursPerRun).toBeGreaterThan(
+        results.bioPilotState.manualHoursPerRun,
+      );
+      expect(results.currentState.reviewHours).toBeGreaterThan(results.bioPilotState.reviewHours);
+    }
   });
 });

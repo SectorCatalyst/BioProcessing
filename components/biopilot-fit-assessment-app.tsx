@@ -680,6 +680,7 @@ const PROCESS_FAMILY_TAGS: Record<ProcessProfileId, string> = {
   "microbial-fermentation": "Fermentation",
   vaccines: "Vaccine",
   "viral-vector": "Vector",
+  "cell-therapy": "Cell Therapy",
   "plasmid-dna": "Plasmid",
   "mrna-rna": "RNA",
 };

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const BIOPILOT_MODEL_VERSION = "2.2.0";
+export const BIOPILOT_MODEL_VERSION = "2.2.1";
 
 export const BIOPHORUM_DPMM_REFERENCE = {
   label: "BioPhorum DPMM 3.0 / 3.1 aligned",
@@ -114,6 +114,7 @@ export const PROCESS_PROFILE_IDS = [
   "microbial-fermentation",
   "vaccines",
   "viral-vector",
+  "cell-therapy",
   "plasmid-dna",
   "mrna-rna",
 ] as const;
@@ -920,6 +921,47 @@ export const PROCESS_PROFILES: ProcessProfile[] = [
         category: "Transfer and review systems",
         examples: "Contextualization layer, SOP automation, evidence packages, review dashboards",
         whyItMatters: "This is where BioPilot can reduce the cost of coordination and review drag.",
+      },
+    ],
+  },
+  {
+    id: "cell-therapy",
+    label: "Cell Therapy",
+    modality:
+      "Autologous or allogeneic workflows where chain of identity, coordination, and operator consistency dominate execution risk.",
+    summary:
+      "Best for teams where orchestration, manual SOP execution, deviations, and training consistency are limiting throughput or release confidence.",
+    bioPilotFit:
+      "BioPilot fits when cross-functional execution is still manual and the organization needs a stronger digital operating layer across instruments and evidence.",
+    base: {
+      manualHoursPerRun: 28,
+      reviewHours: 22,
+      decisionLagHours: 14,
+      transferPackageHours: 72,
+      runSuccessRate: 84,
+      deviationRate: 0.13,
+    },
+    focusAreas: [
+      "Guided Execution And SOP Adherence",
+      "Operator Ramp And Repeatability",
+      "Chain-Of-Identity Evidence Capture",
+      "Cross-Functional Coordination",
+    ],
+    instrumentStack: [
+      {
+        category: "Bioprocess equipment",
+        examples: "Cell culture systems, incubators, closed processing equipment, centrifuges",
+        whyItMatters: "Execution consistency matters as much as instrument data.",
+      },
+      {
+        category: "Measurement and analytics",
+        examples: "Cell counters, viability analyzers, environmental monitoring, offline assays",
+        whyItMatters: "The decision chain often depends on evidence collected from several locations.",
+      },
+      {
+        category: "Digital execution",
+        examples: "Guided SOPs, run records, exception handling, review-ready context",
+        whyItMatters: "BioPilot can add the most value where manual coordination is still the bottleneck.",
       },
     ],
   },
