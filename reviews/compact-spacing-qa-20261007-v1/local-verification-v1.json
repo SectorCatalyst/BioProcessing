@@ -1,0 +1,43 @@
+{
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "beforeAt1280x800": {
+    "pageHeight": 1121,
+    "estimateBottom": 992.265625,
+    "businessBottom": 851.546875
+  },
+  "final": {
+    "pageHeight": 720,
+    "estimateBottom": 630.875,
+    "businessBottom": 573.6640625,
+    "footerBottom": 698.6640625
+  },
+  "clearTargets": {
+    "width": 44,
+    "height": 44
+  },
+  "mobile": {
+    "viewportWidth": 390,
+    "pageWidth": 390,
+    "naturalScroll": true
+  },
+  "behavior": [
+    "all lanes initially blank with e.g. placeholders",
+    "blank submission rejected; first invalid field focused",
+    "synthetic review/failure/transfer results correct",
+    "clear preserves other entries; hides incomplete result; refocuses input",
+    "lane entries retained",
+    "scenario clear rejects range; reset restores 10-25"
+  ],
+  "checks": {
+    "quickStaticBuild": "passed",
+    "lint": "passed",
+    "modelTests": {
+      "passed": 6,
+      "failed": 0
+    }
+  },
+  "sourceOnly": "components/quick-roi-app.tsx"
+}
