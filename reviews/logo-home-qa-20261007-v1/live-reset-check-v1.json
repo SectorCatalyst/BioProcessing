@@ -1,0 +1,37 @@
+{
+  "alerts": 0,
+  "assumptionsOpen": true,
+  "logoHref": "/",
+  "page": {
+    "height": 1139,
+    "width": 865
+  },
+  "scrollY": 288.5,
+  "selectedTab": "Batch review",
+  "values": [
+    {
+      "id": "review-eventsPerYear",
+      "value": "100"
+    },
+    {
+      "id": "review-hoursPerEvent",
+      "value": "20"
+    },
+    {
+      "id": "review-hourlyRate",
+      "value": "145"
+    },
+    {
+      "id": "reduction-low",
+      "value": "15"
+    },
+    {
+      "id": "reduction-high",
+      "value": "30"
+    }
+  ],
+  "viewport": {
+    "height": 851,
+    "width": 865
+  }
+}
