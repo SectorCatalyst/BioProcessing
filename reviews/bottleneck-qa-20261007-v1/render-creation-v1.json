@@ -1,0 +1,9 @@
+{
+  "serviceId": "srv-db3501qd0e5s73f57f2g",
+  "name": "biopilot-quick-roi",
+  "type": "static_site",
+  "branch": "codex/biopilot-quick-roi-20261007",
+  "url": "https://biopilot-quick-roi.onrender.com",
+  "deployId": "dep-db35022d0e5s73f57ht0",
+  "createdAt": "2026-10-07T13:58:31.943148Z"
+}

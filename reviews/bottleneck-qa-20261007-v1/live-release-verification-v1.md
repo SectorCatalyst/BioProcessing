@@ -1,0 +1,7 @@
+# Public release verification
+
+URL https://biopilot-quick-roi.onrender.com/; app commit 9b2899088fc2da2029f48098064652827f9f2e47; Render deploy dep-db35022d0e5s73f57ht0, status live at 2026-10-07T14:01:07Z.
+Public browser outcomes: review $29,000–$72,500 / 200–500 hours; failure $10,000–$25,000 / 0.13–0.31 modeled events; transfer $3,400–$8,500 (rounded). Fixed handoff link opened the existing full assessment root with no process inputs in the URL. Contact fields were blank and not used. Console checks showed no errors/warnings.
+Desktop final evidence live-desktop-result-v2.jpg: CSS viewport 1487×1058, scroll 0, full-page capture 1487×1136. The earlier live-desktop-result-v1.jpg is a preserved 865px intermediate capture, not the final matched desktop evidence. Mobile live-mobile-result-v1.jpg: 390px CSS width, screenshot 390×1736; document width 390px, no overflow.
+The local matched source comparison is recorded in design-qa.md; current shared source files match the tested temporary build byte-for-byte. Public security headers verified separately in live-http-check-v1.json. Initial SSR HTML intentionally contains no full-assessment CTA because it appears after a computed result; the browser handoff verifies the actual interaction.
+Existing full service still tracks codex/patch-bioprocessing-dependencies. No existing Render service was changed. New static service auto-deploys are off. Documentation-only branch updates do not alter the deployed code.

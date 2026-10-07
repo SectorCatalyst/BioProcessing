@@ -1,0 +1,15 @@
+{
+  "url": "https://biopilot-quick-roi.onrender.com/",
+  "status": 200,
+  "headers": {
+    "content-security-policy": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; upgrade-insecure-requests",
+    "x-frame-options": "DENY",
+    "x-content-type-options": "nosniff",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "strict-transport-security": "max-age=315360000; includeSubdomains; preload"
+  },
+  "containsQuickTitle": true,
+  "containsFullLink": false,
+  "checkedAt": "2026-10-07T14:03:07.810Z"
+}
