@@ -1,0 +1,19 @@
+{
+  "build": "BioPilot Quick ROI concept evaluation",
+  "version": "20261007-v1",
+  "status": "concept-review",
+  "branch": "codex/biopilot-quick-roi-20261007",
+  "baselineCommit": "2bb6adf",
+  "documents": [
+    "01-product-requirements.md",
+    "02-technical-requirements.md",
+    "03-app-flow.md",
+    "04-design-brief.md",
+    "05-background-schema.md",
+    "06-implementation-plan.md"
+  ],
+  "currentScope": "Three visual concepts and proposed specifications; implementation and separate public URL follow selection",
+  "applicationChanged": false,
+  "publicPreviewUrl": null,
+  "recommendation": "Batch Value Snapshot"
+}

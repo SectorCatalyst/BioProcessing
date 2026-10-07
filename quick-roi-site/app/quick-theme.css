@@ -1,0 +1,12 @@
+@import "../../app/globals.css";
+
+/* Map the shared calculator tokens for this isolated entry point. */
+@theme inline {
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-indigo: var(--brand-indigo);
+  --color-border-strong: var(--border-strong);
+  --color-primary-strong: var(--primary-strong);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-elevated: var(--surface-elevated);
+}

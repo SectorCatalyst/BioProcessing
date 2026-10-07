@@ -6,6 +6,9 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "dev:quick": "next dev quick-roi-site --webpack --hostname 127.0.0.1 --port 3011",
+    "build:quick": "next build quick-roi-site --webpack",
+    "test:quick-model": "node --test tests/quick-roi-model.test.mjs",
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "postbuild": "node scripts/ensure-next-app-manifests.mjs",

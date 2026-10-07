@@ -20,6 +20,10 @@ node_modules.broken-*/
 # next.js
 /.next/
 /out/
+/quick-roi-site/.next/
+/quick-roi-site/out/
+/quick-roi-site/next-env.d.ts
+/quick-roi-site/releases/
 
 # production
 /build
