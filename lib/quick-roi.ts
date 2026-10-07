@@ -24,23 +24,23 @@ export const QUICK_LANES: { id: QuickLaneId; label: string; formTitle: string; r
     fields: [
       { key: "eventsPerYear", label: "Runs per year", help: "Runs using this review workflow in a typical year.", unit: "runs / year", example: 100, max: 1000000, integer: true },
       { key: "hoursPerEvent", label: "Review hours per run", help: "Hands-on team time assembling, reconciling and reviewing run records.", unit: "hours / run", example: 20, max: 100000 },
-      { key: "hourlyRate", label: "Loaded hourly cost", help: "Hourly labor cost including benefits and overhead. The example is editable.", unit: "USD / hour", example: 145, max: 10000 },
+      { key: "hourlyRate", label: "Loaded hourly cost", help: "Labor cost per hour, including benefits and overhead.", unit: "USD / hour", example: 145, max: 10000 },
     ],
   },
   {
     id: "failure", label: "Failed runs", formTitle: "Your failed-run exposure", resultTitle: "Failed-run opportunity",
     fields: [
-      { key: "eventsPerYear", label: "Failed or degraded runs per year", help: "Use your observed annual average. Zero is a valid answer.", unit: "runs / year", example: 5, max: 1000000 },
-      { key: "costPerEvent", label: "Net avoidable impact per run", help: "Use avoidable materials, recovery and other loss costs, not total product selling value.", unit: "USD / run", example: 80000, max: 1000000000 },
-      { key: "addressableSharePercent", label: "Share linked to data or workflow gaps", help: "Estimated share connected to information, coordination or review gaps. This is an assumption to validate.", unit: "%", example: 25, max: 100 },
+      { key: "eventsPerYear", label: "Failed or degraded runs per year", help: "Your average number of failed or degraded runs in a year.", unit: "runs / year", example: 5, max: 1000000 },
+      { key: "costPerEvent", label: "Net avoidable impact per run", help: "Materials, recovery and other avoidable costs per failed run.", unit: "USD / run", example: 80000, max: 1000000000 },
+      { key: "addressableSharePercent", label: "Share linked to data or workflow gaps", help: "Percentage of failed runs linked to data, coordination or review gaps.", unit: "%", example: 25, max: 100 },
     ],
   },
   {
-    id: "transfer", label: "Tech transfer", formTitle: "Your transfer package effort", resultTitle: "Tech transfer opportunity",
+    id: "transfer", label: "Tech transfer", formTitle: "Your transfer preparation effort", resultTitle: "Tech transfer opportunity",
     fields: [
       { key: "eventsPerYear", label: "Transfers per year", help: "Scale-up, site or partner handoffs using this workflow.", unit: "transfers / year", example: 3, max: 1000000, integer: true },
       { key: "hoursPerEvent", label: "Package hours per transfer", help: "Hands-on team time preparing and checking one transfer package.", unit: "hours / transfer", example: 78, max: 100000 },
-      { key: "hourlyRate", label: "Loaded hourly cost", help: "Hourly labor cost including benefits and overhead. The example is editable.", unit: "USD / hour", example: 145, max: 10000 },
+      { key: "hourlyRate", label: "Loaded hourly cost", help: "Labor cost per hour, including benefits and overhead.", unit: "USD / hour", example: 145, max: 10000 },
     ],
   },
 ];
