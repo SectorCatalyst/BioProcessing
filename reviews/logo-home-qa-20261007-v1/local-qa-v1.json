@@ -1,0 +1,37 @@
+{
+  "checks": {
+    "quickStaticBuild": "passed",
+    "lint": "passed",
+    "keyboardHomeReset": "passed",
+    "pointerHomeReset": "passed",
+    "allLaneEntriesCleared": "passed",
+    "scenarioReset": [
+      10,
+      25
+    ],
+    "errorsCleared": true,
+    "estimateCleared": true,
+    "assumptionsClosed": true,
+    "selectedLane": "review",
+    "scrollY": 0
+  },
+  "desktop": {
+    "viewport": [
+      1280,
+      720
+    ],
+    "pageHeight": 720,
+    "footerBottom": 698.6640625,
+    "logoTarget": [
+      208,
+      44
+    ]
+  },
+  "mobile": {
+    "viewportWidth": 390,
+    "pageWidth": 390,
+    "logoTargetHeight": 44
+  },
+  "rightPanel": "recommendation only; not implemented",
+  "security": "same-origin GET only; no new storage, data submission or model change"
+}

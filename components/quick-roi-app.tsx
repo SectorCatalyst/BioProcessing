@@ -49,10 +49,13 @@ export function QuickRoiApp() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-border bg-white/90">
-        <div className="mx-auto flex max-w-[1487px] flex-wrap items-center gap-3 px-5 py-3 sm:px-8 lg:px-12">
+        <div className="mx-auto flex max-w-[1487px] flex-wrap items-center gap-3 px-5 py-1.5 sm:px-8 lg:px-12">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- A document navigation resets all calculator state. */}
+          <a href="/" aria-label="BioPilot Quick ROI home — reset all fields" title="Return home and reset all fields" className="flex min-h-11 items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue">
           {/* The unchanged source brand asset also appears in the larger assessment. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/yokogawa-logo.png" alt="Yokogawa" width={576} height={87} className="h-auto w-[172px] sm:w-[208px]" />
+          </a>
           <span className="hidden h-7 w-px bg-border-strong sm:block" aria-hidden="true" />
           <span className="font-heading text-lg font-semibold tracking-[-0.035em] sm:text-2xl">BioPilot Quick ROI</span>
         </div>
