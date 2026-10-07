@@ -1,0 +1,9 @@
+{
+  "url": "https://biopilot-quick-roi.onrender.com/",
+  "status": 200,
+  "exactSubheading": true,
+  "removedCopyAbsent": true,
+  "newTitle": true,
+  "csp": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; upgrade-insecure-requests",
+  "checkedAt": "2026-10-07T14:30:27.638Z"
+}
